@@ -12,5 +12,7 @@ void ALBRefreshClearGlass(UIVisualEffectView *view);
 UIUserInterfaceStyle AWESystemInterfaceStyle(void);
 BOOL ALB5Bool(NSString *key, BOOL fallback);
 void ALB5ScheduleIdleCollapse(void);
+BOOL ALBMaterialEnabled(void);
+UIUserInterfaceStyle ALBMaterialStyle(UIView *view, BOOL feedEligible);
 static BOOL gAWESettingsVisible;
 #import "../../ALBSettingsGlass.h"
