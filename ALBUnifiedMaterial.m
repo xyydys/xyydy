@@ -173,13 +173,13 @@ static NSArray<CALayer *> *ALBRenderLayers(UIView *view) {
         CALayer *layer = queue[i];
         // A view-backed layer is excluded unless its owner is a known,
         // noninteractive backdrop containing no foreground or control.
-        if ([layer.delegate isKindOfClass:UIView.class] && !ALBPureBackdropView(layer.delegate)) continue;
+        if ([layer.delegate isKindOfClass:UIView.class] && !ALBPureBackdropView((UIView *)layer.delegate)) continue;
         NSString *name = NSStringFromClass(layer.class).lowercaseString;
         NSString *label = (layer.name ?: @"").lowercaseString;
         if ([label containsString:@"lens"] || [label containsString:@"selection"] ||
             [label containsString:@"content"] || [label containsString:@"portal"]) continue;
         if ([name containsString:@"multilayer"] || [name containsString:@"backdrop"] || [name containsString:@"glass"] ||
-            ([layer.delegate isKindOfClass:UIView.class] && ALBPureBackdropView(layer.delegate))) {
+            ([layer.delegate isKindOfClass:UIView.class] && ALBPureBackdropView((UIView *)layer.delegate))) {
             [result addObject:layer];
         }
         [queue addObjectsFromArray:layer.sublayers ?: @[]];
@@ -382,7 +382,7 @@ void ALBMaterialApplyBar(UITabBar *bar, BOOL bottom) {
     if (!bar || !NSThread.isMainThread) return;
     if ([objc_getAssociatedObject(bar, &ALBApplyingKey) boolValue]) return;
     objc_setAssociatedObject(bar, &ALBApplyingKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    CATransaction.begin(); CATransaction.setDisableActions(YES);
+    [CATransaction begin]; [CATransaction setDisableActions:YES];
     ALBRegister(bar, bottom ? @"bar.bottom" : @"bar.top"); ALBApplyStyle(bar, YES);
     if (bottom) ALBBottomSource = bar;
     BOOL native26 = ALBMaterialEnabled() && ALBMaterialMode() == ALBMaterialNative26;
@@ -438,7 +438,7 @@ void ALBMaterialApplyBar(UITabBar *bar, BOOL bottom) {
     if (native26 && bottom && recipe.count) ALBBottomRecipe = [recipe copy];
     if (!native26) ALBBottomRecipe = nil;
     ALBSetAudit(bar, native26 && bottom ? @"preserved-bottom-native26" : applied ? @"shared-material" : @"unresolved-native-renderer", applied);
-    CATransaction.commit();
+    [CATransaction commit];
     objc_setAssociatedObject(bar, &ALBApplyingKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 

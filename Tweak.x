@@ -1076,8 +1076,6 @@ static void AWEHideAlbumMorphTintProbe(void);
 static CFTimeInterval gAWELastBottomHitDiagnosticTime = 0.0;
 
 static BOOL AWEInteractionDiagnosticsEnabled(void) {
-    if (ALBMaterialEnabled() && AWEOperatingSystemMajorVersion() >= 26)
-        return ALBMaterialStyle(window, YES);
     return [NSUserDefaults.standardUserDefaults
         boolForKey:kAWEInteractionDiagnosticEnabledDefaultsKey];
 }
@@ -17354,6 +17352,7 @@ static void AWELayoutTopLiquidGroup(AWETopLiquidGroupView *group,
     native.forceClear = NO;
     // Resolve the route now, even if the bottom controller has not laid out.
     // Both OS releases use the same source and Home/Friends protection.
+    UIView *container = group;
     UIUserInterfaceStyle groupStyle = ALBMaterialEnabled()
         ? ALBMaterialStyle(container, YES)
         : gAWEAlbumMorphLastAppliedStyle;
