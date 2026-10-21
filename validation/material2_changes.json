@@ -28,7 +28,7 @@
     },
     "ALBSidePalette.h": {
       "before": "beb4300c58c8239e397e27396e577abeaa941c26ee9b5faff9438201ed6fc678",
-      "after": "e0e8ae5ef9d58d5bb6c12385a4048d8629b6a990b52115a79190254c58a18e2d"
+      "after": "b40a29293b804d559f2f3a6bbd78e78a14de1343d502de514303f9edefed1751"
     },
     "MessageTopGlassV3.xm": {
       "before": "d123b22e9b238ce9f06d939d02b3f96e3183af7363dead4759784321bc0dad5c",
@@ -66,7 +66,7 @@
     "ALBGlassMaterials.h": "c004e65a9a880eb4ead750b1335525eeb8590ebf3e4f307ab1df4d1436a4f3b5",
     "CommentGlassDYKiller.xm": "c34740bf68d31363d2a155fe0d7f1a904ebe79bdd846f178137ef98047aa3a12",
     "ALBBottomSupport.swift": "bcfa1c1a86950b71cdfdcb1bc42035cfc78f9bbd24f6b135d9bd206601acba3e",
-    "ALBSidePalette.h": "e0e8ae5ef9d58d5bb6c12385a4048d8629b6a990b52115a79190254c58a18e2d",
+    "ALBSidePalette.h": "b40a29293b804d559f2f3a6bbd78e78a14de1343d502de514303f9edefed1751",
     "MessageTopGlassV3.xm": "709017caf7f3a088887fd2e3909b1968365fdd6b4066a7c5f61e73b0a476827c",
     "Tweak.x": "24fbf7a8a8d81b1a4e2fc3b2862f4bdf8520bd6d4a1966e714082f8bfc137971",
     "ALBTopMaterial.h": "f5f956c2d5d42442babb35a2fb475061cc3eac170cccd90126f2894b814e96cc",

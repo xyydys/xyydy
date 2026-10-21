@@ -635,7 +635,7 @@ static UIView *ALBPaletteFollowEntry(UIView *stack) {
 }
 - (void)layoutSubviews {
     [super layoutSubviews];
-    ALBMaterialApplyButton(self, YES);
+    ALBMaterialApplyButton((UIButton *)self, YES);
     CGFloat width=self.bounds.size.width, height=self.bounds.size.height;
     CGFloat top=MIN(MAX(self.safeAreaInsets.top+54, 100),height*0.25);
     CGFloat bottom=MIN(MAX(self.safeAreaInsets.bottom+64, 90),height*0.20);
