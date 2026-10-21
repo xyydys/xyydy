@@ -1,0 +1,8 @@
+v5 scope
+- comment glass: preserve v4 rounded glass, remove manual tint overlay, use native local-adaptive UIGlassEffect branch
+- comment geometry: clear/restore top 38-86pt black bars only while comment is visible
+- comment geometry: block StoryContainer vertical shifts and LivePhoto/MultiContent/ImageContent shrink while comment is visible
+- message page: message-list controller only; restore on leaving page so chat navigation is not modified
+- message page: transparent AWENavigationBar backdrop; extend actual message content host under nav while preserving resting row position with contentInset/offset conversion
+- message page: fixed 40pt clear-glass menu/search/add plates + 76x36 title plate; hide original artwork but keep original hit targets
+- probe: Documents/AwemeLiquidBar_comment_message_probe_v5.log

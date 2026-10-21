@@ -1,0 +1,60 @@
+--- /mnt/data/v10pristine/AwemeLiquidBar_1.0.58_auth47_ClearGlassNative_v10_project/MessageTopGlassV3.xm	2026-09-03 04:33:20.000000000 +0000
++++ /mnt/data/work_v11/AwemeLiquidBar_1.0.58_auth47_ClearGlassNative_v10_project/MessageTopGlassV3.xm	2026-09-03 05:31:13.679935051 +0000
+@@ -468,6 +468,7 @@
+     }
+     return nil;
+ }
++extern UIUserInterfaceStyle AWEAppResolvedAppearanceStyle(UIWindow *window);
+ static UIButtonConfiguration *AWEMessageClearGlassConfiguration(void);
+ static UIImage *AWEMessageSymbol(NSString *name, CGFloat size, UIImageSymbolWeight weight);
+ 
+@@ -583,12 +584,13 @@
+ 
+ static void AWEMessageApplyAdaptiveStyleToGlassButton(UIButton *button) {
+     if (!button) return;
+-    /* v10: iOS 27 Message buttons use the same un-tinted Clear glass as Home
+-       buttons and are not pinned to Light/Dark. iOS 26 continues to follow the
+-       message page/app appearance so its native Regular glass can adapt. */
+-    UIUserInterfaceStyle style = NSProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27
+-        ? UIUserInterfaceStyleUnspecified
+-        : AWEMessageResolvedAdaptiveInterfaceStyle();
++    /* v11: Message is deliberately standard Regular glass on both iOS 26 and
++       27. Resolve Douyin's app/window appearance and keep the material fixed
++       until the app itself changes Light/Dark. */
++    UIWindow *window = gAWEMessageActiveController.view.window;
++    UIUserInterfaceStyle style = AWEAppResolvedAppearanceStyle(window);
++    if (style != UIUserInterfaceStyleLight && style != UIUserInterfaceStyleDark)
++        style = AWEMessageResolvedAdaptiveInterfaceStyle();
+     if (button.overrideUserInterfaceStyle == style) return;
+     button.overrideUserInterfaceStyle = style;
+     [button setNeedsUpdateConfiguration];
+@@ -647,7 +649,7 @@
+         else cfg.image = AWEMessageSymbol(@"plus", 21.0, UIImageSymbolWeightRegular);
+         proxy.configuration = cfg;
+         proxy.tintColor = UIColor.labelColor;
+-        proxy.overrideUserInterfaceStyle = UIUserInterfaceStyleUnspecified;
++        proxy.overrideUserInterfaceStyle = AWEAppResolvedAppearanceStyle(gAWEMessageActiveController.view.window);
+     }
+ 
+     AWEMessageApplyAdaptiveStyleToGlassButton(proxy);
+@@ -712,10 +714,7 @@
+ static UIButtonConfiguration *AWEMessageClearGlassConfiguration(void) {
+     if (@available(iOS 26.0, *)) {
+         Class cls = NSClassFromString(@"UIButtonConfiguration");
+-        BOOL ios27 = NSProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27;
+-        SEL sel = NSSelectorFromString(ios27
+-            ? @"clearGlassButtonConfiguration"
+-            : @"glassButtonConfiguration");
++        SEL sel = NSSelectorFromString(@"glassButtonConfiguration");
+         if (cls && [cls respondsToSelector:sel]) return ((id (*)(id,SEL))objc_msgSend)(cls,sel);
+     }
+     return nil;
+@@ -763,7 +762,7 @@
+         cfg.image = nil;
+         button.configuration = cfg;
+         button.tintColor = UIColor.clearColor;
+-        button.overrideUserInterfaceStyle = UIUserInterfaceStyleUnspecified;
++        button.overrideUserInterfaceStyle = AWEAppResolvedAppearanceStyle(gAWEMessageActiveController.view.window);
+     }
+     AWEMessageApplyAdaptiveStyleToGlassButton(button);
+     CGRect desired = AWEMessagePlateFrame(navBar,index);

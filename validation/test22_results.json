@@ -1,0 +1,253 @@
+{
+  "version": "2.0.10-test22",
+  "host": "Linux",
+  "complete_apple_sdk_build": false,
+  "real_logos_execution": false,
+  "device_test": false,
+  "private_endpoint_execution": false,
+  "centre_avatar_form_implemented": false,
+  "checks": [
+    {
+      "name": "preflight",
+      "command": [
+        "sh",
+        "scripts/preflight.sh"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_s": 2.629,
+      "stdout": "2.0.10 TEST22 source/package preflight passed; compile and device testing still required.\nTEST22 native source contract passed (not an iOS compile/device test).\nTweak.x: boundary checks passed (234 original-call directives; not SDK compilation)\nCommentGlassDYKiller.xm: boundary checks passed (26 original-call directives; not SDK compilation)\nMessageTopGlassV3.xm: boundary checks passed (12 original-call directives; not SDK compilation)\n",
+      "stderr": ""
+    },
+    {
+      "name": "runtime_guards",
+      "command": [
+        "python3",
+        "scripts/check_runtime_guards.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_s": 1.539,
+      "stdout": "TEST17 extracted Swift scheduling: 8 scenarios passed (mock queue, no UIKit).\nTEST17 source guard assertions passed (not an iOS runtime/crash test).\n",
+      "stderr": ""
+    },
+    {
+      "name": "watchdog_guards",
+      "command": [
+        "python3",
+        "scripts/check_watchdog_guards.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_s": 0.871,
+      "stdout": "48 extracted frame-gate cases + no-shrink pass-through passed; no UIKit used.\nTEST18 source scope / scheduling / preservation checks passed. Not an iOS build or device test.\n",
+      "stderr": ""
+    },
+    {
+      "name": "right_persistence",
+      "command": [
+        "python3",
+        "scripts/check_right_persistence.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_s": 0.788,
+      "stdout": "TEST19 right persistence / material / touch-handler source checks passed; not an iOS build or device test.\n",
+      "stderr": ""
+    },
+    {
+      "name": "top_actions_and_preservation",
+      "command": [
+        "python3",
+        "scripts/check_test22.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_s": 0.92,
+      "stdout": "16 extracted tap/action gate scenarios passed; no UIKit events simulated.\nTEST22 source contracts and preserved baseline hashes passed; not an iOS build or device validation.\n",
+      "stderr": ""
+    },
+    {
+      "name": "endpoint_bridge_declaration_syntax",
+      "command": [
+        "python3",
+        "scripts/test_native_endpoint_syntax.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_s": 0.879,
+      "stdout": "{\n  \"scope\": \"production endpoint header plus invocation/request/readback functions\",\n  \"compile_mode\": \"host\",\n  \"apple_sdk_compile\": false,\n  \"runtime_test\": false,\n  \"note\": \"Non-Apple host passes use Foundation declarations, not an Apple ABI/platform compile.\",\n  \"results\": [\n    {\n      \"arch_label\": \"arm64\",\n      \"exit_code\": 0,\n      \"passed\": true,\n      \"stderr\": \"\"\n    },\n    {\n      \"arch_label\": \"arm64e\",\n      \"exit_code\": 0,\n      \"passed\": true,\n      \"stderr\": \"\"\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "name": "logos_line_tail_regression",
+      "command": [
+        "python3",
+        "scripts/test_logos_boundary.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_s": 0.882,
+      "stdout": "{\n  \"scope\": \"production two-method extraction + upstream line-tail model\",\n  \"real_logos_execution\": false,\n  \"compile_mode\": \"host\",\n  \"apple_sdk_compile\": false,\n  \"sdk_path\": null,\n  \"runtime_test\": false,\n  \"results\": [\n    {\n      \"arch\": \"arm64\",\n      \"case\": \"fixed\",\n      \"expected_success\": true,\n      \"compiler_exit_code\": 0,\n      \"passed\": true,\n      \"stderr\": \"\"\n    },\n    {\n      \"arch\": \"arm64\",\n      \"case\": \"test19_negative\",\n      \"expected_success\": false,\n      \"compiler_exit_code\": 1,\n      \"passed\": true,\n      \"stderr\": \"/tmp/alb-logos-boundary-dgjk8rjd/arm64_test19_negative.m:62:165: error: function definition is not allowed here\\n   62 | static void _logos_method$_ungrouped$AWEElementStackView$traitCollectionDidChange$(AWEElementStackView *self, SEL _cmd, UITraitCollection *previousTraitCollection) {\\n      |                                                                                                                                                                     ^\\n/tmp/alb-logos-boundary-dgjk8rjd/arm64_test19_negative.m:65:2: error: expected '}'\\n   65 | }\\n      |  ^\\n/tmp/alb-logos-boundary-dgjk8rjd/arm64_test19_negative.m:34:110: note: to match this '{'\\n   34 | static void _logos_method$_ungrouped$AWEElementStackView$layoutSubviews(AWEElementStackView *self, SEL _cmd) {\\n      |                                                                                                              ^\\n2 errors generated.\\n\"\n    },\n    {\n      \"arch\": \"arm64e\",\n      \"case\": \"fixed\",\n      \"expected_success\": true,\n      \"compiler_exit_code\": 0,\n      \"passed\": true,\n      \"stderr\": \"\"\n    },\n    {\n      \"arch\": \"arm64e\",\n      \"case\": \"test19_negative\",\n      \"expected_success\": false,\n      \"compiler_exit_code\": 1,\n      \"passed\": true,\n      \"stderr\": \"/tmp/alb-logos-boundary-dgjk8rjd/arm64e_test19_negative.m:62:165: error: function definition is not allowed here\\n   62 | static void _logos_method$_ungrouped$AWEElementStackView$traitCollectionDidChange$(AWEElementStackView *self, SEL _cmd, UITraitCollection *previousTraitCollection) {\\n      |                                                                                                                                                                     ^\\n/tmp/alb-logos-boundary-dgjk8rjd/arm64e_test19_negative.m:65:2: error: expected '}'\\n   65 | }\\n      |  ^\\n/tmp/alb-logos-boundary-dgjk8rjd/arm64e_test19_negative.m:34:110: note: to match this '{'\\n   34 | static void _logos_method$_ungrouped$AWEElementStackView$layoutSubviews(AWEElementStackView *self, SEL _cmd) {\\n      |                                                                                                              ^\\n2 errors generated.\\n\"\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "name": "primary_action_availability",
+      "command": [
+        "python3",
+        "scripts/check_primary_action_availability.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_s": 0.848,
+      "stdout": "{\n  \"test\": \"SDK-free extracted dispatch block availability\",\n  \"apple_sdk_compile\": false,\n  \"results\": [\n    {\n      \"case\": \"guarded_arm64_ios15\",\n      \"target\": \"arm64-apple-ios15.0\",\n      \"compiler_exit_code\": 0,\n      \"expected_success\": true,\n      \"passed\": true,\n      \"stderr\": \"\"\n    },\n    {\n      \"case\": \"guarded_arm64e_ios15\",\n      \"target\": \"arm64e-apple-ios15.0\",\n      \"compiler_exit_code\": 0,\n      \"expected_success\": true,\n      \"passed\": true,\n      \"stderr\": \"\"\n    },\n    {\n      \"case\": \"guarded_arm64_ios17_4\",\n      \"target\": \"arm64-apple-ios17.4\",\n      \"compiler_exit_code\": 0,\n      \"expected_success\": true,\n      \"passed\": true,\n      \"stderr\": \"\"\n    },\n    {\n      \"case\": \"unguarded_negative_control\",\n      \"target\": \"arm64-apple-ios15.0\",\n      \"compiler_exit_code\": 1,\n      \"expected_success\": false,\n      \"passed\": true,\n      \"stderr\": \"/tmp/alb-availability-kndw3uqj/unguarded_negative_control.m:35:31: error: 'performPrimaryAction' is only available on iOS 17.4 or newer [-Werror,-Wunguarded-availability-new]\\n   35 |                         [live performPrimaryAction];\\n      |                               ^~~~~~~~~~~~~~~~~~~~~\\n/tmp/alb-availability-kndw3uqj/unguarded_negative_control.m:13:1: note: 'performPrimaryAction' has been marked as being introduced in iOS 17.4 here, but the deployment target is iOS 15.0.0\\n   13 | - (void)performPrimaryAction __attribute__((availability(ios,introduced=17.4)));\\n      | ^\\n/tmp/alb-availability-kndw3uqj/unguarded_negative_control.m:35:31: note: enclose 'performPrimaryAction' in an @available check to silence this warning\\n   35 |                         [live performPrimaryAction];\\n      |                               ^~~~~~~~~~~~~~~~~~~~~ \\n1 error generated.\\n\"\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "name": "right_headers_syntax",
+      "command": [
+        "bash",
+        "scripts/check_right_header_syntax.sh"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_s": 0.061,
+      "stdout": "arm64 right header declaration-fixture syntax passed (no Apple SDK).\narm64e right header declaration-fixture syntax passed (no Apple SDK).\n",
+      "stderr": ""
+    },
+    {
+      "name": "swift_parse",
+      "command": [
+        "swiftc",
+        "-frontend",
+        "-parse",
+        "AwemeAlbumMorphBar.swift"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_s": 0.047,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "shell_syntax",
+      "command": [
+        "bash",
+        "-n",
+        "push_to_github.sh",
+        "build.sh",
+        "build_no_install.sh",
+        "scripts/preflight.sh"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_s": 0.002,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "Tests/scroll_intent_test.c",
+      "command": [
+        "bash",
+        "-c",
+        "clang -std=c11 -Wall -Wextra -Werror \"Tests/scroll_intent_test.c\" -lm -o \"/tmp/alb22-scroll_intent_test\" && \"/tmp/alb22-scroll_intent_test\""
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_s": 0.073,
+      "stdout": "scroll intent: up, down, reversal, dedup, horizontal, slow and invalid input passed\n",
+      "stderr": ""
+    },
+    {
+      "name": "Tests/right_layout_test.c",
+      "command": [
+        "bash",
+        "-c",
+        "clang -std=c11 -Wall -Wextra -Werror \"Tests/right_layout_test.c\" -lm -o \"/tmp/alb22-right_layout_test\" && \"/tmp/alb22-right_layout_test\""
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_s": 0.089,
+      "stdout": "right layout: coordinate transforms + icon-slot packing + repeated cycles passed\n",
+      "stderr": ""
+    },
+    {
+      "name": "Tests/right_persistence_test.c",
+      "command": [
+        "bash",
+        "-c",
+        "clang -std=c11 -Wall -Wextra -Werror \"Tests/right_persistence_test.c\" -lm -o \"/tmp/alb22-right_persistence_test\" && \"/tmp/alb22-right_persistence_test\""
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_s": 0.368,
+      "stdout": "right persistence: 1.3M stable cycles, 64 hide masks, cross-root inverse maps passed; old restore/apply negative control stays dirty\n",
+      "stderr": ""
+    },
+    {
+      "name": "ALBTopNative/Tests/window_geometry_test.c",
+      "command": [
+        "bash",
+        "-c",
+        "clang -std=c11 -Wall -Wextra -Werror \"ALBTopNative/Tests/window_geometry_test.c\" -lm -o \"/tmp/alb22-window_geometry_test\" && \"/tmp/alb22-window_geometry_test\""
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_s": 0.077,
+      "stdout": "top native window, platter and shared baseline geometry: PASS\n",
+      "stderr": ""
+    },
+    {
+      "name": "Tests/bottom_geometry_test.c",
+      "command": [
+        "bash",
+        "-c",
+        "clang -std=c11 -Wall -Wextra -Werror \"Tests/bottom_geometry_test.c\" -lm -o \"/tmp/alb22-bottom_geometry_test\" && \"/tmp/alb22-bottom_geometry_test\""
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_s": 0.091,
+      "stdout": "bottom geometry: native pair, pivot, 256000 idempotent layouts, reverse trajectory and interrupted animation passed\n",
+      "stderr": ""
+    },
+    {
+      "name": "Tests/download_state_test.c",
+      "command": [
+        "bash",
+        "-c",
+        "clang -std=c11 -Wall -Wextra -Werror \"Tests/download_state_test.c\" -lm -o \"/tmp/alb22-download_state_test\" && \"/tmp/alb22-download_state_test\""
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_s": 0.077,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "Tests/native_state_test.c",
+      "command": [
+        "bash",
+        "-c",
+        "clang -std=c11 -Wall -Wextra -Werror \"Tests/native_state_test.c\" -lm -o \"/tmp/alb22-native_state_test\" && \"/tmp/alb22-native_state_test\""
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_s": 0.073,
+      "stdout": "native-state predicates: BOOL ABI checks, unknown/single-item/transition/expanded/compact/invalid geometry passed\n",
+      "stderr": ""
+    },
+    {
+      "name": "Tests/native_endpoint_policy_test.c",
+      "command": [
+        "bash",
+        "-c",
+        "clang -std=c11 -Wall -Wextra -Werror \"Tests/native_endpoint_policy_test.c\" -lm -o \"/tmp/alb22-native_endpoint_policy_test\" && \"/tmp/alb22-native_endpoint_policy_test\""
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "elapsed_s": 0.076,
+      "stdout": "Native endpoint policy: 71 assertions passed (ABI/name filter only; not UIKit execution).\n",
+      "stderr": ""
+    }
+  ]
+}

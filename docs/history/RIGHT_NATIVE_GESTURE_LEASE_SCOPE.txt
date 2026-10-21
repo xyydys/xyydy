@@ -1,0 +1,15 @@
+AwemeLiquidBar 2.0 auth47 — RightNativeGestureLease
+
+Goal: eliminate the hand-authored scale/translation "press" animation that visibly
+jittered, while keeping right Like/Comment/Favorite/Share clickable.
+
+Architecture:
+- Visible right glass UIButton is the physical touch owner, exactly as top Search.
+- The original Douyin business tap recognizer is temporarily rehosted onto that
+  glass UIButton, keeping its original target/action/private recognizer object.
+- cancelsTouchesInView=NO lets UIKit UIButton tracking and the original Douyin
+  recognizer observe the same physical touch.
+- No manual transform, no synthetic TouchUpInside business forwarding.
+- If no safe business recognizer can be found, fail open to the original
+  AWEFeedVideoButton (click works, native glass press is sacrificed).
+- Old opaque settings page is unchanged.

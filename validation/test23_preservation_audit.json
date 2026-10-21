@@ -1,0 +1,73 @@
+{
+  "baseline": "uploaded TEST22 project",
+  "expected_unchanged_sha256": {
+    "ALB22NativeEndpoint.h": "6958b429375912dc94fbad1157960815cd0fdca7ea64127ee90cce092fc97f37",
+    "ALB5Options.h": "1ebdc5f9789cb2f5993c8c9ea9ffbfc59ae2bffc89b4635ef877a321fa323fcb",
+    "ALB7BottomMath.h": "5dae13ed134eedaac6d4f931f96c11cd4afe5f54a074aa84f846212fed022dce",
+    "ALB8Profile.h": "b66a199bc853ca163edf7236b72fb4d2bf0262b9cb351a705a3d4eb02a41d9c4",
+    "ALBAlbumVideoExporter.h": "8e0af908bdc29259981a1127da018a227ef0857e4375214924ccb70d4c02b476",
+    "ALBAvatarMenuTouch.h": "c8fc559ec32b79ecb81f70b9f9377eb335e94702b022603749678a2736d6b642",
+    "ALBClearContrast.h": "05dc02e607faf26025715f3ec0a3ccd195cdd8aed0ddce36670b3828fb08da1d",
+    "ALBDownloadJob.h": "994615b02723162eae8ebbcc2fa8e74f46b0711c53bfc3dba0ac73e883788cc5",
+    "ALBDownloadState.h": "3988f4b2d718e8ab696018cdfd51a4f837351b5f084a576bcae2eedac9abde63",
+    "ALBGlassMaterials.h": "6f028f675525b46f19bb1227800e375708e2e6496c9252abbf8d59a279fe1e64",
+    "ALBNativeInteraction.h": "71aae5d4869dee5820fc2e065fdaeba9e7bae8bd29fa3f2dfb12aa6a4657ad9d",
+    "ALBNativeMinimize.h": "c547b6751944467b324aeacbe1f5479c517046377444e613768b59f7ab9296b3",
+    "ALBNativeState.h": "e303f7a464ff1a0856db6c509e98ca6bf2e96bf86f1fad720e50dc12c49284f3",
+    "ALBRootScroll.h": "9641e3ef1787c0616cf57b3ec12f4db2a55bccad85b426b13f30503aef9b4e7b",
+    "ALBScrollIntent.h": "ff46ae61dec0a7846cdcdd94b6d327afc15122800bedc81a0be1380fd9b1067e",
+    "ALBSettingsGlass.h": "f7ec57fbb411bbd9b4a448101d2480985865846f211930212e14bbfcbdf0ff89",
+    "ALBSidePalette.h": "1491c4a2e46a26a4ee0c9472a70b3c67dfca0565c75e02f47b793c514e9c3fee",
+    "ALBTopNative/ALBCompactGeometry.h": "cda1ed80b1e8d98cf63165efcb27b8dce0e5bc06085f9b42863e712b25fddf09",
+    "ALBTopNative/ALBNativeBarSurface.h": "cf040bb4a537f761744b2aa9dc4c0f2c3b389a2a325deb302d1407c656646dab",
+    "ALBTopNative/ALBTopNativeGroup.h": "1b06353f3bffc98c697d804d22b446394eca79087a6baf0a9d219807dc69855d",
+    "AwemeAlbumMorphBar.swift": "c5c7ba9657e421bfce0f5d7f37a3335ac5446a2ab27f7a8db90121ca024e744d",
+    "AwemeLiquidBar-Bridging-Header.h": "15322845ac77235d1e99cc6ee3b6c2a2c107c5a6273ff2fc73de5696dacfdb42",
+    "CommentGlassDYKiller.xm": "d2647669fd79d70d59945ad5ffc215df60ce04d018a5099eb30f42131dcf51b0",
+    "MessageTopGlassV3.xm": "8ec1835ac9e6a55ae086df9a436cf7e78fba6c4fd591a578353a472931bac355",
+    "Tests/Support/math.h": "45e623e3904e2d16bfb914d4bec62e3c2b929acf86510505a390cac1c2021fd8",
+    "Tests/Support/right_layout_declarations.m": "f9b1935f11a066a707e1797c5e9f139b9769326eb9ea3402d2b6e629884c97ae",
+    "WCLGBackdropLayer.h": "92567c67756429bbc9514fc6c407af786eb84b7d7efcea66c29c4b9c2f8975d0",
+    "WCLGBackdropLayer.m": "f84ddc951556a126035206069a0fc0f298f5effaf279f26ac3de9a347c52987e",
+    "WCLGEdgeEffect.h": "938b609230f8cc08f2577690a294f0c9d4ef1f1b6b3b0d3481b746b50eb2fabd",
+    "WCLGEdgeEffect.m": "b22253f1e354257eb97a415a3e902949c733e13be89aca00bbc4d82f9fa572c2",
+    "WCLGEdgeGradientTables.h": "93e3b224f6741d2da504c7a62b77eaeec177f5f6131cdb82fc219f0b8de474bd",
+    "WCLGEdgeGradientTables.m": "b79150689859d87497e9bdd446e0a22985e52c57427d72f7ced72beaee6d9b6e"
+  },
+  "intentionally_changed_runtime_files": {
+    "ALB22NativeMethodPolicy.h": {
+      "test22_sha256": "8221c23421ce655549b5ad5e207a060bdf7832c952885d5ec385d0793b95af9d",
+      "test23_sha256": "c200f8a715c0bbce5846c84996270f110a246bddb0c0806037a92d3f8b2bcab1"
+    },
+    "ALB5BottomGeometry.m": {
+      "test22_sha256": "df35dfaa0b9b0990502e4383b74922d29b4f7dba29f27d14c45baf72054fc6a7",
+      "test23_sha256": "81d0ada6d69d36f23736e598ca31128a6be5fa9d6ed302a405063dc9b2730d50"
+    },
+    "ALB5RightLayout.h": {
+      "test22_sha256": "9d447a4fc2c18218f50b176f193304aba12e4f5b29cd96ea875b0cc52677c6c7",
+      "test23_sha256": "2c3b5b0f18093e9397a342b1afd8b329dc4c8d7971c1c5a775e5f56aa6d42892"
+    },
+    "ALB5Settings.h": {
+      "test22_sha256": "dde71ab59ebea9882998fdb6b685106fe6c0a139d19b3fef4f3db0b264b6f2df",
+      "test23_sha256": "478652fba5c32a0097d6c3c678ff2bad680f5d711f912fca1faa6e64cd086539"
+    },
+    "ALBTopNative/ALBTopNativeGroup.m": {
+      "test22_sha256": "719e57a227c26fc0aa3741d34295ecb854fbc524edc29ffe1aa50dd431c17d41",
+      "test23_sha256": "c5218dabff04abc70dc3a8c69d7c373e7be549ef472284de35b3277d365a0c4d"
+    },
+    "Tweak.x": {
+      "test22_sha256": "84a0a416ea31a47f96444b016230e07256d9c869c65a2169b760f0824c9d38fe",
+      "test23_sha256": "599f5d2c709ab9a8bb1f493d7b0fe74cdaeee881c9d3a72ca38e26f9d1b74430"
+    }
+  },
+  "new_runtime_headers": [
+    "ALBTopNative/ALB23LensPolicy.h"
+  ],
+  "notes": [
+    "Raw Method ABI dispatch replaces NSInvocation for minimization only.",
+    "Top glyph/portal and lens parent no longer suppressed.",
+    "Right four-action row shifts added; share and like endpoints kept.",
+    "Bottom geometry implementation changes only TEST17 -> TEST23 diagnostic text.",
+    "No UIKit runtime or full iOS build is claimed by this audit."
+  ]
+}

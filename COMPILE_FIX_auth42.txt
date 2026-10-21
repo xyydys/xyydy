@@ -1,0 +1,6 @@
+AwemeLiquidBar 1.0.56c16 auth42 compile fix
+
+- Fixed one missing comma in kAWEAuthorizationDigestTags between auth40 and the two auth42 tag values.
+- Authorization membership and all 42 masked digests/tags are unchanged.
+- Added a local preflight check that validates tag-initializer comma syntax before cloud build.
+- No runtime/UI/fullscreen/interaction behavior changed.

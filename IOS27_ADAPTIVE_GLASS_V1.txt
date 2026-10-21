@@ -1,0 +1,7 @@
+iOS 27 adaptive glass test
+- Public clear Liquid Glass variant for feed overlay controls.
+- System Clear/Tinted preference remains UIKit-owned.
+- Forced-dark is explicit only; default is adaptive.
+- Feed light/dark follows Douyin's own resolved white/black source glyph tint.
+- Re-resolves native bar appearance after returning from system Settings.
+Authorization table unchanged from auth46 baseline.

@@ -1,0 +1,201 @@
+{
+  "version": "2.0.10 TEST28",
+  "baseline": "delivered TEST27 FIX1",
+  "apple_sdk_compile": false,
+  "swift_compiler_available": false,
+  "device_test": false,
+  "tests": [
+    {
+      "command": "python3 scripts/check_runtime_guards.py",
+      "status": "not_run_missing_compiler",
+      "exit_code": 1,
+      "output": "swiftc required for scheduling test\n"
+    },
+    {
+      "command": "cc -std=c11 -Wall -Wextra -Werror Tests/scroll_intent_test.c; execute",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "scroll intent: directions, reversal, dedup and manual-vs-idle feed ownership passed\n"
+    },
+    {
+      "command": "cc -std=c11 -Wall -Wextra -Werror Tests/native_state_test.c; execute",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "native-state predicates: BOOL ABI checks, unknown/single-item/transition/expanded/compact/invalid geometry passed\n"
+    },
+    {
+      "command": "cc -std=c11 -Wall -Wextra -Werror Tests/right_layout_test.c; execute",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "right layout: coordinate transforms + icon-slot packing + repeated cycles passed\n"
+    },
+    {
+      "command": "cc -std=c11 -Wall -Wextra -Werror Tests/right_persistence_test.c; execute",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "right persistence: 1.3M stable cycles, 64 hide masks, cross-root inverse maps passed; old restore/apply negative control stays dirty\n"
+    },
+    {
+      "command": "cc -std=c11 -Wall -Wextra -Werror ALBTopNative/Tests/window_geometry_test.c; execute",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "top native window, platter and shared baseline geometry: PASS\n"
+    },
+    {
+      "command": "cc -std=c11 -Wall -Wextra -Werror Tests/bottom_geometry_test.c; execute",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "bottom geometry: native pair, pivot, 256000 idempotent layouts, reverse trajectory and interrupted animation passed\n"
+    },
+    {
+      "command": "cc -std=c11 -Wall -Wextra -Werror Tests/download_state_test.c; execute",
+      "status": "passed",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "command": "cc -std=c11 -Wall -Wextra -Werror Tests/native_endpoint_policy_test.c; execute",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "Native endpoint policy: 71 assertions passed (ABI/name filter only; not UIKit execution).\n"
+    },
+    {
+      "command": "cc -std=c11 -Wall -Wextra -Werror Tests/test23_regression_test.c; execute",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "TEST23: raw runtime ABI / portal-safe policy / row-spacing invariants passed (C only, no UIKit).\n"
+    },
+    {
+      "command": "sh scripts/preflight.sh",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "2.0.10 TEST28 source/package preflight passed; compile and device testing still required.\nTEST28 native source contract passed (not an iOS compile/device test).\nTweak.x: boundary checks passed (236 original-call directives; not SDK compilation)\nCommentGlassDYKiller.xm: boundary checks passed (26 original-call directives; not SDK compilation)\nMessageTopGlassV3.xm: boundary checks passed (12 original-call directives; not SDK compilation)\n"
+    },
+    {
+      "command": "python3 scripts/check_test24.py",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "TEST24 production-source invariants passed; not an iOS build, native-animation test, or device test.\n"
+    },
+    {
+      "command": "python3 scripts/check_right_persistence.py",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "TEST19 right persistence / material / touch-handler source checks passed; not an iOS build or device test.\n"
+    },
+    {
+      "command": "python3 scripts/check_watchdog_guards.py",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "48 extracted frame-gate cases + no-shrink pass-through passed; no UIKit used.\nTEST18 source scope / scheduling / preservation checks passed. Not an iOS build or device test.\n"
+    },
+    {
+      "command": "python3 scripts/test_bottom_scale_feedback.py",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "Bottom scale: 6100 anchor/idempotence traces (610000 model passes); no UIKit/device test.\n"
+    },
+    {
+      "command": "bash -n push_to_github.sh",
+      "status": "passed",
+      "exit_code": 0,
+      "output": ""
+    }
+  ],
+  "crash_evidence": {
+    "input_sha256": "632c3ba7928ca3b285de851a2cdab9826b6a5fd0e8f9d5a59c36b4051f7bfc81",
+    "termination": {
+      "code": 2343432205,
+      "flags": 6,
+      "namespace": "FRONTBOARD",
+      "reasons": [
+        "<RBSTerminateContext| domain:10 code:0x8BADF00D explanation:scene-update watchdog transgression: app<com.ss.iphone.ugc.Aweme(FEEDEEEE-DDDD-CCCC-BBBB-0000000001F5)>:12523 exhausted real (wall clock) time allowance of 10.00 seconds",
+        "ProcessVisibility: Background",
+        "ProcessState: Running",
+        "WatchdogEvent: scene-update",
+        "WatchdogVisibility: Background",
+        "WatchdogCPUStatistics: (",
+        "\"Elapsed total CPU time (seconds): 37.390 (user 26.060, system 11.330), 63% CPU\",",
+        "\"Elapsed application CPU time (seconds): 10.458, 18% CPU\"",
+        ")",
+        "ThermalInfo: (",
+        "\"Thermal Level:   4\",",
+        "\"Thermal State:   serious\"",
+        ") reportType:CrashLog maxTerminationResistance:Interactive>"
+      ]
+    },
+    "plugin_uuid": "ab32436e-767a-3656-b1d7-7647e6ee2544",
+    "matching_binary_available": false,
+    "symbolication": "not possible without matching dylib/dSYM/linkmap; code fixes address observed layout class of failure"
+  },
+  "new_features": [
+    "center artwork translation/fade and larger animated avatar",
+    "consistent search material with explicit clear fallback and brief glass-only settling",
+    "idempotent bottom scaling and bounded foreground-only background scans",
+    "shop/favorites/grid bottom recovery",
+    "top search real touch and menu dismissal callback",
+    "comment media restore and zero-state clear/frosted option",
+    "clear half/full settings sheet and frosted section cards",
+    "clean-screen avatar hit region and per-action setting",
+    "13 sortable/enabled panel actions and custom text color",
+    "opt-in native danmaku glass",
+    "message header inward positioning with actual hit geometry"
+  ],
+  "user_requested_preservation_changes": {
+    "ALBAvatarMenuTouch.h": "clean-screen avatar menu hit target",
+    "ALBSidePalette.h": "new sortable actions and stable/custom text ink",
+    "ALBSettingsGlass.h": "clear half/full settings sheet and frosted section cards",
+    "MessageTopGlassV3.xm": "message header action inset with matching touch rect",
+    "ALBClearContrast.h": "responsive per-item contrast and explicit custom ink",
+    "ALBTopNative/ALBTopNativeGroup.h": "top native action touch/lifecycle support",
+    "ALB5Options.h": "shared sanitized action order used by panel and settings sorting",
+    "ALBNativeInteraction.h": "message proxy navigation-parent opt-in; right-column/material byte contract retained by exact reverse-diff check"
+  },
+  "changed_files": [
+    ".github/workflows/build.yml",
+    "ALB5BottomGeometry.m",
+    "ALB5Options.h",
+    "ALB5Settings.h",
+    "ALBAvatarMenuTouch.h",
+    "ALBCenterMorphGeometry.swift",
+    "ALBCenterMorphSurface.swift",
+    "ALBClearContrast.h",
+    "ALBDanmakuGlass.h",
+    "ALBNativeInteraction.h",
+    "ALBSettingsGlass.h",
+    "ALBSidePalette.h",
+    "ALBTopNative/ALBTopNativeGroup.h",
+    "ALBTopNative/ALBTopNativeGroup.m",
+    "AwemeAlbumMorphBar.swift",
+    "CHANGELOG_TEST28.md",
+    "CommentGlassDYKiller.xm",
+    "DIAGNOSIS_TEST28.md",
+    "MessageTopGlassV3.xm",
+    "README.md",
+    "Tests/center_morph_geometry_test.swift",
+    "Tweak.x",
+    "VALIDATION.md",
+    "control",
+    "push_to_github.sh",
+    "scripts/check_native_contract.py",
+    "scripts/check_right_persistence.py",
+    "scripts/check_watchdog_guards.py",
+    "scripts/preflight.sh",
+    "scripts/test_bottom_scale_feedback.py",
+    "validation/test28_preservation_audit.json"
+  ],
+  "remaining_device_checks": [
+    "UIKit Swift/ObjC compilation in supplied Xcode workflow",
+    "native snapshot lens/material fidelity and press animation",
+    "search recognizer timing and native menu appearance",
+    "current Douyin grid/zero-comment/follow/danmaku variants",
+    "comment lift/return and scaling performance on device"
+  ],
+  "notes": [
+    "C arithmetic/model and source checks do not prove UIKit rendering or device timing.",
+    "Runtime source uses no newly invented business selector for follow/share/save actions.",
+    "Native UIMenu follows system appearance; clear opacity is not guaranteed.",
+    "Unknown optional runtime entry variants retain original button or report unavailable.",
+    "No web searches were used in this revision."
+  ]
+}

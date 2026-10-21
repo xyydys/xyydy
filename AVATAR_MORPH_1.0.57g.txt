@@ -1,0 +1,7 @@
+1.0.57g avatar morph probe
+- Clean baseline: 1.0.57c layout/logic, not 57e/57f.
+- Main controller remains exactly four regular pages + one native UISearchTab: Home/Friends/Messages/Profile | Search.
+- Avatar is rendered by a separate helper UITabBarController containing one inert regular tab + one UISearchTab, then cropped to expose only the helper's native Search surface. It therefore never participates in the main controller's five-tab accounting.
+- Avatar helper uses the same native UISearchTab renderer as Search; no UIButton glass material is drawn for the avatar.
+- Initial state is expanded. Page changes only refresh the 5 s idle timer. Home upward swipe may still collapse immediately. Avatar tap toggles only expansion.
+- During collapse the main bar keeps the 57c spring/mask animation; after completion it is actually hidden to eliminate the lingering native platter/search residue. Expanding unhides it at zero-width before animating it back.

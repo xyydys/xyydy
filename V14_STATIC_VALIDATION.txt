@@ -1,0 +1,17 @@
+AwemeLiquidBar 1.0.58 auth47 v14 StableTouch static validation
+
+PASS: scripts/preflight.sh
+PASS: Swift frontend parse (inside preflight)
+PASS: shell syntax (inside preflight)
+PASS: no UIApplication sendEvent hook
+PASS: no begin/continue/endTracking foreign UITouch bridge
+PASS: non-cancelling simultaneous press/stretch driver remains
+PASS: avatar passive glass rollback
+PASS: same-style/music passive 50.16 pt glass rollback
+PASS: clean-screen visible avatar glass hidden; transparent exit menu target retained
+PASS: clean-screen exit profile re-anchor present
+PASS: iOS 27 probe logging diagnostic-only
+PASS: message probe logging diagnostic-only
+PASS: Objective-C/Objective-C++ delimiter audit
+
+Cloud Xcode27/Theos link/build still requires the user's GitHub Actions environment.

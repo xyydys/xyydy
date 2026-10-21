@@ -1,0 +1,28 @@
+--- /mnt/data/work_v9/AwemeLiquidBar_1.0.58_auth47_PageFixedGlass_v9_project/MessageTopGlassV3.xm	2026-09-02 19:15:07.000000000 +0000
++++ /mnt/data/work_v10/AwemeLiquidBar_1.0.58_auth47_ClearGlassNative_v10_project/MessageTopGlassV3.xm	2026-09-03 04:33:20.378296344 +0000
+@@ -583,7 +583,12 @@
+ 
+ static void AWEMessageApplyAdaptiveStyleToGlassButton(UIButton *button) {
+     if (!button) return;
+-    UIUserInterfaceStyle style = AWEMessageResolvedAdaptiveInterfaceStyle();
++    /* v10: iOS 27 Message buttons use the same un-tinted Clear glass as Home
++       buttons and are not pinned to Light/Dark. iOS 26 continues to follow the
++       message page/app appearance so its native Regular glass can adapt. */
++    UIUserInterfaceStyle style = NSProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27
++        ? UIUserInterfaceStyleUnspecified
++        : AWEMessageResolvedAdaptiveInterfaceStyle();
+     if (button.overrideUserInterfaceStyle == style) return;
+     button.overrideUserInterfaceStyle = style;
+     [button setNeedsUpdateConfiguration];
+@@ -707,7 +712,10 @@
+ static UIButtonConfiguration *AWEMessageClearGlassConfiguration(void) {
+     if (@available(iOS 26.0, *)) {
+         Class cls = NSClassFromString(@"UIButtonConfiguration");
+-        SEL sel = NSSelectorFromString(@"glassButtonConfiguration");
++        BOOL ios27 = NSProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27;
++        SEL sel = NSSelectorFromString(ios27
++            ? @"clearGlassButtonConfiguration"
++            : @"glassButtonConfiguration");
+         if (cls && [cls respondsToSelector:sel]) return ((id (*)(id,SEL))objc_msgSend)(cls,sel);
+     }
+     return nil;

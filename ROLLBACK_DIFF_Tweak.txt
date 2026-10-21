@@ -1,0 +1,83 @@
+--- 
+
++++ 
+
+@@ -4136,20 +4136,9 @@
+
+        matcher controller-scoped and require detail/session/input semantics so
+        the root Messages tab itself is not mistaken for a conversation. */
+     BOOL directConversation =
+-        [className isEqualToString:@"IESIMInputViewController"] ||
+-        (controllerLike &&
+-         ([lower containsString:@"conversation"] ||
+-          [lower containsString:@"chatroom"] ||
+-          [lower containsString:@"directmessage"] ||
+-          [lower containsString:@"messagedetail"] ||
+-          [lower containsString:@"privatechat"] ||
+-          [lower containsString:@"singlechat"] ||
+-          [lower containsString:@"sessiondetail"] ||
+-          (([lower hasPrefix:@"aweim"] || [lower hasPrefix:@"iesim"] ||
+-            [lower containsString:@".im"] || [lower containsString:@"_im"])
+-           && ([lower containsString:@"chat"] ||
+-               [lower containsString:@"session"] ||
+-               [lower containsString:@"input"]))));
++        [className isEqualToString:@"AWEIMMessageBaseViewController"] ||
++        ([lower containsString:@"conversation"] && controllerLike) ||
++        ([lower containsString:@"chatroom"] && controllerLike);
+ 
+     BOOL commentDestination =
+         [className isEqualToString:@"AWECommentContainerViewController"] ||
+@@ -4764,19 +4753,10 @@
+
+                                                BOOL animated) {
+     if (!gAWEAlbumMorphController || !gAWEAlbumMorphOverlayWindow) return;
+     fraction = MIN(MAX(fraction, 0.0), 1.0);
+-    /* Steady-state recovery must never resurrect the overlay on a suppressed
+-       route.  During an interactive RETURN, however, the departing chat /
+-       settings controller remains registered until completion.  Allow only
+-       the already-registered reveal coordinator to expose the exact
+-       percentComplete fraction; cancellation settles it back to zero. */
+-    BOOL interactiveReveal =
+-        (gAWEBarTransitionMaskMode == AWEBarTransitionMaskModeReveal &&
+-         gAWEBarVisibilityCoordinator &&
+-         gAWEBarVisibilityCoordinator.isInteractive) ||
+-        AWEReturnRevealGraceIsActive();
+-    if (fraction > 0.0 && AWECurrentRouteSuppressesBar() && !interactiveReveal) {
+-        fraction = 0.0;
+-    }
++    /* No recovery caller may resurrect the bottom overlay on top of a modal
++       share/publish/commerce route.  This guards against late coordinator and
++       lifecycle callbacks that arrive after route registration. */
++    if (fraction > 0.0 && AWECurrentRouteSuppressesBar()) fraction = 0.0;
+     BOOL changed = fabs(gAWEBarLastVisibleFraction - fraction) > 0.002;
+     gAWEBarLastVisibleFraction = fraction;
+ 
+@@ -4829,25 +4809,12 @@
+
+ 
+     gAWEBarStableStateInitialized = YES;
+     gAWEBarStableVisible = targetVisible;
+-    if (!context.isCancelled && mode == AWEBarTransitionMaskModeReveal) {
+-        /* The departing chat/settings controller may remain in the weak route
+-           registry for one more lifecycle callback after the coordinator hits
+-           100%. Keep only a very short reveal grace so that stale registration
+-           cannot snap a fully revealed LiquidBar back to zero. */
+-        gAWEReturnRevealGraceUntil = CACurrentMediaTime() + 0.20;
+-    } else if (context.isCancelled) {
+-        gAWEReturnRevealGraceUntil = 0.0;
+-    }
+-    /* Apply the final reveal while the interactive coordinator/mode are still
+-       registered. Sensitive chat/settings routes are not unregistered until
+-       their disappearance callback, so clearing these first would clamp the
+-       final 100% reveal back to zero for one hand-off frame. */
++    gAWEBarTransitionMaskMode = AWEBarTransitionMaskModeNone;
++    gAWEBarVisibilityCoordinator = nil;
+     AWEApplyAlbumMorphVisibleFraction(
+         targetVisible ? 1.0 : 0.0,
+         context.isCancelled ? @"transition.cancelled" : @"transition.completed",
+         NO);
+-    gAWEBarTransitionMaskMode = AWEBarTransitionMaskModeNone;
+-    gAWEBarVisibilityCoordinator = nil;
+     AWEScheduleTransitionRecovery();
+ }
+ 

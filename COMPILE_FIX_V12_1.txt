@@ -1,0 +1,10 @@
+AwemeLiquidBar 1.0.56c16 auth44 v12.1 compile fix
+
+Fixed GitHub Actions compile error in MessageTopGlassV3.xm line 629.
+The variadic C function AWEMessageProbe(...) was accidentally closed with `];` instead of `);`.
+No functional v12 log-guided behavior was rolled back.
+
+Validation performed:
+- balanced (), [], {} across MessageTopGlassV3.xm, CommentGlassDYKiller.xm and Tweak.x
+- scripts/preflight.sh
+- zip integrity test

@@ -1,0 +1,152 @@
+{
+  "baseline": "AwemeLiquidBar_2.0.10_TEST31_SETTINGS_project.zip",
+  "current_revision": "2.0.10 TEST32 REPAIR",
+  "scope": "capture-guided repairs across bottom, top, clean-screen, shop/grid, comments and right-tail; retains TEST31 settings fixes",
+  "changed_sha256": {
+    "scripts/check_repro_capture.py": {
+      "before": "0aa0d66466b153fd4c4c34888c6d16440b2ed3c4a6c2ef5d06e9b05e4c216546",
+      "after": "f9cad865bbcd4bbc48448140b3880a3ab73dd0895488479215a13ddc43c5f84e"
+    },
+    "Tests/right_tail_anchor_test.c": {
+      "before": "f76067e6b89e91c0278be40b63f72a8fc62a05c9ea141183d886e617f6af67c4",
+      "after": "f1da3f2cb669fd6e85298b5b4849e9da0c1e1b08d9b84920d39f53b8df98a002"
+    },
+    "ALB5BottomGeometry.m": {
+      "before": "98330a5c0b76dfa1b374b5505689cbcdc82f7c226a4dcb5567224ad63357693a",
+      "after": "a9e7535a1acd9a87c6aa3cf4717a58dccae5d37d0af9a9ea2c57cb2a6dbaf388"
+    },
+    "ALB5RightLayout.h": {
+      "before": "a683de91b93e734b6512616dcfc6a90651ad5c3f0fc5bc87d1a5a4f46bbdb42a",
+      "after": "ebaf9c0c69674d0218bb67c1beed3d00f4e22c1449f77716a9bb235d0d1c43a3"
+    },
+    "ALBTopNative/ALBTopNativeGroup.h": {
+      "before": "04793197c816dc39ce0f934d58472aea48c7863adbdd7cb74fd6da567f1b65ac",
+      "after": "4bf450d343da8d3ecf3c0d93c6201d5774b910e99e77d9cb26b52b63d02416d4"
+    },
+    "ALBTopNative/ALBTopNativeGroup.m": {
+      "before": "351539347122c914a0e46d5c5460c0ee2bc6fa72c3c74040b67a0448e3db75d9",
+      "after": "4706ef7245669ae45985584e89cbc0b6213acff692621afefec2c33d70347e27"
+    },
+    "Tweak.x": {
+      "before": "ed8f5a99380fd733d1270881f6414feb071e203cd0087a8117d4a311ef481e6b",
+      "after": "e31febcffa6ecf8b2c5d4c72b6b7820db7abf1261c3c6dd936795f8b539bbc25"
+    },
+    "AwemeAlbumMorphBar.swift": {
+      "before": "a711acdf6b9f9f5cb857d569c331b4bfb5884203f781d08a60ac75413cc2ea5b",
+      "after": "e2128bcb91953138ef19056e6991dbf5a764d90589509d8b8e765fd5b938db62"
+    },
+    "ALBCenterMorphSurface.swift": {
+      "before": "6c54cad27139ead79d3f39e7f3ff158530bb3556d4f3f4ec448a47a6509e5424",
+      "after": "e8cec5f3f5854b16e474e07acfaf4a0492174865f60825e19f697a7f4bf0a64d"
+    },
+    "AwemeLiquidBar-Bridging-Header.h": {
+      "before": "a5c457c4388d6bcf758adc7167851ef2c60044783a0a960867bf31e0754eae58",
+      "after": "a123ba545dc4fd639fca317ff0f331716dd4d3d8b7bc68aea6662ec8c93f70e5"
+    },
+    "CommentGlassDYKiller.xm": {
+      "before": "ae7d1458263eaa80b386f79401d369c719c1b4418f2e194c9819741b2d78837f",
+      "after": "8f238e0ffae26c4bd4be258ce4c4653e5cbda28985c26cac9912484949e8d176"
+    },
+    "ALBAvatarMenuTouch.h": {
+      "before": "907e210a5dda983a3a4e49a710b7438af8fbb7902a3b5757377fefd96ed9ef30",
+      "after": "beb56766a44d705dc5af1ca2356f3be8f74615b8d3dfba3f98ab7f2e1978f138"
+    },
+    "control": {
+      "before": "73fd528cdab2c5209987bf327ce01d55dff22762a83b11959101408ae04d78a3",
+      "after": "ccecb7478ed1a846f2995a9cc67c79bc9ab82cd71b9434456d50a98380f2791a"
+    },
+    "scripts/preflight.sh": {
+      "before": "a5c754041c7adbf4a7029536a01f067d4450a213f1354ddd27919705057f77af",
+      "after": "6a0a70263055599c960b59e0f84d436b5dcce1a2d9ecf81357d75340601059cd"
+    },
+    "scripts/check_native_contract.py": {
+      "before": "21784ad395ad10f73dfeccd595c1cd96a13e37d94131fc18373a355be04ef9b4",
+      "after": "2c30928186c6220995f475469b3c47f7d8b98fbd03d17e038bb014ec674a9173"
+    },
+    "scripts/check_primary_action_availability.py": {
+      "before": "0df1e27a392de277de15c06d8eb46b78416fe562e9eb1faa4987f91bb97b8b36",
+      "after": "d9dd4f3b5ac4be7e6ae74092558c8c29b3274c31a493484681cd81afce6375dc"
+    },
+    "scripts/check_right_persistence.py": {
+      "before": "8e8353f4967f935950e581ced27a316dbfcbf9325f84c8028fbf4c4f1ceca6a0",
+      "after": "ca9f455b5437fe43d511ce7da448c965a3ae8814e096cbef4a89b72ad2ea9cd3"
+    },
+    ".github/workflows/build.yml": {
+      "before": "2302040d231bb30b651955fa5eba34323ddddf50711429322a18b5598f97eacf",
+      "after": "4ef07a3c2d6361861a780815691f95dd84a23b1fe3259584e507e8de20d443f9"
+    },
+    "README.md": {
+      "before": "4cdaa8a0f225f360f08e5faa11c40cf56810a41b2b8b4e0b5e4b5b22475614d8",
+      "after": "2f39b7ee1b5256a92599296ac0d055645ea78a8459680fbfb46174d250767ef7"
+    },
+    "push_to_github.sh": {
+      "before": "620a61121943d360b9d3eec0799cd5c59c93bcda9363d5b220055905ec2d581e",
+      "after": "b5c3ebb8730c3b023648602982ee4681893d040963e76906d596c3cc4f58cd66"
+    }
+  },
+  "expected_unchanged_sha256": {
+    "ALBReproCapture.h": "b1dc4ee848c21e6c116b767308c61f29182ddffc104b16c19a95b506d18300ea",
+    "ALBReproCaptureSignal.h": "e88003bda9c2e327e455ae5b448882f77f2702664ec1e82728545841ff8fabaf",
+    "scripts/check_test29.py": "0809aa94738eecfea2cddff0ecb6c463cec46043be90090953813788f0ff67a3",
+    "ALBTopNative/ALB23LensPolicy.h": "8706e99844884e928c54d661a07fcf31b799df642e86a6b801f50f795dc00db2",
+    "Tests/test23_regression_test.c": "14da0f3f9f7b95e09194884050d4354b81e30860088825f2fe9b66c9e069f208",
+    "scripts/check_test23.py": "76ff949fd6e25107a8356f47b052e955a3ec0e7f0884752ca40fda9210db413e",
+    "scripts/check_test24.py": "14323eaa4dc8f6bd31b659f81a43692d1727f6e5f23510f652bddb77d8073d4c",
+    "scripts/test_top_lens_syntax.py": "b7b2d34b2666e4e25e53c41a810b69f8ec671051003ac68c00d472e161aebcf9",
+    "scripts/test_bottom_scale_feedback.py": "44b0598f786f96c8bb851f786f5b0a1aded71ef21e6ffa2be8c260a575400940",
+    "ALBDanmakuGlass.h": "c1e0ee1ee2bd24d3011330590d108e19c3f25de6081a03ed19ed48eb8b2c3143",
+    "ALB22NativeEndpoint.h": "6958b429375912dc94fbad1157960815cd0fdca7ea64127ee90cce092fc97f37",
+    "ALB22NativeMethodPolicy.h": "c200f8a715c0bbce5846c84996270f110a246bddb0c0806037a92d3f8b2bcab1",
+    "ALB8Profile.h": "b66a199bc853ca163edf7236b72fb4d2bf0262b9cb351a705a3d4eb02a41d9c4",
+    "ALBDownloadJob.h": "994615b02723162eae8ebbcc2fa8e74f46b0711c53bfc3dba0ac73e883788cc5",
+    "ALBDownloadState.h": "3988f4b2d718e8ab696018cdfd51a4f837351b5f084a576bcae2eedac9abde63",
+    "ALBNativeState.h": "e303f7a464ff1a0856db6c509e98ca6bf2e96bf86f1fad720e50dc12c49284f3",
+    "ALB5Options.h": "47bd64af9ff8db32a2a353583d39c12c3c5e091e44ad84292e35a91a7a12f83b",
+    "ALB7BottomMath.h": "5dae13ed134eedaac6d4f931f96c11cd4afe5f54a074aa84f846212fed022dce",
+    "ALB5Settings.h": "f43d960959eed81dc4bd1fc6f0c90a06a71814ac674db85cb5cd5666901c5f3c",
+    "ALBTopNative/ALBCompactGeometry.h": "cda1ed80b1e8d98cf63165efcb27b8dce0e5bc06085f9b42863e712b25fddf09",
+    "ALBTopNative/ALBNativeBarSurface.h": "cf040bb4a537f761744b2aa9dc4c0f2c3b389a2a325deb302d1407c656646dab",
+    "ALBCenterMorphGeometry.swift": "39a5f9fe92445a73e4ddcd8e3231bcebe51fc28a1db17a143c997589eb199e40",
+    "Tests/center_morph_geometry_test.swift": "b48d8c738c15781b0bd926c8ed0f29e7e9276a9a6f011f70edf93a625909be80",
+    "MessageTopGlassV3.xm": "d123b22e9b238ce9f06d939d02b3f96e3183af7363dead4759784321bc0dad5c",
+    "ALBNativeInteraction.h": "7f71eaf3254c1b1a69008a181a81b58b1057c3dda0c14f86d9940ea02d593304",
+    "ALBSettingsGlass.h": "9fa23447e09556f45cdb521e4cd31d417726f388fa49ad7cc980cfe794194e5c",
+    "ALBSidePalette.h": "489ed90e74bd220b7361311fb51182a3bd601318be1b03b7ac5ae952be6f3e87",
+    "ALBAlbumVideoExporter.h": "8e0af908bdc29259981a1127da018a227ef0857e4375214924ccb70d4c02b476",
+    "ALBScrollIntent.h": "ff46ae61dec0a7846cdcdd94b6d327afc15122800bedc81a0be1380fd9b1067e",
+    "ALBNativeMinimize.h": "b6c5eecbf4090745dc57548de4bdce7b929dd7a0a5c9b997a61450e8f89c37b2",
+    "ALBGlassMaterials.h": "6f028f675525b46f19bb1227800e375708e2e6496c9252abbf8d59a279fe1e64",
+    "ALBRootScroll.h": "525dc69cbacb75e77a0d21763da24b43fb24802a88a0606e098d7a1335912090",
+    "ALBClearContrast.h": "9e7794d0ae580af0367746761d5a4935e92743c4c8efbd97f931ba484a3c83ee",
+    "WCLGEdgeEffect.h": "938b609230f8cc08f2577690a294f0c9d4ef1f1b6b3b0d3481b746b50eb2fabd",
+    "WCLGEdgeEffect.m": "b22253f1e354257eb97a415a3e902949c733e13be89aca00bbc4d82f9fa572c2",
+    "WCLGBackdropLayer.h": "92567c67756429bbc9514fc6c407af786eb84b7d7efcea66c29c4b9c2f8975d0",
+    "WCLGBackdropLayer.m": "f84ddc951556a126035206069a0fc0f298f5effaf279f26ac3de9a347c52987e",
+    "WCLGEdgeGradientTables.h": "93e3b224f6741d2da504c7a62b77eaeec177f5f6131cdb82fc219f0b8de474bd",
+    "WCLGEdgeGradientTables.m": "b79150689859d87497e9bdd446e0a22985e52c57427d72f7ced72beaee6d9b6e",
+    "build.sh": "5b47ad50b9f31c9dcc8dcbf0b398b4811b4bf75cdad1ae4fb6522d93cfa49742",
+    "build_no_install.sh": "2fea5edb9a34c5e9226bf80c2ee0302f51d7f0713c365fd4cc1e9f4ed3e5ab77",
+    "scripts/check_logos_boundaries.py": "003b7cedb54d06a289e656273a522cc6e2c50d8004d3e27ed55661bfd021ea05",
+    "scripts/test_logos_boundary.py": "c9b94f2b3847d08e8a8e3f5b4e57d8d311c093e67b10178f9ed66e6222afeeb1",
+    "scripts/check_runtime_guards.py": "faececa25ef10fa6e4f4edb91e4d85e3b19927b66d7d45321019433d1ad7aa5b",
+    "scripts/check_watchdog_guards.py": "c4629c227e0d9921c1680e03489050c19defe5ab606beaba3f7358d8e6584584",
+    "scripts/check_right_header_syntax.sh": "32c313fb4d15c04607639e1ca866afee9f1f975787863d0d34dd1c141a080ad8",
+    "scripts/symbolicate_linkmap.py": "fac6f7c8795156dee1be8fa8f06b6aa7cefcff7e803b311a8befc3c23f062c4d",
+    "scripts/collect_build.py": "ae1d216bc53b4773268657759d63059a38ebbcc0a45a2b96c9f404cc8a240a40",
+    "Tests/native_state_test.c": "29dd4d841fab933246f7d00ee2296057f7830ef02b6b388b301c5f1b621f1915",
+    "Tests/scroll_intent_test.c": "09ff72cbd9b1e709067d5f65da598256027ecec89a3b93a746be45f8443a0d01",
+    "Tests/right_layout_test.c": "afa2ce55da7352abe53f6f35aeb41603e31573c223e1a32aa9599a8bb8147b31",
+    "Tests/right_persistence_test.c": "2cd23c35cb29a86b07cb9d51934c9a2a30b80132df92f65a3849ffbede4e6494",
+    "Tests/Support/right_layout_declarations.m": "3da43334513fd9d223ab18e1910c224fa3d5277db6adda713ea4e370b799f757",
+    "Tests/Support/math.h": "45e623e3904e2d16bfb914d4bec62e3c2b929acf86510505a390cac1c2021fd8",
+    "Tests/bottom_geometry_test.c": "84d6b9ba648ea3b8265b0b0baab40cd65e85020d9fecb1c826c156a5c32e25eb",
+    "Tests/download_state_test.c": "ffc6d39ed841b08c98abb228610aba3bb875b5d750fcfe67012bf0d8c2958ddf",
+    "ALBTopNative/Tests/window_geometry_test.c": "0442e53629cc05996285189ea744ad17333210bfc294d872591c8abd0fabe58e",
+    "scripts/check_test22.py": "6bb3cea02bc8bca1b6e5abb0a7b5df3166e9cfd194ad610b8ce8963bc974647d",
+    "scripts/test_native_endpoint_syntax.py": "4774ade20d96c67449f819af7c2ef909a7f5117d91405a4c5b308ac0bb841013",
+    "Tests/native_endpoint_policy_test.c": "6baee37855bd1b7b004a079bd70806e30dc9ad59d4cb555f17e963fbd1f7a9a9"
+  },
+  "authorization_core_sha256": "a9aa5a8d5e08723a6f034372a1937658c99bc1f023f1773387c21efad42c013f",
+  "apple_sdk_compile": false,
+  "device_test": false
+}

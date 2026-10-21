@@ -1,0 +1,18 @@
+AwemeLiquidBar 1.0.57d — real UISearchTab avatar surface
+
+Core correction from 1.0.57c
+- 1.0.57c still used a standalone UIButton for the avatar. Matching its size and choosing glassButtonConfiguration did not put it on the same renderer as the system Search capsule.
+- 1.0.57d removes that avatar UIButton path. The avatar is now hosted by a second real UITabBarController containing a real UISearchTab, so UIKit creates the Avatar and Search glass through the same native tab/search surface class.
+- The avatar surface inherits the same interface style and accent state as the main controller.
+- The main bar keeps the real Profile / “我” tab. Avatar remains expand/collapse only.
+
+Collapsed-state correction
+- 1.0.57c attempted to collapse the native tab bar with a zero-width mask. On iOS 26 the floating platter/search provider can remain visibly composited even when that mask is effectively empty.
+- 1.0.57d no longer uses the launcher mask to fake an avatar-only bar. When collapsed, the main UITabBar is actually hidden/alpha-zero and its mask is cleared. Only the second native UISearchTab avatar surface stays visible.
+- Route masks are retained only for normal route visibility/recovery, not for avatar collapse.
+
+Behavior retained
+- 5-second idle collapse while expanded.
+- Home upward swipe collapses immediately.
+- Ordinary tab/Search/Publish actions re-arm the 5-second timer instead of collapsing instantly.
+- auth42 and the 1.0.56c16 fullscreen/comment/IM/clean-screen/native-badge baseline are unchanged.

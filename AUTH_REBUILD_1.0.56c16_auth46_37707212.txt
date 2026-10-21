@@ -1,0 +1,9 @@
+AwemeLiquidBar 1.0.56c16 — auth46 rebuild
+
+- Baseline: first 45 authorization digest entries preserved byte-for-byte.
+- Added authorization account: 37707212.
+- The account identifier itself is not embedded in Tweak.x.
+- Entry 46 was regenerated as a fresh random XOR mask/value pair for the correct salted SHA-256 digest.
+- Matching fast digest tag: 0x127B93B5.
+- Authorization table count remains 46.
+- No UI/gesture/fullscreen/comment/IM behavior changed.

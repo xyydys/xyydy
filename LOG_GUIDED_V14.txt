@@ -1,0 +1,117 @@
+AwemeLiquidBar 1.0.56c16 auth44 — v14 log-guided / native-glass pass
+====================================================================
+
+Baseline
+--------
+- Continues from v13.1 compile-fix; no whole-project rollback.
+- Runtime evidence: latest v13 interaction + comment/message + probe logs.
+- Native-liquid reference: supplied XHSLiquidBar project.
+
+What the logs proved
+--------------------
+1. Same-style / Listen Douyin
+   v13 still tied the backing plate to transient feed-host coordinates. Reused pages
+   were observed at large stale x offsets while the actual 44x44 music/same-style
+   anchor had already rebound. The marker can also temporarily disappear.
+
+2. Shop / Profile bottom surface
+   The old bottom repair produced no bottom-scan/bind markers on the failing pages.
+   Current runtime routes are more reliable by visible controller class than a
+   hard-coded native/semantic tab index. IESECMallCoreViewController and
+   AWEProfileBaseContainerViewController are now direct refresh triggers.
+
+3. Comment main body text
+   v13 logs showed AWECommentSwiftBizUI.CommentInteractionBaseLabel receiving the
+   text-color hook, but the screenshot still showed the body text reverting. The
+   likely later writer is the attributed string itself, not UILabel.textColor.
+
+4. Message page
+   The list is already full viewport, but the native bottom inset remained 83pt.
+   That reservation and peripheral top/bottom backdrops explain the dead surface.
+   The top shadow/separator is separate from the content background.
+
+5. Xiaohongshu reference
+   Its complete Liquid Glass interaction is not a decorative, noninteractive plate.
+   Key message shortcuts are actual UIBarButtonItems and the main bottom control is
+   an actual UITabBar. UIKit owns hit testing and therefore owns press/stretch/
+   material transitions. v14 applies this ownership principle to the Douyin message
+   navigation controls using native configured UIButtons that receive the touch and
+   forward the original Douyin UIControl action.
+
+v14 changes
+-----------
+A. Same-style / Listen Douyin
+- Recognizes both “拍同款” and “听抖音”.
+- Stable anchor classes include SingleSongMusicStyleView / ListenDouyin / ListenAweme.
+- Plate is associated with the actual compact anchor and inserted into that anchor's
+  superview, so it moves/reuses with the cell instead of retaining an old host frame.
+- Offscreen anchors are hidden instead of being held globally across videos.
+- Markers: SAMESTYLE_V14_BIND, SAMESTYLE_V14_HIDE.
+
+B. Shop / Profile bottom surface
+- Route detection is controller-first (mall/profile), tab index only fallback.
+- Direct appear/layout triggers for AWEProfileBaseContainerViewController and
+  IESECMallCoreViewController.
+- Bounded candidate logs are emitted before a carrier is selected.
+- Large route scroll view can extend into the old 83pt tabbar reservation.
+- Markers: BOTTOM_V14_CAND, BOTTOM_V14_BIND, BOTTOM_V14_SCAN,
+  BOTTOM_V14_CACHED_RESET, BOTTOM_V14_EXTEND, BOTTOM_V14_NO_SCROLL.
+
+C. Comment body text
+- Adds persistent attributed-string foreground remapping for UILabel and UITextView,
+  only while the comment panel is visible and only inside the comment hierarchy.
+- Neutral foreground runs are mapped to the current auto-glass contrast; mention/
+  accent colors remain untouched.
+- Marker: COMMENT_ATTR_PERSIST.
+
+D. Message page / native glass
+- Four visible nav controls now use one geometry: 46pt height; left/right outer margin
+  20pt; search/add separated by 8pt; title capsule width 90pt.
+- Menu/search/add native UIButton overlays own the touch when a source UIControl is
+  resolved, then forward the original action. This gives UIKit ownership of the
+  pressed control instead of using a noninteractive glass plate.
+- Title remains display-only.
+- Uses glassButtonConfiguration or clearGlassButtonConfiguration according to the
+  existing transparent-glass preference.
+- Full-surface cleanup keeps the actual message list intact, clears only peripheral
+  top/bottom effect/backdrop nodes, removes <=4pt nav separator/shadow, and drops the
+  inherited 83pt bottom content inset to zero.
+- Markers: MESSAGE_NATIVE_GLASS, MESSAGE_NATIVE_PRESS,
+  MESSAGE_V14_SEPARATOR_CLEAR, MESSAGE_V14_PERIPHERAL_CLEAR, MESSAGE_V14.
+
+E. Top-left quick menu
+- Stops depending on private iOS 26 UIMenu class names.
+- A label is centered only when an ancestor compact popup panel contains at least
+  three exact route titles from the UIMenu installed by this tweak. This avoids
+  accidentally centering ordinary feed labels such as “兰州/关注/推荐”.
+- Marker: TOP_MENU_LABEL_CENTER_V14.
+
+F. Dark/light home chrome stability
+- Dark -> Light auto-glass transition now requires ~0.52s stable evidence; other
+  transitions use ~0.20s. This reduces brief bright-frame/avatar samples causing a
+  dark feed's top-left control to jump to a light-looking state.
+- Markers: HOME_GLASS_STYLE_PENDING, HOME_GLASS_STYLE_COMMIT.
+
+One-pass validation
+-------------------
+1. Open top-left quick menu: every route title should be centered.
+2. Rapidly swipe through multiple videos containing either 拍同款 or 听抖音: plate
+   must not remain at a previous video's coordinates.
+3. Enter Shop and Profile -> Favorites; scroll enough to reproduce the old strip.
+4. Open comments on both dark and bright media; inspect the main comment body text,
+   not only timestamp/reply/like labels.
+5. Enter Messages in light + dark mode: no top separator mask, no 83pt bottom mask;
+   menu/title/search/add use equal 46pt height and 20pt outer margins. Press menu,
+   search and add to confirm routing still works and native press deformation appears.
+6. On dark feed, move through mixed bright/dark frames and verify top-left chrome no
+   longer flips light on very short bright samples.
+
+Build verification available in this workspace
+----------------------------------------------
+- scripts/preflight.sh
+- bracket/comment/string-aware balance check on Tweak.x, CommentGlassDYKiller.xm,
+  MessageTopGlassV3.xm
+- Logos %hook/%group/%end count sanity
+- ZIP integrity test after packaging
+
+A real arm64/arm64e Theos/Xcode27 compile is still performed by GitHub Actions.

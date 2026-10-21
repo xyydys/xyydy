@@ -1,0 +1,73 @@
+--- /mnt/data/v8base_for_diff/AwemeLiquidBar_1.0.58_auth47_iOS27LuminanceAdaptive_v8_project/MessageTopGlassV3.xm	2026-09-02 18:34:16.000000000 +0000
++++ MessageTopGlassV3.xm	2026-09-02 19:15:07.664373872 +0000
+@@ -3,13 +3,6 @@
+ #import <objc/runtime.h>
+ #import <objc/message.h>
+ 
+-#ifdef __cplusplus
+-extern "C" {
+-#endif
+-NSInteger AWEIOS27AdaptiveGlassStyle(void);
+-#ifdef __cplusplus
+-}
+-#endif
+ #import <math.h>
+ #import "WCLGEdgeEffect.h"
+ 
+@@ -568,10 +561,21 @@
+ }
+ 
+ static UIUserInterfaceStyle AWEMessageResolvedAdaptiveInterfaceStyle(void) {
+-    if (@available(iOS 27.0, *)) {
+-        NSInteger raw = AWEIOS27AdaptiveGlassStyle();
+-        if (raw == UIUserInterfaceStyleLight || raw == UIUserInterfaceStyleDark) {
+-            return (UIUserInterfaceStyle)raw;
++    if (@available(iOS 26.0, *)) {
++        /* v9 secondary-page policy: Message chrome follows Douyin's own
++           window/controller Light/Dark appearance and stays there. Keep this
++           resolver local to the message translation unit so there is no
++           cross-object dependency on Tweak.x's private static helpers. */
++        UIWindow *window = gAWEMessageActiveController.view.window;
++        UIUserInterfaceStyle style = window.traitCollection.userInterfaceStyle;
++        if (style != UIUserInterfaceStyleLight && style != UIUserInterfaceStyleDark) {
++            style = gAWEMessageActiveController.traitCollection.userInterfaceStyle;
++        }
++        if (style != UIUserInterfaceStyleLight && style != UIUserInterfaceStyleDark) {
++            style = gAWEMessageActiveController.view.traitCollection.userInterfaceStyle;
++        }
++        if (style == UIUserInterfaceStyleLight || style == UIUserInterfaceStyleDark) {
++            return style;
+         }
+     }
+     return UIUserInterfaceStyleUnspecified;
+@@ -1163,17 +1167,10 @@
+     UIView *add = AWEMessageAddSource(nav);
+     UILabel *title = AWEMessageTitleSource(nav);
+ 
+-    /* Pull both sides inward symmetrically and move the original Douyin
+-       artwork/hit owner at the same time as its material.  Keep the native
+-       48pt spacing between Search and Add. */
+-    CGFloat navWidth = CGRectGetWidth(nav.bounds);
+-    if (navWidth >= 320.0) {
+-        /* 1.0.58: do not move the left menu gesture owner.  The original
+-           geometry is the only variant that consistently receives Douyin's
+-           private tap recognizer.  Search/Add can still be inset safely. */
+-        AWEMessageMoveNativeTopControl(add, nav, navWidth - 38.0);
+-        AWEMessageMoveNativeTopControl(search, nav, navWidth - 86.0);
+-    }
++    /* v9: do not reposition any native Message navigation control. Moving
++       nested private owners caused visual/touch coordinates to diverge. The
++       glass plates now simply cover Menu/Search/Add at Douyin's exact native
++       frames, so hit-testing stays 100% native. */
+     UIButton *menuPlate = AWEMessageEnsurePlate(nav, 0);
+     UIButton *searchPlate = AWEMessageEnsurePlate(nav, 1);
+     UIButton *addPlate = AWEMessageEnsurePlate(nav, 2);
+@@ -1322,7 +1319,7 @@
+                         menu ? NSStringFromClass(menu.class) : @"nil",
+                         search ? NSStringFromClass(search.class) : @"nil",
+                         add ? NSStringFromClass(add.class) : @"nil");
+-        AWEMessageProbe(@"MESSAGE_V58_NATIVE_PRESS native-menu-tap-preserved=1 menuDriver=%d search=%d add=%d frames=%@/%@/%@/%@",
++        AWEMessageProbe(@"MESSAGE_V9_NATIVE_POS native-menu-tap-preserved=1 menuDriver=%d search=%d add=%d frames=%@/%@/%@/%@",
+                         objc_getAssociatedObject(AWEMessagePressGestureHost(menu, nav), &kAWEMessagePressGestureKey) != nil,
+                         objc_getAssociatedObject(AWEMessagePressGestureHost(search, nav), &kAWEMessagePressGestureKey) != nil,
+                         objc_getAssociatedObject(AWEMessagePressGestureHost(add, nav), &kAWEMessagePressGestureKey) != nil,

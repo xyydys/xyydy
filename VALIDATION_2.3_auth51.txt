@@ -1,0 +1,36 @@
+AwemeLiquidBar 2.3 auth51 validation scope
+
+Baseline:
+Original AwemeLiquidBar_2.3_auth50_MATERIAL2_project.zip
+SHA-256: 5c771432172b333334fab583253e0a4d539f98d1043bb35774619d60cb504c09
+
+Authorization checks:
+- 51 unique normal authorization records, with all previous 50 mask/value pairs retained.
+- 3 unique special bottom-release permissions, with both previous special entries retained.
+- One existing normal digest is promoted; the added ordinary digest has no special entitlement.
+- Account normalization, hashing salts, device-bound proof, validation/cache and profile binding logic match the original 2.3 code.
+- Extracted production C hashing, tag, comparison and allowlist loops are executed using a C compiler.
+- Every authorization row is tested against normal and special gates; all special candidates fail when device-proof validity is false.
+- 1,632 altered digests and invalid digest lengths are rejected.
+
+Rollback checks:
+- 55 other production source/header files are pinned to their exact original 2.3 hashes.
+- The rejected 2.4 ALB26NativeMaterial implementation is absent.
+- Tweak.x changes are limited to the authorization tables/tags, special entitlement count, diagnostic auth label and bottom ownership release/restoration paths.
+- Original material/appearance, top and bottom carrier geometry, native button menus and minimize behavior remain the 2.3 implementation.
+- Historical preservation manifests are retained, with an explicit auth51 delta layered after the original MATERIAL2 manifest.
+
+Release source integration:
+- Ordinary accounts cannot use the OFF preference or see the special switch.
+- Special OFF removes the bottom controller, observer/gesture leases and iOS 27 backdrop mirrors, cancels the visibility driver, restores native child content and recorded chrome, and restores owned route frames.
+- Bottom background clearing and late recovery paths check the OFF state before changing native chrome.
+- Snapshots use weak view keys; a newer native or third-party property value wins over the plugin's last applied value.
+- Turning ON reinstalls from the original native tab-bar host.
+
+Run all SDK-independent gates:
+sh scripts/preflight.sh
+
+Phone builds without Python retain scripts/preflight_portable.sh and the original compile-only build/collection scripts.
+
+Limits:
+This environment has no Apple SDK, Clang/Swift iOS toolchain or physical iOS device. An iOS package has not been compiled here. UIKit drawing, live account binding, native bottom touch/menu behavior and cross-plugin interaction require the real Theos/SDK build and device verification. Existing CI still performs iPhone SDK checks and package compilation.

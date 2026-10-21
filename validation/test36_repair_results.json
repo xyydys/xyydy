@@ -1,0 +1,92 @@
+{
+  "revision": "2.0.10 TEST36 REPAIR",
+  "generated_at": "2026-09-27T11:19:53.525Z",
+  "apple_sdk_compile": false,
+  "ios_device_test": false,
+  "scope": "Foreground visibility ownership, capsule geometry release ordering, avatar above native symbol branch, clip-only Favorites rendering and preservation of original materials/top menu.",
+  "checks": [
+    {
+      "command": "bash scripts/preflight.sh",
+      "status": "passed",
+      "output": "2.0.10 TEST36 REPAIR source/package preflight passed; compile and device testing still required.\nTEST36 native source contract passed (not an iOS compile/device test).\nTweak.x: boundary checks passed (244 original-call directives; not SDK compilation)\nCommentGlassDYKiller.xm: boundary checks passed (28 original-call directives; not SDK compilation)\nMessageTopGlassV3.xm: boundary checks passed (12 original-call directives; not SDK compilation)\n"
+    },
+    {
+      "command": "python3 scripts/check_watchdog_guards.py",
+      "status": "passed",
+      "output": "48 extracted frame-gate cases + no-shrink pass-through passed; no UIKit used.\nTEST18 source scope / scheduling / preservation checks passed. Not an iOS build or device test.\n"
+    },
+    {
+      "command": "python3 scripts/check_right_persistence.py",
+      "status": "passed",
+      "output": "TEST19 right persistence / material / touch-handler source checks passed; not an iOS build or device test.\n"
+    },
+    {
+      "command": "python3 scripts/check_test24.py",
+      "status": "passed",
+      "output": "TEST24 production-source invariants passed; not an iOS build, native-animation test, or device test.\n"
+    },
+    {
+      "command": "python3 scripts/test_bottom_scale_feedback.py",
+      "status": "passed",
+      "output": "Bottom scale: 6100 anchor/idempotence traces (610000 model passes); no UIKit/device test.\n"
+    },
+    {
+      "command": "python3 scripts/check_test29.py",
+      "status": "passed",
+      "output": "TEST29 native-material / foreground / search / sheet / background source contracts passed; no SDK/device rendering claim.\n"
+    },
+    {
+      "command": "python3 scripts/check_test33.py",
+      "status": "passed",
+      "output": "TEST33: nine-regression integration and original-material preservation guards passed; no SDK/device claim.\n"
+    },
+    {
+      "command": "python3 scripts/check_test34.py",
+      "status": "passed",
+      "output": "TEST34 menu lifetime / center foreground / native material preservation guards passed; no SDK/device claim.\n"
+    },
+    {
+      "command": "python3 scripts/check_test35.py",
+      "status": "passed",
+      "output": "TEST35: no lens snapshots; complete selection lease; native platter foreground attachment; historical profile exclusion; unchanged working top menu. Source checks only.\n"
+    },
+    {
+      "command": "python3 scripts/check_test36.py",
+      "status": "passed",
+      "output": "TEST36: foreground masks preserve native visibility; capsule geometry restored before reveal; avatar above symbol branch; Favorites clipping only; material/top menu unchanged. Source checks only.\n"
+    },
+    {
+      "command": "python3 scripts/test_profile_scroll_preservation.py",
+      "status": "passed",
+      "output": "Profile: no scroll geometry writes; 3104 retained helper traces and 56 clip-boundary cases passed; no UIKit/device test.\n"
+    },
+    {
+      "command": "python3 scripts/check_repro_capture.py",
+      "status": "passed",
+      "output": "TEST30 CAPTURE: 11 scenarios, passive hooks, bounded snapshots, write isolation, ABI and preservation source checks passed; no SDK/device claim.\n"
+    },
+    {
+      "command": "bash -n push_to_github.sh",
+      "status": "passed",
+      "output": ""
+    },
+    {
+      "command": "sh -n build_no_install.sh scripts/preflight.sh",
+      "status": "passed",
+      "output": ""
+    }
+  ],
+  "not_run": [
+    "Apple SDK Objective-C/Swift type checking and Theos package build (required CI gates retained)",
+    "Runtime UIKit compositing/lens visibility, icon clarity, Favorites coverage and frame-rate on iPhone"
+  ],
+  "reviewed_limits": [
+    "Screenshots establish symptoms; private-renderer causation and visual result are not fully provable without an on-device run.",
+    "Clip-only Favorites restoration uses already-laid-out cells and does not increase the app's visible-cell layout viewport."
+  ],
+  "changed_contracts": [
+    "Retired per-leaf hidden/alpha restoration in favor of scoped foreground covers; primary/auxiliary glass roots explicitly excluded.",
+    "Avatar attaches above the native platter's content, replacing TEST35 _UITabButton attachment.",
+    "Historical Profile scroll-geometry exclusion remains; full-width bottom clipping can open without frame/inset/offset writes."
+  ]
+}

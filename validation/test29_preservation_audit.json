@@ -1,0 +1,73 @@
+{
+  "baseline": "delivered TEST28 FIX1; user supplied TEST9 and 1.0.56 used for routing/presentation only",
+  "current_revision": "2.0.10 TEST29",
+  "expected_unchanged_sha256": {
+    "ALBAlbumVideoExporter.h": "8e0af908bdc29259981a1127da018a227ef0857e4375214924ccb70d4c02b476",
+    "WCLGBackdropLayer.m": "f84ddc951556a126035206069a0fc0f298f5effaf279f26ac3de9a347c52987e",
+    "WCLGEdgeGradientTables.m": "b79150689859d87497e9bdd446e0a22985e52c57427d72f7ced72beaee6d9b6e",
+    "ALBDownloadState.h": "3988f4b2d718e8ab696018cdfd51a4f837351b5f084a576bcae2eedac9abde63",
+    "ALB22NativeEndpoint.h": "6958b429375912dc94fbad1157960815cd0fdca7ea64127ee90cce092fc97f37",
+    "WCLGEdgeGradientTables.h": "93e3b224f6741d2da504c7a62b77eaeec177f5f6131cdb82fc219f0b8de474bd",
+    "ALB22NativeMethodPolicy.h": "c200f8a715c0bbce5846c84996270f110a246bddb0c0806037a92d3f8b2bcab1",
+    "ALBNativeState.h": "e303f7a464ff1a0856db6c509e98ca6bf2e96bf86f1fad720e50dc12c49284f3",
+    "WCLGEdgeEffect.m": "b22253f1e354257eb97a415a3e902949c733e13be89aca00bbc4d82f9fa572c2",
+    "ALB8Profile.h": "b66a199bc853ca163edf7236b72fb4d2bf0262b9cb351a705a3d4eb02a41d9c4",
+    "WCLGEdgeEffect.h": "938b609230f8cc08f2577690a294f0c9d4ef1f1b6b3b0d3481b746b50eb2fabd",
+    "ALBGlassMaterials.h": "6f028f675525b46f19bb1227800e375708e2e6496c9252abbf8d59a279fe1e64",
+    "ALB7BottomMath.h": "5dae13ed134eedaac6d4f931f96c11cd4afe5f54a074aa84f846212fed022dce",
+    "WCLGBackdropLayer.h": "92567c67756429bbc9514fc6c407af786eb84b7d7efcea66c29c4b9c2f8975d0",
+    "ALBDownloadJob.h": "994615b02723162eae8ebbcc2fa8e74f46b0711c53bfc3dba0ac73e883788cc5",
+    "ALBScrollIntent.h": "ff46ae61dec0a7846cdcdd94b6d327afc15122800bedc81a0be1380fd9b1067e",
+    "ALBTopNative/ALBNativeBarSurface.h": "cf040bb4a537f761744b2aa9dc4c0f2c3b389a2a325deb302d1407c656646dab",
+    "ALBTopNative/ALBCompactGeometry.h": "cda1ed80b1e8d98cf63165efcb27b8dce0e5bc06085f9b42863e712b25fddf09",
+    "ALBTopNative/ALB23LensPolicy.h": "8706e99844884e928c54d661a07fcf31b799df642e86a6b801f50f795dc00db2"
+  },
+  "authorization_core_sha256": "a9aa5a8d5e08723a6f034372a1937658c99bc1f023f1773387c21efad42c013f",
+  "apple_sdk_compile": false,
+  "device_test": false,
+  "right_layout_baseline_sha256": "2c3b5b0f18093e9397a342b1afd8b329dc4c8d7971c1c5a775e5f56aa6d42892",
+  "user_requested_changes": {
+    "ALB5RightLayout.h": "count-bottom anchoring and reference pivot only; exact reverse check preserves all prior bodies",
+    "ALBCenterMorphSurface.swift": "resident native glass, per-item artwork, opt-in Clear mode",
+    "ALB5BottomGeometry.m": "public image/text/badge capture, per-tab completion",
+    "AwemeAlbumMorphBar.swift": "material preference and native geometry lease lifecycle",
+    "ALBCenterMorphGeometry.swift": "distance-based foreground absorption",
+    "Tweak.x": "TEST9 search routing, mall/grid backgrounds, native settings entry and options",
+    "ALBTopNative/ALBTopNativeGroup.m": "restore actual menu provider visibility at dismissal",
+    "ALBSettingsGlass.h": "1.0.56 system sheet with existing clear background; translucent section frost"
+  },
+  "runtime_files": {
+    "ALB5RightLayout.h": {
+      "before_sha256": "2c3b5b0f18093e9397a342b1afd8b329dc4c8d7971c1c5a775e5f56aa6d42892",
+      "after_sha256": "a683de91b93e734b6512616dcfc6a90651ad5c3f0fc5bc87d1a5a4f46bbdb42a"
+    },
+    "ALBCenterMorphSurface.swift": {
+      "before_sha256": "117d9cbb065e1b59ae0080a12eb685f2c1d20a976df23615d3175eaa2f7d914d",
+      "after_sha256": "9559ebc28c59cd58c9299c1ff63023981873f546b75dc41b31300107a6daf556"
+    },
+    "ALB5BottomGeometry.m": {
+      "before_sha256": "068a2f4e5d18cae3b3bb378048b8f0bb9fe0bd7427bd50259ebc6bf811813091",
+      "after_sha256": "98330a5c0b76dfa1b374b5505689cbcdc82f7c226a4dcb5567224ad63357693a"
+    },
+    "AwemeAlbumMorphBar.swift": {
+      "before_sha256": "553c51b16f5625c447e72ac1b4eb1d0cb0c2bfe2503afebb92b8d20fa80e2742",
+      "after_sha256": "d38dd936074680e5ef0b96ee2b87b5b13406fbb9bcd62777004c63599d05acf5"
+    },
+    "ALBCenterMorphGeometry.swift": {
+      "before_sha256": "5fb2fa344453773dc5a4ebf8d030ca6e24569ef28f3524726b59e83f47361948",
+      "after_sha256": "39a5f9fe92445a73e4ddcd8e3231bcebe51fc28a1db17a143c997589eb199e40"
+    },
+    "Tweak.x": {
+      "before_sha256": "75e4e6de611378e792d1d34a916a11931ba9837b647bd1e181b21fcb8e868f0c",
+      "after_sha256": "8db3a31894e7753c23e9659a32cb16a2f0eaad36779bf6505a61cdbe3ef47b12"
+    },
+    "ALBTopNative/ALBTopNativeGroup.m": {
+      "before_sha256": "552da21f2adde82241d0ec533d61896459a19c8d09de2794b616d239ef8323dd",
+      "after_sha256": "84a011e3064f61faf261c5925dedec08fe351b8a314d7694ae5dc87f8ed77c22"
+    },
+    "ALBSettingsGlass.h": {
+      "before_sha256": "3687b462aa3d703971c683192bf1d1e6c1a6bde3cbfe6feb4bd8bc816759eb1e",
+      "after_sha256": "83a7d10f5e1c61e6a5e9e644ccce85f4516afefb568f6cb412d3dc3c10a9fa3f"
+    }
+  }
+}

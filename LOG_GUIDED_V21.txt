@@ -1,0 +1,14 @@
+AwemeLiquidBar v21 targeted integration
+
+1. SHOP: replaces v20 frame/inset/ancestor fight with XHS-style collection-only extension.
+   - no negative contentInset
+   - no ancestor frame resizing
+   - desired collection frame is stored/reapplied after native layout
+   - old-bottom ancestors only disable clipping
+2. Comment adaptive style: 4x4 UIGlassEffect probe moved from physical bottom-left to center of visible right-side profile/avatar region.
+3. Bottom bar: hard native-visibility gate. If Douyin native bar is hidden/detached/offscreen or covered by modal/higher window, replacement is not shown.
+4. Message page: integrates supplied WCG variable-blur edge effect as a passive preset.
+   top: 118pt host, 92pt transition, alpha 0.14, blur radius 1.0
+   bottom: 126pt host, 108pt transition, alpha 0.10, blur radius 1.0
+   No message scroll geometry is changed by the fade.
+5. Preserves v20 message-page and same-style fixes.

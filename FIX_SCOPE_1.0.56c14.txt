@@ -1,0 +1,13 @@
+AwemeLiquidBar 1.0.56c15 — route ownership correction
+
+Based on 1.0.56c13 logs, this build fixes two concrete ownership bugs:
+1. A stale IM composer can remain in a live window after switching to Home. It no longer suppresses LiquidBar or fullscreen unless Messages is the selected main tab.
+2. Global right-action/fullscreen recovery was running inside AWEIMAwemeMedia/RichContent viewers. It is now restricted to Home/Friends/profile-detail feed contexts and rechecked on every delayed pass.
+
+Additional guardrails:
+- Home chrome recovery only runs on the actual Home feed surface.
+- Fullscreen geometry never runs anywhere in the Messages tab and is blocked by immediate sensitive/commerce routes.
+- Profile avatar/edit/crop/picker controllers are explicit sensitive destinations so the independent overlay cannot leak over them.
+- Overlay diagnostics now log suppression reason, main-tab index and top controller class.
+
+Authorization remains auth37. The visual bottom-bar ownership-release toggle remains limited to Hoeyc_0505 and 0416xxd.

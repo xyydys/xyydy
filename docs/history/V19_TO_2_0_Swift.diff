@@ -1,0 +1,77 @@
+--- /mnt/data/AwemeLiquidBar_1.0.58_auth47_GlassPolish_v19_project/AwemeAlbumMorphBar.swift	2026-09-05 21:15:26.342787433 +0000
++++ /mnt/data/AwemeLiquidBar_2.0_auth47_SettingsRefactor_project/AwemeAlbumMorphBar.swift	2026-09-05 21:59:46.850761582 +0000
+@@ -217,39 +217,6 @@
+     AWEAlbumMorphHideTitlesEnabled() != 0
+ }
+ 
+-@_silgen_name("AWEAlbumMorphTextOnlyStyleEnabled")
+-private func AWEAlbumMorphTextOnlyStyleEnabled() -> Int32
+-
+-private var albumMorphTextOnlyStyle: Bool {
+-    AWEAlbumMorphTextOnlyStyleEnabled() != 0
+-}
+-
+-private func albumMorphTitleImage(_ title: String) -> UIImage? {
+-    let font = UIFont.systemFont(ofSize: 15.0, weight: .medium)
+-    let attributes: [NSAttributedString.Key: Any] = [
+-        .font: font,
+-        .foregroundColor: UIColor.black
+-    ]
+-    let measured = (title as NSString).size(withAttributes: attributes)
+-    let size = CGSize(width: ceil(measured.width) + 8.0,
+-                      height: max(24.0, ceil(measured.height) + 4.0))
+-    let renderer = UIGraphicsImageRenderer(size: size)
+-    let image = renderer.image { _ in
+-        let rect = CGRect(x: (size.width - measured.width) * 0.5,
+-                          y: (size.height - measured.height) * 0.5,
+-                          width: measured.width, height: measured.height)
+-        (title as NSString).draw(in: rect, withAttributes: attributes)
+-    }
+-    return image.withRenderingMode(.alwaysTemplate)
+-}
+-
+-@_silgen_name("AWEAlbumMorphCreateConfiguredImage")
+-private func AWEAlbumMorphCreateConfiguredImage(
+-    _ key: UnsafePointer<CChar>,
+-    _ fallback: UnsafePointer<CChar>,
+-    _ pointSize: Double
+-) -> UnsafeMutableRawPointer?
+-
+ private func albumMorphConfiguredImage(
+     key: String,
+     fallback: String,
+@@ -477,16 +444,14 @@
+         identifier: String,
+         originalIndex: Int
+     ) -> UITab {
+-        let image = albumMorphTextOnlyStyle
+-            ? albumMorphTitleImage(title)
+-            : albumMorphConfiguredImage(
+-                key: iconRole,
+-                fallback: fallback,
+-                pointSize: 22.0
+-              )
++        let image = albumMorphConfiguredImage(
++            key: iconRole,
++            fallback: fallback,
++            pointSize: 22.0
++        )
+         explicitImagesByIdentifier[identifier] = (image, image)
+         let tab = UITab(
+-            title: (albumMorphTextOnlyStyle || albumMorphHideTitles) ? "" : title,
++            title: albumMorphHideTitles ? "" : title,
+             image: image,
+             identifier: identifier
+         ) { [weak self] _ in
+@@ -629,11 +594,6 @@
+     }
+ 
+     private func sanitizedVisibleItems(_ identifiers: [String]) -> [String] {
+-        if albumMorphTextOnlyStyle {
+-            // DYKiller-style native text rendered in the centered image slot.
+-            // The app has one dynamic second page: Friends OR Shop.
+-            return [ItemKey.home, ItemKey.second, ItemKey.messages, ItemKey.profile]
+-        }
+         var seen = Set<String>()
+         var result: [String] = []
+         for identifier in identifiers where ItemKey.allowed.contains(identifier) {

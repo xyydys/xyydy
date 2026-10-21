@@ -1,0 +1,12 @@
+AwemeLiquidBar 1.0.56c1 audit intent
+
+Base is exact 1.0.56c. Only the chat-return visibility experiment is reverted to 1.0.56a behavior.
+
+Retained: 1.0.56c fullscreen, clean-screen/status-bar, comment protection, save HUD, highest quality, top-menu cold-start work, settings routing, badges, auth, and all unrelated features.
+
+Reverted code scope:
+- directConversation sensitive-route matcher
+- AWEApplyAlbumMorphVisibleFraction
+- AWEFinishAlbumMorphTransition
+
+Forbidden in this rollback build: the later `interactiveReveal` handoff branch.

@@ -1,0 +1,26 @@
+AwemeLiquidBar 1.0.57b8 private Search branch clone probe
+
+57b7 runtime finding:
+UITabBar
+  UIKit._UITabBarAuxiliaryView (62x62)
+    UIKit._UITabBarPlatterView (62x62)
+      private ContentView
+        _UITabButton (62x62)
+
+No UIVisualEffectView exists in the native Search branch. The visible Search
+material is therefore owned by UIKit's private tab-bar platter/provider path,
+not by a standalone public UIVisualEffectView that can be copied.
+
+57b8 test:
+- keep exactly one real UISearchTab;
+- keep profile in the main native bar;
+- reserve the existing 64-pt avatar strip;
+- hide the old avatar UIButton;
+- archive/unarchive the live UIKit._UITabBarAuxiliaryView and add that clone
+  directly back under the SAME UITabBar;
+- fallback to cloning its live UIKit._UITabBarPlatterView if the auxiliary
+  object graph refuses keyed decoding;
+- do not create another UISearchTab, UITabBarController, UIButton glass, or
+  UIGlassEffect.
+
+Expected geometry: [main native platter] [real Search] [private Search clone]

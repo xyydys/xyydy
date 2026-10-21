@@ -1,0 +1,192 @@
+--- /mnt/data/_alb_topcurrent/AwemeLiquidBar_2.0_auth47_SettingsRefactor_TopControls_project/Tweak.x	2026-09-11 09:36:18.000000000 +0000
++++ /mnt/data/AwemeLiquidBar_2.0_auth47_SettingsRefactor_TopControls_RightNativePressFix_project/Tweak.x	2026-09-11 10:35:59.862360292 +0000
+@@ -6672,6 +6672,9 @@
+ static NSArray<UIView *> *AWESortedVisibleHomeActionButtons(UIView *stack);
+ static AWEHomeActionKind AWEHomeActionKindForButton(UIView *button,
+                                                      NSArray<UIView *> *ordered);
++static BOOL AWEForwardHomeActionKindFromStack(UIView *stack,
++                                               AWEHomeActionKind kind,
++                                               UIView **ownerInOut);
+ static BOOL AWEForwardExactNativeTapFromView(UIView *sourceView,
+                                               NSString *context);
+ 
+@@ -6681,9 +6684,21 @@
+ @property (nonatomic, assign) AWEHomeActionKind actionKind;
+ @property (nonatomic, strong) AWEPhotosExactGlassButtonHostView *photosGlassHost;
+ @property (nonatomic, strong) UIButton *systemGlassButton;
++- (void)alb_nativeGlassTap:(UIButton *)sender;
+ @end
+ 
+ @implementation AWEHomeActionSlotView
++- (void)alb_nativeGlassTap:(UIButton *)sender {
++    (void)sender;
++    UIView *owner = self.originalView;
++    BOOL sent = AWEForwardHomeActionKindFromStack(
++        self.superview, self.actionKind, &owner);
++    if (owner && owner != self.originalView) self.originalView = owner;
++    AWEInteractionDiagnosticWrite(
++        @"HOME_NATIVE_GLASS_TAP kind=%ld dispatched=%d owner=%@",
++        (long)self.actionKind, sent, AWEInteractionObjectSummary(owner));
++    if (sent) AWEScheduleHomeActionStackRefresh(self.superview);
++}
+ @end
+ 
+ /* v18 real-touch bridge for the right action column.
+@@ -8186,6 +8201,26 @@
+     return activated;
+ }
+ 
++static BOOL AWEForwardHomeActionKindFromStack(UIView *stack,
++                                               AWEHomeActionKind kind,
++                                               UIView **ownerInOut) {
++    if (!stack || kind == AWEHomeActionKindUnknown) return NO;
++    NSArray<UIView *> *ordered = AWESortedVisibleHomeActionButtons(stack);
++    UIView *owner = ownerInOut ? *ownerInOut : nil;
++    NSString *context = [NSString stringWithFormat:@"RIGHT_KIND_%ld", (long)kind];
++    if (owner && owner.window && AWEViewIsDescendantOfView(owner, stack) &&
++        AWEHomeActionKindForButton(owner, ordered) == kind) {
++        if (AWEForwardExactNativeTapFromView(owner, context)) return YES;
++    }
++    for (UIView *candidate in ordered) {
++        if (candidate == owner) continue;
++        if (AWEHomeActionKindForButton(candidate, ordered) != kind) continue;
++        if (ownerInOut) *ownerInOut = candidate;
++        if (AWEForwardExactNativeTapFromView(candidate, context)) return YES;
++    }
++    return NO;
++}
++
+ static void AWECollectImageViews(UIView *root,
+                                  NSMutableArray<UIImageView *> *result,
+                                  NSUInteger depth) {
+@@ -11279,21 +11314,22 @@
+         slot = [[AWEHomeActionSlotView alloc] initWithFrame:CGRectZero];
+         slot.accessibilityIdentifier = [NSString stringWithFormat:
+             @"AwemeLiquidBar.HomeActionSlot.%ld", (long)kind];
+-        /* Visual-only sibling. Douyin's native AWEFeedVideoButton remains
+-           the real hit-test/business owner. */
+-        slot.userInteractionEnabled = NO;
++        /* The visible system-glass UIButton is the real UIKit touch owner.
++           This is required for genuine iOS 26/27 Liquid Glass press/stretch.
++           Only the completed business action is forwarded to Douyin. */
++        slot.userInteractionEnabled = YES;
+         slot.backgroundColor = UIColor.clearColor;
+         slot.opaque = NO;
+ 
+         if (@available(iOS 26.0, *)) {
+             UIButton *glassButton = [UIButton buttonWithType:UIButtonTypeCustom];
+-            glassButton.userInteractionEnabled = NO;
+-            glassButton.exclusiveTouch = NO;
++            glassButton.userInteractionEnabled = YES;
++            glassButton.exclusiveTouch = YES;
+             glassButton.backgroundColor = UIColor.clearColor;
+             glassButton.opaque = NO;
+             glassButton.clipsToBounds = NO;
+-            /* v18: no synthetic TouchUpInside business forwarding. This
+-               visual control stays pass-through; owner receives real touches. */
++            [glassButton addTarget:slot action:@selector(alb_nativeGlassTap:)
++                   forControlEvents:UIControlEventTouchUpInside];
+             [slot addSubview:glassButton];
+             slot.systemGlassButton = glassButton;
+         }
+@@ -11339,10 +11375,10 @@
+     slot.alpha = 1.0;
+     slot.overrideUserInterfaceStyle = UIUserInterfaceStyleUnspecified;
+ 
+-    /* Bookkeeping/visual layer only. It never wins hit testing; the original
+-       AWEFeedVideoButton underneath receives the real touch. */
+-    slot.userInteractionEnabled = NO;
+-    slot.systemGlassButton.userInteractionEnabled = NO;
++    /* Real UIKit touch ownership: the configured Liquid Glass UIButton itself
++       receives touch-down/move/up, so the system compositor owns deformation. */
++    slot.userInteractionEnabled = YES;
++    slot.systemGlassButton.userInteractionEnabled = YES;
+     slot.systemGlassButton.frame = slot.bounds;
+ 
+     UIColor *foregroundColor = nil;
+@@ -11363,7 +11399,6 @@
+     if (@available(iOS 26.0, *)) {
+         slot.photosGlassHost.hidden = YES;
+         slot.systemGlassButton.hidden = NO;
+-        AWEBindPassThroughHomeActionGlass(slot, button);
+         AWEConfigureAdaptiveSystemGlassIconButton(
+             slot.systemGlassButton,
+             symbol,
+@@ -11373,13 +11408,12 @@
+             originalPNG,
+             AWEHomeTintedGlassEnabled(),
+             NO);
+-        /* Configure may update UIButton internals; force pass-through back on. */
+-        slot.systemGlassButton.userInteractionEnabled = NO;
++        slot.userInteractionEnabled = YES;
++        slot.systemGlassButton.userInteractionEnabled = YES;
+         AWEInteractionDiagnosticWrite(
+-            @"RIGHT_REAL_TOUCH_BIND kind=%ld mode=passthrough-mirror owner=%@ glass=%@ recognizers=%lu",
++            @"RIGHT_NATIVE_GLASS_BIND kind=%ld mode=direct-ui-button owner=%@ glass=%@",
+             (long)kind, AWEInteractionObjectSummary(button),
+-            AWEInteractionObjectSummary(slot.systemGlassButton),
+-            (unsigned long)button.gestureRecognizers.count);
++            AWEInteractionObjectSummary(slot.systemGlassButton));
+     } else {
+         AWEUnbindPassThroughHomeActionGlass(slot);
+         slot.hidden = YES;
+@@ -11521,7 +11555,8 @@
+         slot.hidden = NO;
+         slot.systemGlassButton.frame = slot.bounds;
+         slot.systemGlassButton.hidden = NO;
+-        AWEBindPassThroughHomeActionGlass(slot, owner);
++        slot.userInteractionEnabled = YES;
++        slot.systemGlassButton.userInteractionEnabled = YES;
+     }
+     AWELayoutExternalBridgeMenuForStack(stack);
+     [CATransaction commit];
+@@ -19771,36 +19806,8 @@
+ 
+ - (void)layoutSubviews {
+     %orig;
+-    AWEHomeActionSlotView *slot = objc_getAssociatedObject(
+-        (UIView *)self, &kAWEHomeActionEmbeddedGlassSlotKey);
+-    if (slot && slot.originalView == (UIView *)self) {
+-        /* Keep pass-through invariant without scheduling a hot layout loop. */
+-        slot.systemGlassButton.userInteractionEnabled = NO;
+-    }
+-}
+-
+-- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+-    AWEMirrorRealTouchToHomeActionGlass((UIView *)self, touches, event,
+-                                        AWEGlassTouchMirrorPhaseBegan);
+-    %orig(touches, event);
+-}
+-
+-- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+-    AWEMirrorRealTouchToHomeActionGlass((UIView *)self, touches, event,
+-                                        AWEGlassTouchMirrorPhaseMoved);
+-    %orig(touches, event);
+-}
+-
+-- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+-    %orig(touches, event);
+-    AWEMirrorRealTouchToHomeActionGlass((UIView *)self, touches, event,
+-                                        AWEGlassTouchMirrorPhaseEnded);
+-}
+-
+-- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+-    %orig(touches, event);
+-    AWEMirrorRealTouchToHomeActionGlass((UIView *)self, touches, event,
+-                                        AWEGlassTouchMirrorPhaseCancelled);
++    /* Right-side system glass is intentionally a real interactive UIButton.
++       Do not force it back into pass-through mode during recycled-cell layout. */
+ }
+ 
+ - (void)setHidden:(BOOL)hidden {
+--- /mnt/data/_alb_topcurrent/AwemeLiquidBar_2.0_auth47_SettingsRefactor_TopControls_project/scripts/preflight.sh	2026-09-11 09:36:19.000000000 +0000
++++ /mnt/data/AwemeLiquidBar_2.0_auth47_SettingsRefactor_TopControls_RightNativePressFix_project/scripts/preflight.sh	2026-09-11 10:36:00.453132580 +0000
+@@ -35,7 +35,7 @@
+     (tweak,'TAP_MODE triple_like','triple like route'),
+     (tweak,'performLikeAction','native triple-tap like toggle action'),
+     (tweak,'AWEStoredTapGestureMode','tap mode getter'),
+-    (tweak,'RIGHT_REAL_TOUCH_BEGIN','v18 right real touch'),
++    (tweak,'RIGHT_NATIVE_GLASS_BIND','direct native right glass'),
+     (tweak,'SEARCH_REAL_GESTURE_LEASE','v18 search lease'),
+     (tweak,'AWERefreshAvatarMenuIfNeeded','avatar menu stabilization'),
+     (tweak,'AWEAvatarMenuSignatureForStack','avatar menu signature'),

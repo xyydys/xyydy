@@ -1,0 +1,20 @@
+AwemeLiquidBar 1.0.56c2 performance audit
+
+Baseline: 1.0.56c1_chat_return_rollback_project
+
+1. Global UIView hook
+   REMOVED. The old hook intercepted UIView setFrame/setAlpha/layoutSubviews/setBackgroundColor process-wide.
+   Player height correction is now scoped to AWEDPlayerFeedPlayerViewController, AWEDPlayerViewController_Merge, AWEAwemePlayVideoViewController, and AWEPlayVideoViewController layout callbacks and scans only their local view trees to depth 3.
+   Detail comment-background cleanup remains on AWECommentInputBackgroundView and the dynamic Swift CommentInputContainerView hook.
+
+2. Top-category suppression
+   The up-to-500-node BFS is cached after a successful discovery pass. Layout passes re-assert cached targets. Cache is invalidated on top-bar attachment, scheduled top refresh passes, trait changes, immediate-subview-count changes, or stale descendants.
+
+3. Clean-screen reapply
+   Generic feed/table/container layout callbacks no longer schedule whole-window rescans. Reapply remains on enter, cell reuse, model changes, and feed index changes, while explicit target hooks still re-suppress controls on their own layout/window/alpha events.
+
+4. Adaptive glass sampling
+   Steady display-link sampling reduced from preferred 4 Hz to 2 Hz. Feed index changes trigger an explicit delayed refresh (~60 ms), preserving fast adaptation after swipes.
+
+5. Intentionally untouched
+   Authorization digest table / auth flow; chat-return rollback behavior; save HUD; status-bar clean-screen handling; fullscreen preference and live/profile geometry; settings and routing behavior.

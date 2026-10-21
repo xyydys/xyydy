@@ -1,0 +1,62 @@
+AwemeLiquidBar 1.0.56c16 auth44 — v15 log-guided recovery
+
+BASELINE
+- Source baseline: v13.1 compile-fixed project.
+- v14 message native-proxy implementation is intentionally NOT inherited.
+
+WHY v14 WAS REJECTED
+- The message log emitted MESSAGE_NATIVE_GLASS thousands of times immediately after entering Messages while MESSAGE_NATIVE_PRESS never appeared.
+- That means the crash happened during layout/configuration, before user interaction.
+- v15 therefore never creates an interactive proxy/forwarder loop. Existing Douyin UIButtons are configured at most once; if a custom subclass removes that configuration, v15 falls back to a passive glass plate and leaves the original action/control untouched.
+
+V15 TARGETS
+1) Messages
+- left/menu 46x46, search 46x46, add 46x46, title 90x46.
+- 20pt balanced outer margins and 8pt search/add gap.
+- original button target/actions preserved.
+- content list extended under the top glass.
+- bottom 83pt native tab reservation released.
+- no AFDCloseFriendsPlaceHolderView mutation; only a thin header separator can be cleared.
+Markers: MESSAGE_V15_NATIVE, MESSAGE_V15_NATIVE_FALLBACK, MESSAGE_V15_SEPARATOR_CLEAR, MESSAGE_V15.
+
+2) 拍同款 / 听抖音
+- glass is owned by each stable AWEPlayInteractionSingleSongMusicStyleView / AWEPlayInteractionListenFeedView anchor.
+- plate is a sibling directly below that anchor; no cross-video host coordinates are retained.
+- zero-size/recycled anchors hide/remove their own plate instead of moving a previous video's plate.
+Markers: SAMESTYLE_V15_WAIT, SAMESTYLE_V15_ATTACH.
+
+3) 商城 / 收藏(Profile)
+- route detection is based on real controllers: IESECMallCoreViewController / AWEProfileBaseContainerViewController hierarchy, not a guessed tab index.
+- real route collection/content anchors are extended through the native 83pt tab reservation.
+- contentInset/adjustedContentInset bottom reservation is cancelled without discarding the top safe area.
+- clipping ancestors are opened so the extended collection can actually draw beneath the floating bar.
+Markers: BOTTOM_V15_ROUTE, BOTTOM_V15_EXTEND.
+
+4) Comment main text
+- global trait propagation remains, but the exact runtime class AWECommentSwiftBizUI.CommentInteractionBaseLabel is also hooked directly.
+- setTextColor:, setAttributedText:, setText:, layoutSubviews and drawTextInRect: are covered so its cached attributed foreground cannot immediately overwrite the adaptive contrast.
+Markers: COMMENT_BODY_V15_HOOK, COMMENT_BODY_V15_ENFORCE, COMMENT_ATTR_PERSIST_V15.
+
+5) Photo / Live Photo comments
+- panel-shrink transforms are rejected only while the comment sheet is opening/visible.
+- ordinary feed transitions are no longer globally blocked.
+- any visible image/live view still carrying the characteristic panel shrink at dismissal is explicitly restored to identity.
+Markers: COMMENT_PHOTO_LIVE_BLOCK, COMMENT_PHOTO_LIVE_RESTORE_V15.
+
+6) Top-left quick menu
+- centering no longer depends on private UIMenu class names.
+- exact generated titles + popup-row geometry are used, and setFrame/layout/didMove all re-apply centering.
+Marker: TOP_MENU_LABEL_CENTER_V15.
+
+7) Home adaptive foreground
+- dark -> light change requires ~0.52 s stability; other changes use ~0.20 s.
+Markers: HOME_GLASS_STYLE_PENDING_V15, HOME_GLASS_STYLE_COMMIT_V15.
+
+ONE-PASS TEST
+A. Enter Messages first. Confirm no crash, equal-height header controls, no 83pt bottom block.
+B. Return Home and swipe through several videos containing 拍同款 and 听抖音.
+C. Open Shop and Profile->收藏 and scroll far enough that cells should pass under the floating tab bar.
+D. Open adaptive comments over both a bright and dark video and inspect the actual comment body text.
+E. Open/close comments on photo and Live Photo posts several times.
+F. Open the top-left menu and verify all action titles are centered.
+G. Export the single v15 diagnostic file if any item remains wrong.

@@ -1,0 +1,99 @@
+{
+  "baseline": "AwemeLiquidBar_2.0.10_TEST15_Native_project.zip",
+  "baseline_zip_sha256": "0e76e91935f7af1da3d84c241acd6be77b74e415ce570477c6ee4a9fbb240642",
+  "revision": "2.0.10-test16",
+  "only_functional_source_change": {
+    "path": "ALBTopNative/ALBTopNativeGroup.m",
+    "change": "iOS 17.4 @available guard in menu dispatch; single TouchUpInside fallback",
+    "all_other_text_in_file_identical": true
+  },
+  "version_only_app_files": [
+    "Tweak.x",
+    "ALB5BottomGeometry.m",
+    "ALB5Settings.h"
+  ],
+  "all_other_app_and_test_sources_identical": true,
+  "unchanged_source_files": [
+    "ALBSidePalette.h",
+    "ALBSettingsGlass.h",
+    "ALBClearContrast.h",
+    "ALBDownloadJob.h",
+    "AwemeLiquidBar-Bridging-Header.h",
+    "ALB5RightLayout.h",
+    "WCLGBackdropLayer.m",
+    "CommentGlassDYKiller.xm",
+    "WCLGEdgeGradientTables.h",
+    "ALB7BottomMath.h",
+    "ALBAlbumVideoExporter.h",
+    "ALBRootScroll.h",
+    "WCLGEdgeEffect.h",
+    "ALBGlassMaterials.h",
+    "MessageTopGlassV3.xm",
+    "ALBNativeMinimize.h",
+    "WCLGBackdropLayer.h",
+    "ALBNativeState.h",
+    "ALBScrollIntent.h",
+    "AwemeAlbumMorphBar.swift",
+    "ALB8Profile.h",
+    "ALBDownloadState.h",
+    "ALBAvatarMenuTouch.h",
+    "ALBNativeInteraction.h",
+    "WCLGEdgeGradientTables.m",
+    "WCLGEdgeEffect.m",
+    "ALB5Options.h",
+    "Tests/native_state_test.c",
+    "Tests/bottom_geometry_test.c",
+    "Tests/scroll_intent_test.c",
+    "Tests/download_state_test.c",
+    "Tests/right_layout_test.c",
+    "ALBTopNative/ALBNativeBarSurface.h",
+    "ALBTopNative/ALBTopNativeGroup.h",
+    "ALBTopNative/ALBCompactGeometry.h",
+    "ALBTopNative/Tests/window_geometry_test.c"
+  ],
+  "material_and_minimization_sha256": {
+    "Makefile": {
+      "test15": "cbbb4fd06284867309a9d494fceb3eea269bdd45bc42fa148df7eaaf390f8b50",
+      "test16": "cbbb4fd06284867309a9d494fceb3eea269bdd45bc42fa148df7eaaf390f8b50",
+      "identical": true
+    },
+    "ALB5Options.h": {
+      "test15": "1ebdc5f9789cb2f5993c8c9ea9ffbfc59ae2bffc89b4635ef877a321fa323fcb",
+      "test16": "1ebdc5f9789cb2f5993c8c9ea9ffbfc59ae2bffc89b4635ef877a321fa323fcb",
+      "identical": true
+    },
+    "ALBTopNative/ALBNativeBarSurface.h": {
+      "test15": "cf040bb4a537f761744b2aa9dc4c0f2c3b389a2a325deb302d1407c656646dab",
+      "test16": "cf040bb4a537f761744b2aa9dc4c0f2c3b389a2a325deb302d1407c656646dab",
+      "identical": true
+    },
+    "AwemeAlbumMorphBar.swift": {
+      "test15": "c5789749558ce765c5718cf9118d2f4d51db89a822ca8d884a50167af738dcaa",
+      "test16": "c5789749558ce765c5718cf9118d2f4d51db89a822ca8d884a50167af738dcaa",
+      "identical": true
+    },
+    "ALBNativeMinimize.h": {
+      "test15": "b29ac1722b5db3f99f0d02b80b9a937eee7a67f7a02c343ff1677ccb8bf9123d",
+      "test16": "b29ac1722b5db3f99f0d02b80b9a937eee7a67f7a02c343ff1677ccb8bf9123d",
+      "identical": true
+    },
+    "ALBNativeInteraction.h": {
+      "test15": "3667b60fd60152987cc2421350a3f9b410050e211c5b69734acc2506be3c73ae",
+      "test16": "3667b60fd60152987cc2421350a3f9b410050e211c5b69734acc2506be3c73ae",
+      "identical": true
+    },
+    "ALB5RightLayout.h": {
+      "test15": "6794e5db8aeea6689d5d6438cfc06f2c4ca0c2fc245f697fc850bd4dfe2c435c",
+      "test16": "6794e5db8aeea6689d5d6438cfc06f2c4ca0c2fc245f697fc850bd4dfe2c435c",
+      "identical": true
+    },
+    "ALBGlassMaterials.h": {
+      "test15": "6f028f675525b46f19bb1227800e375708e2e6496c9252abbf8d59a279fe1e64",
+      "test16": "6f028f675525b46f19bb1227800e375708e2e6496c9252abbf8d59a279fe1e64",
+      "identical": true
+    }
+  },
+  "apple_sdk_build_verified": false,
+  "runtime_material_identity_verified": false,
+  "native_centered_single_avatar_layout_implemented": false
+}

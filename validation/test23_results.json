@@ -1,0 +1,131 @@
+{
+  "scope": "local C regression, source contracts, extracted Objective-C declaration-fixture syntax, Swift parse",
+  "apple_sdk_compile": false,
+  "real_logos_preprocessing": false,
+  "device_test": false,
+  "results": [
+    {
+      "test": "preflight",
+      "exit_code": 0,
+      "passed": true,
+      "output": "2.0.10 TEST23 source/package preflight passed; compile and device testing still required.\nTEST23 native source contract passed (not an iOS compile/device test).\nTweak.x: boundary checks passed (234 original-call directives; not SDK compilation)\nCommentGlassDYKiller.xm: boundary checks passed (26 original-call directives; not SDK compilation)\nMessageTopGlassV3.xm: boundary checks passed (12 original-call directives; not SDK compilation)\n"
+    },
+    {
+      "test": "runtime_guards",
+      "exit_code": 0,
+      "passed": true,
+      "output": "TEST17 extracted Swift scheduling: 8 scenarios passed (mock queue, no UIKit).\nTEST17 source guard assertions passed (not an iOS runtime/crash test).\n"
+    },
+    {
+      "test": "watchdog_guards",
+      "exit_code": 0,
+      "passed": true,
+      "output": "48 extracted frame-gate cases + no-shrink pass-through passed; no UIKit used.\nTEST18 source scope / scheduling / preservation checks passed. Not an iOS build or device test.\n"
+    },
+    {
+      "test": "right_persistence",
+      "exit_code": 0,
+      "passed": true,
+      "output": "TEST19 right persistence / material / touch-handler source checks passed; not an iOS build or device test.\n"
+    },
+    {
+      "test": "test23_source_contract",
+      "exit_code": 0,
+      "passed": true,
+      "output": "16 extracted tap/action gate scenarios passed; no UIKit events simulated.\nTEST23 source contracts and preserved baseline hashes passed; not an iOS build or device validation.\n"
+    },
+    {
+      "test": "primary_action_availability",
+      "exit_code": 0,
+      "passed": true,
+      "output": "{\n  \"test\": \"SDK-free extracted dispatch block availability\",\n  \"apple_sdk_compile\": false,\n  \"results\": [\n    {\n      \"case\": \"guarded_arm64_ios15\",\n      \"target\": \"arm64-apple-ios15.0\",\n      \"compiler_exit_code\": 0,\n      \"expected_success\": true,\n      \"passed\": true,\n      \"stderr\": \"\"\n    },\n    {\n      \"case\": \"guarded_arm64e_ios15\",\n      \"target\": \"arm64e-apple-ios15.0\",\n      \"compiler_exit_code\": 0,\n      \"expected_success\": true,\n      \"passed\": true,\n      \"stderr\": \"\"\n    },\n    {\n      \"case\": \"guarded_arm64_ios17_4\",\n      \"target\": \"arm64-apple-ios17.4\",\n      \"compiler_exit_code\": 0,\n      \"expected_success\": true,\n      \"passed\": true,\n      \"stderr\": \"\"\n    },\n    {\n      \"case\": \"unguarded_negative_control\",\n      \"target\": \"arm64-apple-ios15.0\",\n      \"compiler_exit_code\": 1,\n      \"expected_success\": false,\n      \"passed\": true,\n      \"stderr\": \"/tmp/alb-availability-0704er_5/unguarded_negative_control.m:35:31: error: 'performPrimaryAction' is only available on iOS 17.4 or newer [-Werror,-Wunguarded-availability-new]\\n   35 |                         [live performPrimaryAction];\\n      |                               ^~~~~~~~~~~~~~~~~~~~~\\n/tmp/alb-availability-0704er_5/unguarded_negative_control.m:13:1: note: 'performPrimaryAction' has been marked as being introduced in iOS 17.4 here, but the deployment target is iOS 15.0.0\\n   13 | - (void)performPrimaryAction __attribute__((availability(ios,introduced=17.4)));\\n      | ^\\n/tmp/alb-availability-0704er_5/unguarded_negative_control.m:35:31: note: enclose 'performPrimaryAction' in an @available check to silence this warning\\n   35 |                         [live performPrimaryAction];\\n      |                               ^~~~~~~~~~~~~~~~~~~~~ \\n1 error generated.\\n\"\n    }\n  ]\n}\n"
+    },
+    {
+      "test": "native_endpoint_syntax",
+      "exit_code": 0,
+      "passed": true,
+      "output": "{\n  \"scope\": \"production endpoint header plus invocation/request/readback functions\",\n  \"compile_mode\": \"host\",\n  \"apple_sdk_compile\": false,\n  \"runtime_test\": false,\n  \"note\": \"Non-Apple host passes use Foundation declarations, not an Apple ABI/platform compile.\",\n  \"results\": [\n    {\n      \"arch_label\": \"arm64\",\n      \"exit_code\": 0,\n      \"passed\": true,\n      \"stderr\": \"\"\n    },\n    {\n      \"arch_label\": \"arm64e\",\n      \"exit_code\": 0,\n      \"passed\": true,\n      \"stderr\": \"\"\n    }\n  ]\n}\n"
+    },
+    {
+      "test": "lens_delta_syntax",
+      "exit_code": 0,
+      "passed": true,
+      "output": "{\n  \"scope\": \"edited lens methods only\",\n  \"compile_mode\": \"host\",\n  \"apple_sdk_compile\": false,\n  \"runtime_test\": false,\n  \"results\": [\n    {\n      \"arch_label\": \"arm64\",\n      \"exit_code\": 0,\n      \"stderr\": \"\",\n      \"passed\": true\n    },\n    {\n      \"arch_label\": \"arm64e\",\n      \"exit_code\": 0,\n      \"stderr\": \"\",\n      \"passed\": true\n    }\n  ]\n}\n"
+    },
+    {
+      "test": "right_header_syntax",
+      "exit_code": 0,
+      "passed": true,
+      "output": "arm64 right header declaration-fixture syntax passed (no Apple SDK).\narm64e right header declaration-fixture syntax passed (no Apple SDK).\n"
+    },
+    {
+      "test": "logos_boundary_regression",
+      "exit_code": 0,
+      "passed": true,
+      "output": "{\n  \"scope\": \"production two-method extraction + upstream line-tail model\",\n  \"real_logos_execution\": false,\n  \"compile_mode\": \"host\",\n  \"apple_sdk_compile\": false,\n  \"sdk_path\": null,\n  \"runtime_test\": false,\n  \"results\": [\n    {\n      \"arch\": \"arm64\",\n      \"case\": \"fixed\",\n      \"expected_success\": true,\n      \"compiler_exit_code\": 0,\n      \"passed\": true,\n      \"stderr\": \"\"\n    },\n    {\n      \"arch\": \"arm64\",\n      \"case\": \"test19_negative\",\n      \"expected_success\": false,\n      \"compiler_exit_code\": 1,\n      \"passed\": true,\n      \"stderr\": \"/tmp/alb-logos-boundary-xgq6rk4u/arm64_test19_negative.m:62:165: error: function definition is not allowed here\\n   62 | static void _logos_method$_ungrouped$AWEElementStackView$traitCollectionDidChange$(AWEElementStackView *self, SEL _cmd, UITraitCollection *previousTraitCollection) {\\n      |                                                                                                                                                                     ^\\n/tmp/alb-logos-boundary-xgq6rk4u/arm64_test19_negative.m:65:2: error: expected '}'\\n   65 | }\\n      |  ^\\n/tmp/alb-logos-boundary-xgq6rk4u/arm64_test19_negative.m:34:110: note: to match this '{'\\n   34 | static void _logos_method$_ungrouped$AWEElementStackView$layoutSubviews(AWEElementStackView *self, SEL _cmd) {\\n      |                                                                                                              ^\\n2 errors generated.\\n\"\n    },\n    {\n      \"arch\": \"arm64e\",\n      \"case\": \"fixed\",\n      \"expected_success\": true,\n      \"compiler_exit_code\": 0,\n      \"passed\": true,\n      \"stderr\": \"\"\n    },\n    {\n      \"arch\": \"arm64e\",\n      \"case\": \"test19_negative\",\n      \"expected_success\": false,\n      \"compiler_exit_code\": 1,\n      \"passed\": true,\n      \"stderr\": \"/tmp/alb-logos-boundary-xgq6rk4u/arm64e_test19_negative.m:62:165: error: function definition is not allowed here\\n   62 | static void _logos_method$_ungrouped$AWEElementStackView$traitCollectionDidChange$(AWEElementStackView *self, SEL _cmd, UITraitCollection *previousTraitCollection) {\\n      |                                                                                                                                                                     ^\\n/tmp/alb-logos-boundary-xgq6rk4u/arm64e_test19_negative.m:65:2: error: expected '}'\\n   65 | }\\n      |  ^\\n/tmp/alb-logos-boundary-xgq6rk4u/arm64e_test19_negative.m:34:110: note: to match this '{'\\n   34 | static void _logos_method$_ungrouped$AWEElementStackView$layoutSubviews(AWEElementStackView *self, SEL _cmd) {\\n      |                                                                                                              ^\\n2 errors generated.\\n\"\n    }\n  ]\n}\n"
+    },
+    {
+      "test": "swift_parse",
+      "exit_code": 0,
+      "passed": true,
+      "output": ""
+    },
+    {
+      "test": "window_geometry_test",
+      "exit_code": 0,
+      "passed": true,
+      "output": "top native window, platter and shared baseline geometry: PASS\n"
+    },
+    {
+      "test": "bottom_geometry_test",
+      "exit_code": 0,
+      "passed": true,
+      "output": "bottom geometry: native pair, pivot, 256000 idempotent layouts, reverse trajectory and interrupted animation passed\n"
+    },
+    {
+      "test": "download_state_test",
+      "exit_code": 0,
+      "passed": true,
+      "output": ""
+    },
+    {
+      "test": "native_endpoint_policy_test",
+      "exit_code": 0,
+      "passed": true,
+      "output": "Native endpoint policy: 71 assertions passed (ABI/name filter only; not UIKit execution).\n"
+    },
+    {
+      "test": "native_state_test",
+      "exit_code": 0,
+      "passed": true,
+      "output": "native-state predicates: BOOL ABI checks, unknown/single-item/transition/expanded/compact/invalid geometry passed\n"
+    },
+    {
+      "test": "right_layout_test",
+      "exit_code": 0,
+      "passed": true,
+      "output": "right layout: coordinate transforms + icon-slot packing + repeated cycles passed\n"
+    },
+    {
+      "test": "right_persistence_test",
+      "exit_code": 0,
+      "passed": true,
+      "output": "right persistence: 1.3M stable cycles, 64 hide masks, cross-root inverse maps passed; old restore/apply negative control stays dirty\n"
+    },
+    {
+      "test": "scroll_intent_test",
+      "exit_code": 0,
+      "passed": true,
+      "output": "scroll intent: up, down, reversal, dedup, horizontal, slow and invalid input passed\n"
+    },
+    {
+      "test": "test23_regression_test",
+      "exit_code": 0,
+      "passed": true,
+      "output": "TEST23: raw runtime ABI / portal-safe policy / row-spacing invariants passed (C only, no UIKit).\n"
+    }
+  ],
+  "version": "2.0.10-test23",
+  "private_endpoint_execution": false,
+  "centre_avatar_form_implemented": false
+}

@@ -1,0 +1,137 @@
+{
+  "revision": "2.0.10 TEST29",
+  "scope": "source contracts; production C geometry; extracted watchdog branches; scale model; shell syntax",
+  "apple_sdk_compile": false,
+  "device_test": false,
+  "swift_tests_run": false,
+  "reason_not_run": "This workspace has no Swift compiler, Clang or Apple SDK; the existing Swift tests and full arm64/arm64e build remain required in Xcode CI.",
+  "results": [
+    {
+      "command": [
+        "sh",
+        "scripts/preflight.sh"
+      ],
+      "returncode": 0,
+      "output": "2.0.10 TEST29 source/package preflight passed; compile and device testing still required.\nTEST29 native source contract passed (not an iOS compile/device test).\nTweak.x: boundary checks passed (236 original-call directives; not SDK compilation)\nCommentGlassDYKiller.xm: boundary checks passed (26 original-call directives; not SDK compilation)\nMessageTopGlassV3.xm: boundary checks passed (12 original-call directives; not SDK compilation)\n"
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/check_test29.py"
+      ],
+      "returncode": 0,
+      "output": "TEST29 native-material / foreground / search / sheet / background source contracts passed; no SDK/device rendering claim.\n"
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/check_test24.py"
+      ],
+      "returncode": 0,
+      "output": "TEST24 production-source invariants passed; not an iOS build, native-animation test, or device test.\n"
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/check_right_persistence.py"
+      ],
+      "returncode": 0,
+      "output": "TEST19 right persistence / material / touch-handler source checks passed; not an iOS build or device test.\n"
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/check_watchdog_guards.py"
+      ],
+      "returncode": 0,
+      "output": "48 extracted frame-gate cases + no-shrink pass-through passed; no UIKit used.\nTEST18 source scope / scheduling / preservation checks passed. Not an iOS build or device test.\n"
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/test_bottom_scale_feedback.py"
+      ],
+      "returncode": 0,
+      "output": "Bottom scale: 6100 anchor/idempotence traces (610000 model passes); no UIKit/device test.\n"
+    },
+    {
+      "command": [
+        "bash",
+        "-n",
+        "push_to_github.sh"
+      ],
+      "returncode": 0,
+      "output": ""
+    },
+    {
+      "test": "right_layout_test",
+      "returncode": 0,
+      "output": "right layout: coordinate transforms + icon-slot packing + repeated cycles passed\n"
+    },
+    {
+      "test": "right_persistence_test",
+      "returncode": 0,
+      "output": "right persistence: 1.3M stable cycles, 64 hide masks, cross-root inverse maps passed; old restore/apply negative control stays dirty\n"
+    },
+    {
+      "test": "test23_regression_test",
+      "returncode": 0,
+      "output": "TEST23: raw runtime ABI / portal-safe policy / row-spacing invariants passed (C only, no UIKit).\n"
+    },
+    {
+      "test": "right_tail_anchor_test",
+      "returncode": 0,
+      "output": "hidden-share count anchoring: 140 visibility/scale cases passed\n"
+    },
+    {
+      "workflow_step": "Verify Xcode 27 and iOS 27 SDK",
+      "returncode": 0,
+      "output": ""
+    },
+    {
+      "workflow_step": "Fix executable permissions",
+      "returncode": 0,
+      "output": ""
+    },
+    {
+      "workflow_step": "Static preflight before dependencies",
+      "returncode": 0,
+      "output": ""
+    },
+    {
+      "workflow_step": "Check top carrier with iOS 15 deployment target",
+      "returncode": 0,
+      "output": ""
+    },
+    {
+      "workflow_step": "Typecheck bottom Swift against iPhone SDK",
+      "returncode": 0,
+      "output": ""
+    },
+    {
+      "workflow_step": "Install packaging dependencies",
+      "returncode": 0,
+      "output": ""
+    },
+    {
+      "workflow_step": "Install Theos",
+      "returncode": 0,
+      "output": ""
+    },
+    {
+      "workflow_step": "Preprocess Logos source and verify generated hook boundaries",
+      "returncode": 0,
+      "output": ""
+    },
+    {
+      "workflow_step": "Build rootless package",
+      "returncode": 0,
+      "output": ""
+    },
+    {
+      "workflow_step": "Collect package and dylib",
+      "returncode": 0,
+      "output": ""
+    }
+  ]
+}

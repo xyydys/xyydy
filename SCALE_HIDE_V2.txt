@@ -1,0 +1,36 @@
+AwemeLiquidBar 2.0 auth47 — Scale/Hide v2 + compile bridge fix
+
+Base
+- AwemeLiquidBar_2.0_auth47_SettingsRefactor_project
+- Keeps the existing v18 real-touch right action path and real Search gesture lease.
+
+Compile fix
+- Restores the Swift declaration for AWEAlbumMorphCreateConfiguredImage via @_silgen_name before its first use.
+- preflight now verifies that this bridge declaration exists.
+
+New layout controls
+- Bottom bar overall scale: 70%–130%, transform-based and bottom-aligned.
+- Top left button scale: 70%–130%.
+- Top middle category capsule scale: 70%–130%.
+- Top right/search button scale: 70%–130%.
+- Top left/right edge margins: 24–96 pt.
+- Right like/comment/favorite/share glass scale: 70%–130%.
+- Avatar scale: 70%–130% (avatar remains non-hideable).
+- Same-style / 拍同款 whole-slot scale: 70%–130%.
+- Right number/text scale: 70%–130% via transform on native labels.
+- Right spacing scale: 55%–125%.
+- Right vertical offset: -80 to +120 pt.
+
+New hide controls
+- Hide Like / 点赞.
+- Hide Comment / 评论.
+- Hide Favorite / 收藏.
+- Hide Share / 分享.
+- Hide Same Style / 拍同款.
+- Avatar intentionally has no hide switch.
+
+Reflow behavior
+- Hidden roles do not keep a visual/touch slot.
+- Remaining roles are packed into the lower native slot positions; items above a hidden role fall downward.
+- The original AWEFeedVideoButton remains the real touch/business owner; the Liquid Glass layer stays pass-through.
+- Hidden native owners use layer opacity + interaction disable rather than hidden/alpha so discovery/recovery remains stable.

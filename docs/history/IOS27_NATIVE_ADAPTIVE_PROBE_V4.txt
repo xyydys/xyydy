@@ -1,0 +1,24 @@
+iOS 27 Native Adaptive Probe v4
+Base: AwemeLiquidBar 1.0.58 auth47 fullscreen-fix release
+
+Purpose
+- iOS 26 behavior remains unchanged.
+- iOS 27 keeps UIKit-owned Clear/Tinted transparency.
+- iOS 27 light/dark material branch follows the feed near the bottom bar.
+- Native search button receives real touches again for Liquid Glass press/stretch.
+
+Changes
+1. Three 4x4 UIGlassEffect probes live in Douyin's source window at the actual
+   bottom-bar Y and 20/50/80% X.
+2. 2-of-3 vote with two-sample hysteresis.
+3. The resolved style is applied to the private UITabBar floating material tree
+   (platter/lens/backdrop/visual provider), not only controller/tabBar traits.
+4. Native UITabBarAppearance is re-submitted only when the material tree changes.
+5. iOS 27 bypasses the old search gesture proxy and uses the real UISearchTab.
+6. Automatic diagnostics:
+   ALBUM27_PROBE_V4
+   ALBUM27_MATERIAL_APPLY_V4
+   ALBUM27_NATIVE_SEARCH_DIRECT_V4
+   ALBUM_MORPH_APPEARANCE ... mode=IOS27_LOCAL_PROBE_V4
+
+Force Dark remains explicit. Auth47 is preserved, including ma175172.

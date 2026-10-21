@@ -1,0 +1,38 @@
+{
+  "revision": "2.0.10-test17",
+  "baseline_uploaded_file": "AwemeLiquidBar_2.0.10_TEST10_project(2).zip",
+  "baseline_zip_sha256": "e0682b0219614a4887c13cfe0af259304775a8a380203e687916523965632369",
+  "immutable_files": {
+    "ALB5Options.h": {
+      "baseline_sha256": "1ebdc5f9789cb2f5993c8c9ea9ffbfc59ae2bffc89b4635ef877a321fa323fcb",
+      "test17_sha256": "1ebdc5f9789cb2f5993c8c9ea9ffbfc59ae2bffc89b4635ef877a321fa323fcb",
+      "identical": true
+    },
+    "ALB5RightLayout.h": {
+      "baseline_sha256": "6794e5db8aeea6689d5d6438cfc06f2c4ca0c2fc245f697fc850bd4dfe2c435c",
+      "test17_sha256": "6794e5db8aeea6689d5d6438cfc06f2c4ca0c2fc245f697fc850bd4dfe2c435c",
+      "identical": true
+    },
+    "ALBRootScroll.h": {
+      "baseline_sha256": "9641e3ef1787c0616cf57b3ec12f4db2a55bccad85b426b13f30503aef9b4e7b",
+      "test17_sha256": "9641e3ef1787c0616cf57b3ec12f4db2a55bccad85b426b13f30503aef9b4e7b",
+      "identical": true
+    },
+    "ALBSidePalette.h": {
+      "baseline_sha256": "1491c4a2e46a26a4ee0c9472a70b3c67dfca0565c75e02f47b793c514e9c3fee",
+      "test17_sha256": "1491c4a2e46a26a4ee0c9472a70b3c67dfca0565c75e02f47b793c514e9c3fee",
+      "identical": true
+    },
+    "ALBTopNative/ALBNativeBarSurface.h": {
+      "baseline_sha256": "cf040bb4a537f761744b2aa9dc4c0f2c3b389a2a325deb302d1407c656646dab",
+      "test17_sha256": "cf040bb4a537f761744b2aa9dc4c0f2c3b389a2a325deb302d1407c656646dab",
+      "identical": true
+    }
+  },
+  "authorization_core": {
+    "sha256": "a9aa5a8d5e08723a6f034372a1937658c99bc1f023f1773387c21efad42c013f",
+    "identical": true
+  },
+  "runtime_material_identity_verified": false,
+  "native_centered_single_avatar_layout_implemented": false
+}

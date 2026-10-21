@@ -1,0 +1,61 @@
+AwemeLiquidBar 1.0.58 auth47 — Interaction/Warp v12
+
+This build is intentionally based on the user's two supplied references rather
+than continuing the v10/v11 interaction architecture:
+- old AwemeLiquidBar auth44 stability-v7: verified native Douyin hit ownership.
+- VVebo_LiquidGlass_IconWarp_Solution: verified UIButtonConfiguration native
+  content-container placement for foreground deformation.
+
+1. iOS 27 Clear bottom-bar policy
+- Returns to the exact _UITabBarItemPlatterView.glassEffect target that visibly
+  worked in v10. v11's broad Platter/Search private-view scan is removed.
+- The setting still means: ON = Clear on Home + playable Like/Favourites feed;
+  OFF = Home Regular/Dark + all secondary pages follow Douyin Light/Dark.
+- Clear/Regular is committed again only at page/settings transition times
+  (0/0.05/0.16s) because UIKit can recreate the private platter after its trait
+  write. There is no per-video luminance sampling or display-link polling.
+- Existing GlassContainer spacing merge attempt remains, without reparenting
+  private UIKit views.
+
+2. Right Like / Comment / Favourite / Share
+- Restores old-v7 ownership exactly: replacement slots and glass buttons never
+  participate in hit testing. Douyin's original AWEFeedVideoButton remains the
+  only business-action receiver.
+- iOS 26/27 visual glass now receives the SAME real UITouch/UIEvent through its
+  public UIButton tracking lifecycle (begin/continue/end/cancelTracking),
+  observed passively from UIApplication.sendEvent. No action is synthesized.
+- Old gesture/scale feedback remains only as a pre-iOS-26 fallback.
+
+3. Home Search
+- Top Search glass is positioned on the real Douyin search owner's live hit
+  centre when available, then made pass-through. No private recognizer is moved.
+- Bottom UISearchTab returns to the old-v7 live top-owner discovery/forward path,
+  with the existing native fallback retained.
+- Top visual glass is also registered for passive native tracking; it has no
+  action target of its own, preventing duplicate/failed forwarding.
+
+4. Avatar + music/"拍同款"
+- v9 geometry is retained (avatar 54pt plate, same-style/music 50.16pt plate).
+- The visible image mirror is no longer an ordinary UIButton subview and is not
+  assigned to UIButtonConfiguration.image.
+- Foreground is inserted into UIKit's real UIButtonConfiguration content
+  container using the supplied VVebo rule (titleLabel/imageView parent; blank
+  title only to materialise that hierarchy). Material and image therefore share
+  the same native Glass deformation coordinate space.
+
+5. Message top Menu / Search / Add
+- Regular glass only; follows Douyin/App Light/Dark, never the Home Clear policy.
+- Douyin source controls/recognizers remain untouched and receive real touches.
+- Their icon mirrors are placed inside the glass UIButton configuration-content
+  hierarchy so content follows the plate deformation.
+- iOS 26/27 uses the same passive native UITouch/UIEvent tracking bridge as the
+  right rail. No long-press recognizer is installed on Message controls.
+
+6. Top category title readability
+- Native Douyin text colour is preserved when valid.
+- If the custom top carrier is objectively dark/opaque and the captured text is
+  also dark, only that unreadable case is corrected to white. Titles are not
+  globally forced black or white.
+
+7. Favourites scroll no-snap fix
+- v11's Profile/Favourites geometry suppression is retained unchanged.

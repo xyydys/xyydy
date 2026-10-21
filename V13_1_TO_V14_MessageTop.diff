@@ -1,0 +1,15 @@
+--- /mnt/data/alb_v14_work/AwemeLiquidBar_1.0.58_auth47_TouchRollback_v13_1_compilefix_project/MessageTopGlassV3.xm	2026-09-03 08:09:25.000000000 +0000
++++ MessageTopGlassV3.xm	2026-09-03 08:57:00.469262925 +0000
+@@ -172,7 +172,11 @@
+     return [documents stringByAppendingPathComponent:@"AwemeLiquidBar_comment_message_probe_1.0.58.log"];
+ }
+ static void AWEMessageProbe(NSString *format, ...) {
+-    if (format.length == 0) return;
++    /* v14: message diagnostics are opt-in. The previous unconditional file
++       writes ran during layout/maintenance and were unnecessary in release. */
++    if (![NSUserDefaults.standardUserDefaults
++            boolForKey:@"AwemeLiquidBarInteractionDiagnosticEnabledV1"] ||
++        format.length == 0) return;
+     va_list args; va_start(args, format);
+     NSString *line = [[NSString alloc] initWithFormat:format arguments:args];
+     va_end(args);

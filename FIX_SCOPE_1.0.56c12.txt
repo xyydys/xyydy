@@ -1,0 +1,21 @@
+AwemeLiquidBar 1.0.56c12 — targeted c10 follow-up
+
+BASE
+- Built from 1.0.56c10 auth37 (not the unrelated 1.0.56c11 SWJ experiment).
+- Preserves the 1.0.56c8 playback-lifecycle fix and 1.0.56c10 true ownership-release implementation.
+
+TARGETED FIXES
+1. Home article-style feed items cannot leave LiquidBar permanently hidden; visible Home feed chrome is authoritative unless an explicit route suppresses the bar.
+2. IM composer routes suppress LiquidBar and opt out of internal fullscreen geometry, preventing bottom-bar leakage under sent images and avoiding forwarded-work UI being lifted by a second bottom footprint.
+3. Search routes opt out of internal fullscreen geometry so tapping search-result works does not enter a competing feed-height rewrite path.
+4. AWEFeedTableView fullscreen sizing only expands a native one-tab-short layout and never rewrites its frame while tracking/dragging/decelerating.
+5. Top category visibleCount=1 now follows selectedIndex instead of always showing windowStart 0.
+6. Authorization adds Hoeyc_0505: auth37 -> auth38.
+7. True bottom-bar ownership-release setting is visible and usable only for the authorized account digests corresponding to Hoeyc_0505 and 0416xxd. All other accounts are forced to normal LiquidBar-visible behavior, including stale defaults.
+
+NOT CHANGED
+- No SWJ compatibility logic from 1.0.56c11.
+- No forced play/pause changes.
+- No chat interactive-return experiments.
+- No settings-drawer geometry experiments.
+- No process-wide UIView hook.

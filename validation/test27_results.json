@@ -1,0 +1,163 @@
+{
+  "version": "2.0.10 TEST27 FIX1",
+  "basis": "TEST27 source plus user device diagnostic and four reported CI compile corrections",
+  "checks": [
+    {
+      "command": "sh scripts/preflight.sh",
+      "exit_code": 0,
+      "status": "passed",
+      "output": "2.0.10 TEST27 FIX1 source/package preflight passed; compile and device testing still required.\nTEST27 FIX1 native source contract passed (not an iOS compile/device test).\nTweak.x: boundary checks passed (234 original-call directives; not SDK compilation)\nCommentGlassDYKiller.xm: boundary checks passed (26 original-call directives; not SDK compilation)\nMessageTopGlassV3.xm: boundary checks passed (12 original-call directives; not SDK compilation)\n"
+    },
+    {
+      "command": "python3 scripts/check_test24.py",
+      "exit_code": 0,
+      "status": "passed",
+      "output": "TEST24 production-source invariants passed; not an iOS build, native-animation test, or device test.\n"
+    },
+    {
+      "command": "python3 scripts/check_right_persistence.py",
+      "exit_code": 0,
+      "status": "passed",
+      "output": "TEST19 right persistence / material / touch-handler source checks passed; not an iOS build or device test.\n"
+    },
+    {
+      "command": "bash -n push_to_github.sh",
+      "exit_code": 0,
+      "status": "passed",
+      "output": ""
+    },
+    {
+      "command": "python3 scripts/check_runtime_guards.py",
+      "exit_code": 1,
+      "status": "not_run_missing_compiler",
+      "output": "swiftc required for scheduling test\n"
+    },
+    {
+      "command": "python3 scripts/check_watchdog_guards.py",
+      "exit_code": 1,
+      "status": "not_run_missing_compiler",
+      "output": "TEST18 watchdog guard: clang is required for extracted control-flow checks\n"
+    },
+    {
+      "command": "cc -std=c11 -Wall -Wextra -Werror Tests/scroll_intent_test.c; execute",
+      "exit_code": 0,
+      "status": "passed",
+      "output": "scroll intent: directions, reversal, dedup and manual-vs-idle feed ownership passed\n"
+    },
+    {
+      "command": "cc -std=c11 -Wall -Wextra -Werror Tests/native_state_test.c; execute",
+      "exit_code": 0,
+      "status": "passed",
+      "output": "native-state predicates: BOOL ABI checks, unknown/single-item/transition/expanded/compact/invalid geometry passed\n"
+    }
+  ],
+  "apple_sdk_compile": false,
+  "swift_model_execution": false,
+  "device_test": false,
+  "authorization_and_preservation_hash_gates": "passed in preflight",
+  "fixes": [
+    "foreground bitmap failure no longer rejects center transition; native view snapshot/public glyph copy/current UITab model paths",
+    "feed commit expands timed-idle ball only, preserving gesture collapse",
+    "prior runtime guard / CoreGraphics / capsule / obsolete pixel-array fixes integrated"
+  ],
+  "remaining_validation": [
+    "Actual UIKit snapshot and selected-lens appearance on device",
+    "Glass fusion and reverse animation appearance",
+    "Fallback model omits native selection lens and badge, original native views restored on full expansion",
+    "Apple SDK compilation via supplied Xcode workflow"
+  ],
+  "previous_test27_report": {
+    "version": "2.0.10 TEST27",
+    "baseline": "uploaded TEST24 NativeScrollModes project 2(2).zip",
+    "checks": [
+      {
+        "command": "sh scripts/preflight.sh",
+        "exit_code": 0,
+        "output": "2.0.10 TEST27 source/package preflight passed; compile and device testing still required.\nTEST27 native source contract passed (not an iOS compile/device test).\nTweak.x: boundary checks passed (234 original-call directives; not SDK compilation)\nCommentGlassDYKiller.xm: boundary checks passed (26 original-call directives; not SDK compilation)\nMessageTopGlassV3.xm: boundary checks passed (12 original-call directives; not SDK compilation)\n",
+        "status": "passed"
+      },
+      {
+        "command": "python3 scripts/check_test24.py",
+        "exit_code": 0,
+        "output": "TEST24 production-source invariants passed; not an iOS build, native-animation test, or device test.\n",
+        "status": "passed"
+      },
+      {
+        "command": "python3 scripts/check_runtime_guards.py",
+        "exit_code": 1,
+        "output": "swiftc required for scheduling test\n",
+        "status": "not_run_missing_compiler"
+      },
+      {
+        "command": "python3 scripts/check_watchdog_guards.py",
+        "exit_code": 1,
+        "output": "TEST18 watchdog guard: clang is required for extracted control-flow checks\n",
+        "status": "not_run_missing_compiler"
+      },
+      {
+        "command": "python3 scripts/check_right_persistence.py",
+        "exit_code": 0,
+        "output": "TEST19 right persistence / material / touch-handler source checks passed; not an iOS build or device test.\n",
+        "status": "passed"
+      },
+      {
+        "command": "bash -n push_to_github.sh",
+        "exit_code": 0,
+        "output": "",
+        "status": "passed"
+      }
+    ],
+    "changed_baseline_files": [
+      ".github/workflows/build.yml",
+      "ALB5BottomGeometry.m",
+      "ALB5Settings.h",
+      "AwemeAlbumMorphBar.swift",
+      "AwemeLiquidBar-Bridging-Header.h",
+      "Makefile",
+      "README.md",
+      "Tweak.x",
+      "VALIDATION.md",
+      "control",
+      "push_to_github.sh",
+      "scripts/check_native_contract.py",
+      "scripts/preflight.sh"
+    ],
+    "new_runtime_sources": [
+      "ALBCenterMorphGeometry.swift",
+      "ALBCenterMorphSurface.swift"
+    ],
+    "authorization_and_preservation_hash_gates": "passed in preflight",
+    "new_geometry_math_scan": {
+      "kind": "independent Python equivalent-formula numerical scan, not Swift execution",
+      "layouts": 5,
+      "poses": 500005,
+      "result": "passed by geometry review agent",
+      "invariants": [
+        "constant height and y",
+        "capsule width >= height",
+        "monotone edges and outer width",
+        "contact/absorption and containment",
+        "centered circle endpoint",
+        "late complementary icon/avatar fades"
+      ]
+    },
+    "existing_c_tests": {
+      "scroll_intent": "compiled with cc and passed",
+      "native_state": "compiled with cc and passed",
+      "bottom_geometry": "compiled with cc and passed; historical model, not new Swift fusion"
+    },
+    "new_swift_geometry_tests": "included and added to macOS Xcode Actions; not executed locally (swiftc missing)",
+    "apple_sdk_compile": false,
+    "device_test": false,
+    "limitations": [
+      "Native foreground snapshot/lens and UIGlassContainerEffect rendering require device validation",
+      "Native effect may be unavailable; fallback uses UIKit regular and logs source",
+      "Snapshot foreground does not update live badge/refraction until restored",
+      "No search pair or failed native capture retains expanded bar"
+    ]
+  },
+  "foreground_routes": "Public image/text clone; complex native foreground UIView snapshot; per-side current UITab model fallback on missing or partial capture.",
+  "snapshot_path_note": "No bitmap/alpha-pixel precondition. Snapshot non-nil does not itself prove visual fidelity; device validation required.",
+  "archive_whitelist_files": 117,
+  "latest_preflight_output": "2.0.10 TEST27 FIX1 source/package preflight passed; compile and device testing still required.\nTEST27 FIX1 native source contract passed (not an iOS compile/device test).\nTweak.x: boundary checks passed (234 original-call directives; not SDK compilation)\nCommentGlassDYKiller.xm: boundary checks passed (26 original-call directives; not SDK compilation)\nMessageTopGlassV3.xm: boundary checks passed (12 original-call directives; not SDK compilation)\n"
+}

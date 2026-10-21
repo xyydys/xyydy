@@ -1,0 +1,675 @@
+--- /mnt/data/v8base_for_diff/AwemeLiquidBar_1.0.58_auth47_iOS27LuminanceAdaptive_v8_project/Tweak.x	2026-09-02 18:34:39.000000000 +0000
++++ Tweak.x	2026-09-02 19:16:18.756971866 +0000
+@@ -12,7 +12,7 @@
+ #include <dlfcn.h>
+ 
+ /*
+- AwemeLiquidBar 1.0.58 — auth47 + iOS27 luminance-adaptive native tab bar v8 + release fixes
++ AwemeLiquidBar 1.0.58 — auth47 + page-fixed Liquid Glass v9 + interaction fixes
+ 
+  Fullscreen/clean consolidation release:
+  - starts from the verified 1.0.55a stable baseline; unrelated layout experiments remain excluded;
+@@ -273,6 +273,7 @@
+ static char kAWETopCategorySuppressionCacheKey;
+ static char kAWETopCategorySuppressionCacheDirtyKey;
+ static char kAWETopCategorySuppressionCacheSubviewCountKey;
++static char kAWETopCategoryOwnerInteractionKey;
+ static char kAWETopMenuSlotKey;
+ static char kAWETopSearchSlotKey;
+ static char kAWETopSourceHiddenKey;
+@@ -280,6 +281,8 @@
+ static char kAWETopSourceSlotKey;
+ static char kAWETopOwnerLayerOpacityKey;
+ static char kAWETopOwnerInteractionKey;
++static char kAWETopSearchTransferredGestureKey;
++static char kAWETopSearchTransferredGestureOriginalViewKey;
+ static char kAWETopOwnerOriginalCenterKey;
+ static char kAWETopOwnerSlotKey;
+ static char kAWETopMenuForcedHiddenKey;
+@@ -951,6 +954,7 @@
+ static BOOL AWEInstallOrUpdateAlbumMorphBar(UIView *originalBar, BOOL forceVisible);
+ static void AWEUninstallAlbumMorphBar(void);
+ static void AWEApplyAlbumMorphResolvedAppearance(UIWindow *sourceWindow, NSInteger originalIndex);
++static UIUserInterfaceStyle AWEAlbumMorphResolvedInterfaceStyle(UIWindow *sourceWindow, NSInteger originalIndex);
+ static void AWEApplyAlbumMorphVisibleFraction(CGFloat fraction, NSString *reason, BOOL animated);
+ static void AWEUpdateAlbumMorphVisibility(UIView *originalBar, NSString *reason);
+ static void AWEApplyAlbumMorphOriginalSuppression(UIView *originalBar,
+@@ -3570,22 +3574,15 @@
+     if (!nativeBar) return;
+     if (!accentColor) accentColor = AWEStoredAccentColor();
+ 
+-    /*
+-     iOS 27 changed the backdrop sampling used by Liquid Glass.  Supplying an
+-     explicit normal icon/title colour prevents the new native renderer from
+-     choosing black or white against the sampled content.  In automatic mode
+-     on iOS 27, leave the normal foreground unset and let UIKit own it.
+-    */
+-    BOOL nativeAdaptiveForeground =
+-        AWEIsIOS27OrLater() && !AWEHomeForceDarkGlassEnabled();
+-
++    /* v9 page-fixed policy: use a dynamic label foreground rather than the
++       retired backdrop-adaptive path. The bar's own trait is Dark on Home and
++       matches the app on secondary pages, so UIKit resolves this color once
++       per page/appearance transition instead of per-video backdrop. */
+     UIColor *normalColor = nil;
+-    if (!nativeAdaptiveForeground) {
+-        if (@available(iOS 13.0, *)) {
+-            normalColor = [UIColor.labelColor colorWithAlphaComponent:0.78];
+-        } else {
+-            normalColor = [UIColor colorWithWhite:0.0 alpha:0.78];
+-        }
++    if (@available(iOS 13.0, *)) {
++        normalColor = [UIColor.labelColor colorWithAlphaComponent:0.78];
++    } else {
++        normalColor = [UIColor colorWithWhite:0.0 alpha:0.78];
+     }
+ 
+     nativeBar.translucent = YES;
+@@ -3797,7 +3794,14 @@
+         return;
+     }
+ 
+-    UIUserInterfaceStyle desired = UIUserInterfaceStyleUnspecified;
++    /* v9 page-fixed policy: Home is always the dark Liquid Glass branch.
++       Every other root tab follows Douyin's own app/window appearance. This
++       changes only on root-page transitions or app appearance changes; no
++       video/backdrop luminance sampling participates in the decision. */
++    NSInteger rootIndex = AWECurrentOriginalMainTabIndex();
++    UIUserInterfaceStyle desired = rootIndex == 0
++        ? UIUserInterfaceStyleDark
++        : AWEAppResolvedAppearanceStyle(nativeBar.window ?: AWEActiveMainWindow());
+ 
+     BOOL changed = nativeBar.overrideUserInterfaceStyle != desired;
+     [UIView performWithoutAnimation:^{
+@@ -7047,9 +7051,20 @@
+ @property (nonatomic, assign) AWEHomeActionKind actionKind;
+ @property (nonatomic, strong) AWEPhotosExactGlassButtonHostView *photosGlassHost;
+ @property (nonatomic, strong) UIButton *systemGlassButton;
++- (void)alb_nativeGlassTap:(UIButton *)sender;
+ @end
+ 
+ @implementation AWEHomeActionSlotView
++- (void)alb_nativeGlassTap:(UIButton *)sender {
++    (void)sender;
++    UIView *owner = self.originalView;
++    if (!owner || !owner.window) return;
++    BOOL sent = AWETriggerQuickMenuDestinationView(owner);
++    AWEInteractionDiagnosticWrite(
++        @"HOME_NATIVE_GLASS_TAP kind=%ld result=%d owner=%@",
++        (long)self.actionKind, sent, AWEInteractionObjectSummary(owner));
++    if (sent) AWEScheduleHomeActionStackRefresh(self.superview);
++}
+ @end
+ 
+ @interface AWEHomeProfileGlassView : UIView
+@@ -8862,9 +8877,15 @@
+         homeStyle != UIUserInterfaceStyleDark) {
+         homeStyle = gAWEAlbumMorphLastAppliedStyle;
+     }
+-    UIUserInterfaceStyle style = transparent
+-        ? UIUserInterfaceStyleUnspecified
+-        : homeStyle;
++    UIUserInterfaceStyle style = homeStyle;
++    if (AWEOperatingSystemMajorVersion() >= 26) {
++        /* Home chrome is fixed DARK even in Clear glass mode. The configuration
++           still owns Clear/Tinted/transparency; only the semantic Light/Dark
++           material branch is pinned here. */
++        style = UIUserInterfaceStyleDark;
++    } else if (transparent) {
++        style = UIUserInterfaceStyleUnspecified;
++    }
+     if (style != UIUserInterfaceStyleLight &&
+         style != UIUserInterfaceStyleDark) {
+         style = UIUserInterfaceStyleUnspecified;
+@@ -8934,7 +8955,11 @@
+ 
+     BOOL transparent = !tintedGlass;
+     BOOL automaticContrast = transparent && !preserveOriginalImage &&
+-                             foregroundColor == nil;
++                             foregroundColor == nil &&
++                             AWEOperatingSystemMajorVersion() < 26;
++    /* v9 iOS 26/27 Home is a fixed DARK material island. Clear glass therefore
++       no longer needs per-button backdrop screenshots just to choose black vs
++       white artwork; UIKit resolves the foreground inside the dark trait. */
+     objc_setAssociatedObject(button, &kAWEAdaptiveGlassTransparentKey,
+                              @(transparent), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+     objc_setAssociatedObject(button, &kAWEAdaptiveGlassStrongEdgeKey,
+@@ -11204,16 +11229,19 @@
+         slot = [[AWEHomeActionSlotView alloc] initWithFrame:CGRectZero];
+         slot.accessibilityIdentifier = [NSString stringWithFormat:
+             @"AwemeLiquidBar.HomeActionSlot.%ld", (long)kind];
+-        slot.userInteractionEnabled = NO;
++        slot.userInteractionEnabled = YES;
+         slot.backgroundColor = UIColor.clearColor;
+         slot.opaque = NO;
+ 
+         if (@available(iOS 26.0, *)) {
+             UIButton *glassButton = [UIButton buttonWithType:UIButtonTypeCustom];
+-            glassButton.userInteractionEnabled = NO;
++            glassButton.userInteractionEnabled = YES;
++            glassButton.exclusiveTouch = YES;
+             glassButton.backgroundColor = UIColor.clearColor;
+             glassButton.opaque = NO;
+             glassButton.clipsToBounds = NO;
++            [glassButton addTarget:slot action:@selector(alb_nativeGlassTap:)
++                   forControlEvents:UIControlEventTouchUpInside];
+             [slot addSubview:glassButton];
+             slot.systemGlassButton = glassButton;
+         }
+@@ -11251,11 +11279,11 @@
+     slot.hidden = NO;
+     slot.alpha = 1.0;
+     slot.overrideUserInterfaceStyle = UIUserInterfaceStyleUnspecified;
+-    /* Keep the verified pass-through interaction path: Douyin's original
+-       AWEFeedVideoButton remains the sole touch owner.  The glass is visual
+-       only, so like/comment/favorite/share cannot be intercepted or duplicated. */
+-    slot.userInteractionEnabled = NO;
+-    slot.systemGlassButton.userInteractionEnabled = NO;
++    /* v9: the visible UIButton is the real touch owner so UIKit can render
++       native Liquid Glass touch-down/stretch/motion. A completed tap is then
++       forwarded once to Douyin's original action owner. */
++    slot.userInteractionEnabled = YES;
++    slot.systemGlassButton.userInteractionEnabled = YES;
+     slot.systemGlassButton.frame = slot.bounds;
+ 
+     UIColor *foregroundColor = nil;
+@@ -11291,7 +11319,8 @@
+             originalPNG,
+             AWEHomeTintedGlassEnabled(),
+             NO);
+-        AWEInstallGlassPressFeedback(button, slot.systemGlassButton);
++        /* No synthetic scale/long-press mirror: UIButton owns its native
++           Liquid Glass interaction state directly. */
+     } else {
+         slot.hidden = YES;
+     }
+@@ -11554,6 +11583,21 @@
+     return best;
+ }
+ 
++static void AWERestoreTopSearchGestureForSlot(AWEHomeTopSlotView *slot) {
++    if (!slot) return;
++    UIGestureRecognizer *gesture = objc_getAssociatedObject(
++        slot, &kAWETopSearchTransferredGestureKey);
++    UIView *original = objc_getAssociatedObject(
++        slot, &kAWETopSearchTransferredGestureOriginalViewKey);
++    if (gesture && original && gesture.view != original) {
++        [original addGestureRecognizer:gesture];
++    }
++    objc_setAssociatedObject(slot, &kAWETopSearchTransferredGestureKey,
++                             nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++    objc_setAssociatedObject(slot, &kAWETopSearchTransferredGestureOriginalViewKey,
++                             nil, OBJC_ASSOCIATION_ASSIGN);
++}
++
+ static void AWERestoreTopOwnerAppearanceOnly(UIView *owner) {
+     if (!owner) return;
+     NSNumber *opacity = objc_getAssociatedObject(
+@@ -11623,6 +11667,7 @@
+     AWEHomeTopSlotView *slot = AWEEnsureTopSlot(
+         container, AWEHomeTopActionKindSearch);
+     if (!slot) return;
++    AWERestoreTopSearchGestureForSlot(slot);
+ 
+     if (owner) {
+         AWEHideTopSourceImage(slot, source ?: AWEBestTopIconImageView(owner));
+@@ -11822,10 +11867,9 @@
+ static UIVisualEffectView *AWEEnsureAlbumMorphTintProbe(UIWindow *sourceWindow) {
+     if (!sourceWindow || !sourceWindow.rootViewController) return nil;
+ 
+-    /* v5: the 4x4 iOS 27 resolver was proven unreliable by the device log:
+-       it stayed L,L,L while the actual right-side Liquid Glass controls changed
+-       with the video.  Never create those probe dots on iOS 27 again. */
+-    if (AWEIsIOS27OrLater()) {
++    /* v9: iOS 26/27 are page-fixed. There is no backdrop-resolution problem
++       left to solve, so do not even materialize the legacy 4x4 effect probe. */
++    if (AWEOperatingSystemMajorVersion() >= 26) {
+         [gAWEAlbumMorphTintProbe removeFromSuperview];
+         [gAWEAlbumMorphTintProbeMid removeFromSuperview];
+         [gAWEAlbumMorphTintProbeRight removeFromSuperview];
+@@ -11836,7 +11880,7 @@
+         return nil;
+     }
+ 
+-    if (!AWEIsIOS27OrLater()) {
++    if (AWEOperatingSystemMajorVersion() < 26) {
+         UIView *rootView = sourceWindow.rootViewController.view;
+         BOOL needsRebuild =
+             !gAWEAlbumMorphTintProbe ||
+@@ -12712,23 +12756,21 @@
+         gAWEAlbumMorphSuppressedOriginalBar.window ?: AWEActiveMainWindow();
+     if (!sourceWindow) return;
+ 
+-    UIUserInterfaceStyle resolved = UIUserInterfaceStyleUnspecified;
+-    if (AWEIsIOS27OrLater()) {
+-        /* Same-window hosting restores correct Clear/Tinted transparency, but
+-           Light/Dark is a trait decision and UIKit does not infer that trait
+-           from backdrop luminance. v8 explicitly resolves that second axis. */
+-        AWEIOS27EnsureNativeSameWindowHost(sourceWindow);
+-        resolved = AWEIOS27ResolveBackdropLuminanceStyle();
+-    } else {
+-        resolved = AWEAlbumMorphResolvedProbeStyle(sourceWindow);
+-    }
++    NSInteger index = [gAWEAlbumMorphController currentOriginalIndex];
++    if (index == NSNotFound) index = AWECurrentOriginalMainTabIndex();
++    if (index == NSNotFound) index = 0;
++
++    /* v9: no backdrop probe/screenshot path on iOS 26/27. Home is DARK;
++       secondary root pages resolve once from Douyin's own appearance. */
++    UIUserInterfaceStyle resolved = AWEAlbumMorphResolvedInterfaceStyle(
++        sourceWindow, index);
+     if (resolved != UIUserInterfaceStyleLight &&
+-        resolved != UIUserInterfaceStyleDark) return;
++        resolved != UIUserInterfaceStyleDark) {
++        resolved = AWEAppResolvedAppearanceStyle(sourceWindow);
++    }
+     if (resolved == gAWEAlbumMorphLastMirroredStyle) return;
+ 
+     gAWEAlbumMorphLastMirroredStyle = resolved;
+-    NSInteger index = [gAWEAlbumMorphController currentOriginalIndex];
+-    if (index == NSNotFound) index = 0;
+     AWEApplyAlbumMorphResolvedAppearance(sourceWindow, index);
+ }
+ 
+@@ -12755,6 +12797,13 @@
+ @end
+ 
+ static void AWEStartAlbumMorphTintDisplayLink(void) {
++    /* v9: iOS 26/27 use page-fixed material branches. Do not run the old
++       low-frequency CADisplayLink at all; it was still polling chrome after
++       luminance adaptation had supposedly been made "idle". */
++    if (AWEOperatingSystemMajorVersion() >= 26) {
++        AWERefreshAlbumMorphTintFromSystemProbe();
++        return;
++    }
+     if (gAWEAlbumMorphTintDisplayLink) {
+         gAWEAlbumMorphTintDisplayLink.paused = NO;
+         return;
+@@ -12804,14 +12853,16 @@
+ }
+ 
+ static void AWEHideAlbumMorphTintProbe(void) {
++    if (AWEOperatingSystemMajorVersion() >= 26) {
++        /* Page-fixed builds have no probe objects and no display link. */
++        return;
++    }
+     UIWindow *sourceWindow =
+         gAWEAlbumMorphSuppressedOriginalBar.window ?: AWEActiveMainWindow();
+     if (sourceWindow) AWEEnsureAlbumMorphTintProbe(sourceWindow);
+     gAWEAlbumMorphTintDisplayLink.paused = YES;
+ 
+-    /* iOS 27 probes sit under the actual bar rather than in the rounded screen
+-       corner. Keep the objects warm but hide them whenever our bar is not
+-       visible so no 4x4 resolver dot can leak onto a suppressed route. */
++    /* Legacy path only. */
+     if (AWEIsIOS27OrLater()) {
+         gAWEAlbumMorphTintProbe.hidden = YES;
+         gAWEAlbumMorphTintProbeMid.hidden = YES;
+@@ -13787,16 +13838,14 @@
+ static UIUserInterfaceStyle AWEAlbumMorphResolvedInterfaceStyle(
+     UIWindow *sourceWindow,
+     NSInteger originalIndex) {
+-    (void)originalIndex;
+-    if (AWEIsIOS27OrLater()) {
+-        if (AWEHomeForceDarkGlassEnabled()) return UIUserInterfaceStyleDark;
+-        UIUserInterfaceStyle sampled = gAWEIOS27BackdropResolvedStyle;
+-        if (sampled == UIUserInterfaceStyleLight ||
+-            sampled == UIUserInterfaceStyleDark) return sampled;
+-        return UIUserInterfaceStyleUnspecified;
++    UIWindow *window = sourceWindow ?: AWEActiveMainWindow();
++    if (AWEOperatingSystemMajorVersion() >= 26) {
++        /* v9 page boundary is the only semantic switch:
++           0 = Home -> DARK; all other root pages -> app Light/Dark. */
++        if (originalIndex == 0) return UIUserInterfaceStyleDark;
++        return AWEAppResolvedAppearanceStyle(window);
+     }
+-    return AWEAlbumMorphResolvedProbeStyle(
+-        sourceWindow ?: AWEActiveMainWindow());
++    return AWEAlbumMorphResolvedProbeStyle(window);
+ }
+ 
+ static void AWEScheduleStableHomeChromeStyle(
+@@ -13804,11 +13853,10 @@
+     if (style != UIUserInterfaceStyleLight &&
+         style != UIUserInterfaceStyleDark) return;
+ 
+-    /* v8: iOS 27 luminance resolution already has hysteresis plus a two-sample
+-       commit gate. A second 0.20/0.52 s debounce made the tab bar switch first
+-       and the surrounding Home glass switch later. Commit the Home controls
+-       in the same transaction instead. Preserve the older delay on iOS 26. */
+-    if (AWEIsIOS27OrLater()) {
++    /* v9: on iOS 26/27 Home never tracks content luminance. Its fixed DARK
++       branch is committed immediately; there is no settle/debounce timer. */
++    if (AWEOperatingSystemMajorVersion() >= 26) {
++        style = UIUserInterfaceStyleDark;
+         gAWEHomeChromePendingStyle = UIUserInterfaceStyleUnspecified;
+         gAWEHomeChromeStyleGeneration++;
+         if (gAWEHomeChromeLastStableStyle != style) {
+@@ -13864,16 +13912,9 @@
+ 
+     UIUserInterfaceStyle style =
+         AWEAlbumMorphResolvedInterfaceStyle(sourceWindow, originalIndex);
+-    BOOL ios27NativeAutomatic = AWEIsIOS27OrLater() &&
+-        !AWEHomeForceDarkGlassEnabled() &&
+-        style == UIUserInterfaceStyleUnspecified;
+-    if (!ios27NativeAutomatic && style != UIUserInterfaceStyleLight &&
+-        style != UIUserInterfaceStyleDark) {
+-        style = UIScreen.mainScreen.traitCollection.userInterfaceStyle;
+-    }
+-    if (!ios27NativeAutomatic && style != UIUserInterfaceStyleLight &&
++    if (style != UIUserInterfaceStyleLight &&
+         style != UIUserInterfaceStyleDark) {
+-        style = UIUserInterfaceStyleLight;
++        style = AWEAppResolvedAppearanceStyle(sourceWindow ?: AWEActiveMainWindow());
+     }
+ 
+     BOOL homeChromeActive =
+@@ -13910,13 +13951,12 @@
+         }
+     }
+ 
+-    BOOL forcedDark = AWEIsIOS27OrLater() && AWEHomeForceDarkGlassEnabled();
+-    NSString *mode = forcedDark
+-        ? @"IOS27_FORCE_DARK"
+-        : (AWEIsIOS27OrLater() ? @"IOS27_LUMINANCE_ADAPTIVE_V7" : @"SYSTEM_PROBE");
+-    NSString *styleName = ios27NativeAutomatic
+-        ? @"UNSPECIFIED_NATIVE"
+-        : (style == UIUserInterfaceStyleDark ? @"DARK" : @"LIGHT");
++    BOOL fixedHomeDark = AWEOperatingSystemMajorVersion() >= 26 && originalIndex == 0;
++    NSString *mode = fixedHomeDark
++        ? @"PAGE_FIXED_HOME_DARK"
++        : (AWEOperatingSystemMajorVersion() >= 26
++            ? @"PAGE_FIXED_APP_APPEARANCE" : @"SYSTEM_PROBE");
++    NSString *styleName = style == UIUserInterfaceStyleDark ? @"DARK" : @"LIGHT";
+ 
+     static NSString *lastAppearanceSignature = nil;
+     NSString *signature = [NSString stringWithFormat:
+@@ -14362,20 +14402,18 @@
+     UIWindow *sourceWindow) {
+     if (!overlay || !sourceWindow || !gAWEAlbumMorphController.tabBar) return;
+ 
+-    /* iOS 27: let the real UISearchTab receive the touch. The old proxy
+-       forwarded Douyin's source gesture correctly but stole UIKit's native
+-       Liquid Glass touch-down/stretch state from the search button. */
+-    if (AWEIsIOS27OrLater()) {
++    /* v9: iOS 26 and 27 both let the real UISearchTab receive the complete
++       touch sequence. Reparenting Douyin's search gesture to an overlay proxy
++       removed UIKit's native Liquid Glass press/stretch feedback on iOS 26. */
++    if (AWEOperatingSystemMajorVersion() >= 26) {
+         AWERestoreAlbumMorphSearchGesture();
+         overlay.searchTouchProxy = nil;
+         static BOOL loggedNativeSearch = NO;
+         if (!loggedNativeSearch) {
+             loggedNativeSearch = YES;
+             AWEInteractionDiagnosticWrite(
+-                @"ALBUM27_NATIVE_SEARCH_DIRECT_V6 enabled=1 tab=%@",
+-                AWEInteractionObjectSummary(gAWEAlbumMorphController.tabBar));
+-            AWEIOS27BottomProbeWrite(
+-                @"SEARCH_DIRECT enabled=1 bar=%@",
++                @"ALBUM_NATIVE_SEARCH_DIRECT_V9 enabled=1 os=%ld tab=%@",
++                (long)AWEOperatingSystemMajorVersion(),
+                 AWEInteractionObjectSummary(gAWEAlbumMorphController.tabBar));
+         }
+         return;
+@@ -14663,11 +14701,13 @@
+     AWEUpdateAlbumMorphVisibility(originalBar, @"install.original-state");
+ 
+     BOOL visible = gAWEBarLastVisibleFraction > 0.001;
+-    AWEEnsureAlbumMorphTintProbe(sourceWindow);
++    if (AWEOperatingSystemMajorVersion() < 26) {
++        AWEEnsureAlbumMorphTintProbe(sourceWindow);
++    }
+     if (visible) {
+         AWEStartAlbumMorphTintDisplayLink();
+         AWERefreshAlbumMorphTintFromSystemProbe();
+-    } else {
++    } else if (AWEOperatingSystemMajorVersion() < 26) {
+         AWEHideAlbumMorphTintProbe();
+     }
+ 
+@@ -14818,27 +14858,27 @@
+ 
+     if (!AWETopSourceIsNearExpectedPoint(container, source, kind)) source = nil;
+ 
+-    /*
+-     Search must receive a real touch sequence.  The private AWEAlphaTapGesture
+-     recognizer reports a callable target/action, but invoking that action
+-     programmatically does not enter the search route.  Keep the real search
+-     owner fully hit-testable, hide only its artwork, and make our visual slot
+-     ignore touches so UIKit delivers the user's tap to Douyin itself.
+-
+-     Menu keeps the compatibility proxy because its private recognizer accepts
+-     the existing forwarding path on the tested builds.
+-    */
++    /* v9 search uses the real Douyin tap recognizer, but moves that recognizer
++       onto our actual glass UIButton. This gives the search entrance a genuine
++       UIKit Liquid Glass press/stretch sequence while preserving Douyin's
++       private real-touch route. The old invisible owner is disabled so it can
++       no longer leave a ghost hit target behind the custom top chrome. */
+     BOOL directSearchPassthrough = (kind == AWEHomeTopActionKindSearch);
+     if (directSearchPassthrough) {
+         if (slot.ownerView && slot.ownerView != owner) {
++            AWERestoreTopSearchGestureForSlot(slot);
+             AWERestoreTopOwnerVisual(slot);
+         }
+-        /* Restore a previously force-hidden search without bouncing the real
+-           owner back to its old center on every layout.  This keeps the native
+-           Douyin control and the glass slot moving as one stable unit. */
+         AWERestoreTopOwnerAppearanceOnly(owner);
++        slot.ownerView = owner;
+         UIImageView *searchArtwork = source ?: AWEBestTopIconImageView(owner);
+         AWEHideTopSourceImage(slot, searchArtwork);
++        if (!objc_getAssociatedObject(owner, &kAWETopOwnerInteractionKey)) {
++            objc_setAssociatedObject(owner, &kAWETopOwnerInteractionKey,
++                                     @(owner.userInteractionEnabled),
++                                     OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++        }
++        owner.userInteractionEnabled = NO;
+     } else {
+         AWEHideTopSourceImage(slot, nil);
+         AWEHideTopOwnerVisual(slot, owner, container);
+@@ -14896,21 +14936,33 @@
+             AWEHomeTintedGlassEnabled(),
+             YES);
+         if (directSearchPassthrough) {
+-            AWEInstallGlassPressFeedback(owner, materialButton);
++            UIGestureRecognizer *gesture = AWEAlbumMorphFindSearchGesture(owner);
++            UIGestureRecognizer *bound = objc_getAssociatedObject(
++                slot, &kAWETopSearchTransferredGestureKey);
++            if (bound && bound != gesture) AWERestoreTopSearchGestureForSlot(slot);
++            if (gesture && gesture.view != materialButton) {
++                UIView *originalGestureView = gesture.view;
++                gesture.cancelsTouchesInView = NO;
++                objc_setAssociatedObject(slot, &kAWETopSearchTransferredGestureKey,
++                                         gesture, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++                objc_setAssociatedObject(slot, &kAWETopSearchTransferredGestureOriginalViewKey,
++                                         originalGestureView, OBJC_ASSOCIATION_ASSIGN);
++                [materialButton addGestureRecognizer:gesture];
++            }
+         }
+         slot.systemGlassButton.hidden = !directSearchPassthrough;
+     } else {
+         slot.hidden = YES;
+     }
+     if (directSearchPassthrough) {
+-        /* The whole slot is visual-only; hit testing continues to the real
+-           AWEHPDiscoverFeedEntranceView underneath. */
+         AWEClearTopMenuMorph(slot);
+         slot.hitButton.hidden = YES;
+         slot.hitButton.userInteractionEnabled = NO;
+-        slot.userInteractionEnabled = NO;
++        slot.systemGlassButton.userInteractionEnabled = YES;
++        slot.userInteractionEnabled = YES;
++        [slot bringSubviewToFront:slot.systemGlassButton];
+         AWEInteractionDiagnosticWrite(
+-            @"TOP_BIND kind=SEARCH mode=direct-passthrough owner=%@ source=%@ slot=%@",
++            @"TOP_BIND kind=SEARCH mode=native-glass-real-gesture-v9 owner=%@ source=%@ slot=%@",
+             AWEInteractionObjectSummary(owner),
+             AWEInteractionObjectSummary(slot.sourceImageView),
+             AWEInteractionObjectSummary(slot));
+@@ -14979,6 +15031,14 @@
+     NSNumber *opacity = objc_getAssociatedObject(
+         view, &kAWETopCategoryOriginalLayerOpacityKey);
+     if (opacity) view.layer.opacity = opacity.floatValue;
++    UIView *owner = AWEQuickMenuActionOwnerForMatchedView(view, view.window);
++    NSNumber *interaction = owner ? objc_getAssociatedObject(
++        owner, &kAWETopCategoryOwnerInteractionKey) : nil;
++    if (owner && interaction) {
++        owner.userInteractionEnabled = interaction.boolValue;
++        objc_setAssociatedObject(owner, &kAWETopCategoryOwnerInteractionKey,
++                                 nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++    }
+     objc_setAssociatedObject(view, &kAWETopCategoryHiddenMarkerKey,
+                              nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+     objc_setAssociatedObject(view, &kAWETopCategoryOriginalLayerOpacityKey,
+@@ -14996,10 +15056,20 @@
+             @(view.layer.opacity),
+             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+     }
+-    /* Do not touch hidden or UIView.alpha. The menu router intentionally
+-       discovers the original title views and their real owners; CALayer
+-       opacity removes only the pixels while leaving that routing path alive. */
++    /* Keep the original views discoverable for our programmatic category
++       router, but remove them from UIKit hit-testing. Otherwise invisible
++       Douyin tabs remain tappable underneath the custom liquid group. */
+     view.layer.opacity = 0.0f;
++    UIView *owner = AWEQuickMenuActionOwnerForMatchedView(view, view.window);
++    if (owner && owner != view.window &&
++        !AWEViewIsInsidePluginTopLiquidGroup(owner)) {
++        if (!objc_getAssociatedObject(owner, &kAWETopCategoryOwnerInteractionKey)) {
++            objc_setAssociatedObject(owner, &kAWETopCategoryOwnerInteractionKey,
++                                     @(owner.userInteractionEnabled),
++                                     OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++        }
++        owner.userInteractionEnabled = NO;
++    }
+ }
+ 
+ static void AWERestoreTopCategoryIndicator(UIView *view) {
+@@ -15643,8 +15713,16 @@
+              available; dynamic colors continue to resolve in Douyin's own
+              trait environment.  labelColor is only a cold-start fallback.
+             */
+-            UIColor *titleColor = [definition[@"textColor"] isKindOfClass:UIColor.class]
+-                ? definition[@"textColor"] : UIColor.labelColor;
++            UIColor *titleColor = nil;
++            if (AWEOperatingSystemMajorVersion() >= 26) {
++                /* Home is deliberately a dark material island even when the
++                   app itself is Light. Resolve category text inside that same
++                   dark trait instead of reusing a Light-mode native snapshot. */
++                titleColor = UIColor.labelColor;
++            } else {
++                titleColor = [definition[@"textColor"] isKindOfClass:UIColor.class]
++                    ? definition[@"textColor"] : UIColor.labelColor;
++            }
+             [button setTitleColor:titleColor forState:UIControlStateNormal];
+             [button setTitleColor:titleColor forState:UIControlStateHighlighted];
+             [button setTitleColor:titleColor forState:UIControlStateSelected];
+@@ -15777,8 +15855,10 @@
+     group.hidden = NO;
+     group.userInteractionEnabled = YES;
+     group.alpha = 1.0;
+-    /* Text/material traits are inherited from Douyin's top container. */
+-    group.overrideUserInterfaceStyle = UIUserInterfaceStyleUnspecified;
++    /* v9: the entire Home category group belongs to the fixed dark material
++       island, including its labels and the system glass background. */
++    group.overrideUserInterfaceStyle = AWEOperatingSystemMajorVersion() >= 26
++        ? UIUserInterfaceStyleDark : UIUserInterfaceStyleUnspecified;
+ 
+     NSString *signature = [[definitions valueForKey:@"route"]
+         componentsJoinedByString:@"|"];
+@@ -15833,6 +15913,7 @@
+         : &kAWETopMenuSlotKey;
+     AWEHomeTopSlotView *slot = objc_getAssociatedObject(container, key);
+     if (!slot) return;
++    if (kind == AWEHomeTopActionKindSearch) AWERestoreTopSearchGestureForSlot(slot);
+     AWERestoreTopSourceImage(slot);
+     AWERestoreTopOwnerVisual(slot);
+     if (kind == AWEHomeTopActionKindMenu) AWEClearTopMenuMorph(slot);
+@@ -16896,8 +16977,15 @@
+             configureVisibleItemIdentifiers:AWEAlbumMorphVisibleItemIdentifiers()];
+         [gAWEAlbumMorphController reloadConfiguredImages];
+         [gAWEAlbumMorphController updateAccentColor:AWEStoredAccentColor()];
+-        [gAWEAlbumMorphController setForcedDark:
+-            (AWEIsIOS27OrLater() && AWEHomeForceDarkGlassEnabled())];
++
++        /* Do not let the retired preference-based force-dark setter erase the
++           page-fixed trait after an icon/settings refresh. Resolve from the
++           current root page every time this native controller is rebuilt. */
++        NSInteger originalIndex = [gAWEAlbumMorphController currentOriginalIndex];
++        if (originalIndex == NSNotFound) originalIndex = AWECurrentOriginalMainTabIndex();
++        UIUserInterfaceStyle resolved = AWEAlbumMorphResolvedInterfaceStyle(
++            AWEActiveMainWindow(), originalIndex);
++        [gAWEAlbumMorphController setResolvedInterfaceStyleRaw:(NSInteger)resolved];
+     }
+     UITabBar *live = gAWELastTabBar
+         ? objc_getAssociatedObject((UIView *)gAWELastTabBar, &kAWENativeBarKey)
+@@ -18341,12 +18429,12 @@
+     preferHighestPlaybackRow.distribution = UIStackViewDistributionEqualSpacing;
+ 
+     UILabel *forceDarkBottomBarLabel = [UILabel new];
+-    forceDarkBottomBarLabel.text = @"iOS 27 首页液态玻璃强制深色（关闭=背景自适应）";
++    forceDarkBottomBarLabel.text = @"iOS 26/27 首页固定深色液态玻璃（性能模式）";
+     forceDarkBottomBarLabel.font =
+         [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+     UISwitch *forceDarkBottomBarSwitch = [UISwitch new];
+-    forceDarkBottomBarSwitch.on = AWEHomeForceDarkGlassEnabled();
+-    forceDarkBottomBarSwitch.enabled = AWEIsIOS27OrLater();
++    forceDarkBottomBarSwitch.on = AWEOperatingSystemMajorVersion() >= 26;
++    forceDarkBottomBarSwitch.enabled = NO;
+     forceDarkBottomBarSwitch.onTintColor = AWEStoredAccentColor();
+     [forceDarkBottomBarSwitch addTarget:self
+         action:@selector(forceDarkBottomBarSwitchChanged:)
+@@ -19054,27 +19142,9 @@
+ 
+ 
+ - (void)forceDarkBottomBarSwitchChanged:(UISwitch *)sender {
+-    [NSUserDefaults.standardUserDefaults setBool:sender.isOn
+-        forKey:kAWEHomeForceDarkGlassDefaultsKey];
+-    [NSUserDefaults.standardUserDefaults synchronize];
+-
+-    BOOL forceDark = AWEIsIOS27OrLater() && sender.isOn;
+-    if (!forceDark) AWEIOS27RequestBackdropBurstSample();
+-    if (gAWEAlbumMorphController) {
+-        [gAWEAlbumMorphController setForcedDark:forceDark];
+-        AWEApplyAlbumMorphResolvedAppearance(
+-            AWEActiveMainWindow(),
+-            [gAWEAlbumMorphController currentOriginalIndex]);
+-        /* Mode changes (adaptive <-> forced dark) do alter item foreground
+-           ownership, so rebuild appearance once here — not on every luminance
+-           Light/Dark commit. */
+-        AWEConfigureNativeBarAppearance(
+-            gAWEAlbumMorphController.tabBar, AWEStoredAccentColor());
+-        [gAWEAlbumMorphController.tabBar setNeedsLayout];
+-        [gAWEAlbumMorphController.tabBar layoutIfNeeded];
+-        [gAWEAlbumMorphController.tabBar setNeedsDisplay];
+-    }
+-    AWERefreshAllConfiguredIcons();
++    /* v9: retained only for old settings-controller instances. The policy is
++       fixed by page, so this control is intentionally locked ON on iOS 26/27. */
++    sender.on = AWEOperatingSystemMajorVersion() >= 26;
+     [[[UISelectionFeedbackGenerator alloc] init] selectionChanged];
+ }
+ 
+@@ -20591,19 +20661,8 @@
+ - (void)aweme:(id)aweme currentIndexDidChange:(NSInteger)index {
+     %orig(aweme, index);
+     if (gAWEStableCleanScreenEnabled) AWEScheduleCleanScreenReapply(@"index.didChange");
+-    if (gAWEAlbumMorphVisible) {
+-        /* v8: a settled page change is the one moment where rapid sampling is
+-           valuable. Two bounded probes satisfy the existing two-sample gate,
+-           while idle video playback falls back to the much slower cadence. */
+-        AWEIOS27RequestBackdropBurstSample();
+-        for (NSNumber *delay in @[@0.05, @0.18]) {
+-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
+-                                         (int64_t)(delay.doubleValue * NSEC_PER_SEC)),
+-                           dispatch_get_main_queue(), ^{
+-                AWERefreshAlbumMorphTintFromSystemProbe();
+-            });
+-        }
+-    }
++    /* v9 page-fixed policy: changing feed items never touches Liquid Glass
++       traits/materials, so video swipes cannot trigger style work or screenshots. */
+     /* A few Home article/feed models leave the native bar hidden after reuse.
+        Re-evaluate once after the item switch; the Home-feed visibility rule
+        above decides whether the replacement should be restored. */

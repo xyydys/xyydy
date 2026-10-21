@@ -1,0 +1,17 @@
+AwemeLiquidBar 1.0.57b2 — live Search-effect double probe
+
+Baseline: 1.0.57b.
+
+Only the avatar launcher branch is changed:
+- Keep the original main UITabBarController and its single real UISearchTab.
+- Do not add a second UITab, UISearchTab, UITabBarController, or snapshot.
+- At layout time, locate the live UIVisualEffectView that overlaps the real native Search control.
+- Assign that exact UIVisualEffect object to a second UIVisualEffectView at the avatar position.
+  The second effect view samples its own backdrop, so this is a live material double rather than a bitmap mirror.
+- Copy the Search effect view's live bounds/corner metadata, so avatar glass size follows Search instead of fixed 50 pt.
+- Avatar image is content only; the transparent UIButton is hit testing only and has no glass configuration.
+- Restore the real Profile tab. Avatar tap is only expand/collapse.
+- Regular tab/Search/Publish actions restart the 5 s idle timer instead of collapsing immediately.
+- Home upward swipe still collapses immediately.
+
+The old adaptive UIButton function remains in Objective-C as untouched fallback/library code but is no longer used by the avatar chrome.

@@ -1,0 +1,14 @@
+AwemeLiquidBar 2.3 auth51 — 2.3 rollback and scoped authorization update
+
+- Uses the original 2.3 auth50 MATERIAL2 project ZIP as the rollback baseline.
+- Preserves all 50 previous authorization mask/value pairs and all previous digest tags.
+- Appends one ordinary salted SHA-256 digest with a fresh random XOR mask/value pair and its matching digest tag.
+- Promotes one existing authorized digest to the special bottom ownership-release table without duplicating its normal authorization.
+- Preserves both previous special mask/value pairs. Total: 51 normal authorization records, with 3 special bottom-release entitlements.
+- Keeps account normalization, hash salts, device-bound proof, cache validation and profile binding unchanged.
+- Keeps the ordinary-user guard: an old OFF preference cannot disable the bottom bar for an ordinary account.
+- Keeps the special switch at LiquidBar > bottom bar > show liquid bottom bar.
+- OFF removes the plugin bottom controller and search touch proxy, restores saved native chrome, and stops backdrop/recovery callbacks from reclaiming the released native host.
+- Native chrome snapshots use weak view membership and restore only values still matching this plugin's latest write. Newer native or other-plugin values are retained.
+- All other 2.3 material, geometry, button/menu, route, playback and download source files are retained byte for byte.
+- The release stores no plaintext account identifiers in source or documentation.

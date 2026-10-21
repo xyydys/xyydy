@@ -1,0 +1,13 @@
+AwemeLiquidBar 1.0.56c16 auth44 — v17 hierarchy-guided
+
+Captured hierarchy targets:
+- Message grey veil: UIKit.ScrollEdgeEffectView (bottom example frame {0,808.2,440,147.8}); suppress on message page only.
+- Shop page controller: AWECNewMallViewController.
+- Shop full-width bottom carrier: UIKit._UITabBarContainerWrapperView frame {0,873,440,83}.
+- Same-style music variants: AWEPlayInteractionStyleOneMusicView and AWEPlayInteractionSingleSongMusicStyleView.
+
+Markers:
+MESSAGE_V17_EDGE_EFFECT_HIDE
+MESSAGE_V17_NATIVE_PRESS
+SAMESTYLE_V17_ATTACH / SAMESTYLE_V17_WAIT
+BOTTOM_V17_SYSTEM_CLEAR / BOTTOM_V17_ROUTE

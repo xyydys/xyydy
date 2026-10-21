@@ -1,0 +1,7 @@
+iOS 27 bottom bar local backdrop v3
+- keeps system Liquid Glass transparency/tint preference native
+- removes icon-color/global proxy from bottom-bar light/dark selection
+- resolves bottom-bar material branch from three native UIGlassEffect probes under the actual bar (left/center/right)
+- 2-of-3 vote with two-sample hysteresis
+- force-dark remains explicit override
+- auth46 unchanged

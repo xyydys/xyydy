@@ -1,0 +1,22 @@
+{
+  "baseline": "uploaded TEST38_FIX1, revised to TEST42",
+  "reason": "Current hashes pin the requested lifecycle/geometry/header changes; other files retain TEST37 preservation checks.",
+  "intentional_changes": {
+    "ALB5RightLayout.h": "60409d33072dd221f8187177c37966944357290e5c721293dd04a5db3f938214",
+    "AwemeAlbumMorphBar.swift": "51b5c27f28c1ce9a013892da9752cc66fb4468b3efa28410417fee0dbb52a0a3",
+    "Tests/Support/right_layout_declarations.m": "7b04a28571924fb586bc6590dc22fe327efb7e1575f0137b9df0141c2dc17630",
+    "Tests/right_persistence_test.c": "39e08c18ff2d393743bf9a86bcc2e07fd2c1059b6e001569a09238614ac5fdbc",
+    "ALBSidePalette.h": "beb4300c58c8239e397e27396e577abeaa941c26ee9b5faff9438201ed6fc678",
+    "ALBReproCapture.h": "7b804fe407da855bbd7d73aabe4b3a2b413c92a2aec3533504487f95c1b3fdde"
+  },
+  "test42_fix3_changes": [
+    "ALBSidePalette.h"
+  ],
+  "test42_fix8_changes": {
+    "AwemeAlbumMorphBar.swift": "User request: centered-avatar compact scheme deleted; native minimize requests wait for the previous UIKit animation to complete."
+  },
+  "v22_changes": {
+    "AwemeAlbumMorphBar.swift": "2.2: iOS 27 Clear switch relayouts the bar; native minimize trace and one post-animation layout pass under bottom.scale.",
+    "ALBReproCapture.h": "2.2 user request: floating reproduction-capture overlay removed; inert recorder API keeps call sites compiling."
+  }
+}

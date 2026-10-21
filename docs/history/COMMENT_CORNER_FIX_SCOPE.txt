@@ -1,0 +1,8 @@
+Comment Liquid Glass top-corner leak fix
+
+- Keeps the current RightNativeGestureLease experiment unchanged.
+- Keeps the old opaque Settings page unchanged.
+- Fixes the translucent rectangular carrier visible beside the rounded top corners of the comment glass.
+- Clears only same-frame panel backdrop carriers and clips same-frame comment wrappers to the exact same top-corner radius as the glass.
+- Removes same-frame wrapper shadow output at those top corners.
+- Does not alter comment text, input controls, list geometry, material mode, or corner-radius setting.

@@ -1,0 +1,23 @@
+AwemeLiquidBar 1.0.58 auth47 — V9ActionForward v16
+
+Baseline: V9SelectiveFix v15.1, itself rebuilt from user-supplied PageFixedGlass v9.
+
+This revision changes only Home action/search forwarding, Search persistence guards,
+cold-start native top-category suppression, and interaction diagnostics.
+It does NOT change glass material, UIButtonConfiguration geometry, right-button size,
+press/stretch behavior, avatar/music implementation, favorites scroll fix, commerce
+suppression, message blur settings, settings sizing, or menu appearance policy.
+
+Key interaction correction:
+- Visible UIKit glass remains the real touch owner.
+- No private recognizer is cloned/reparented.
+- On TouchUpInside, the original Douyin source recognizer is located and its original
+  target/action is invoked with the ORIGINAL recognizer as sender.
+- Right-side forwarding prioritizes real tap recognizers before UIControl fallbacks,
+  preventing decorative child controls from producing false-positive "success" logs.
+- Both Top Search and UISearchTab Bottom Search use the same exact original action path.
+- The hidden original Search owner stays noninteractive, so no separate ghost hit region
+  is intentionally created.
+
+Diagnostics now log EXACT_NATIVE_CANDIDATE / EXACT_NATIVE_FORWARD with recognizer,
+target class, selector, source view and dispatch result.

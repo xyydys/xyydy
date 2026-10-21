@@ -1,0 +1,578 @@
+--- /mnt/data/work_v12/current/AwemeLiquidBar_1.0.58_auth47_ClearGlassPolicy_v11_1_compilefix_project/Tweak.x	2026-09-03 05:35:18.000000000 +0000
++++ /mnt/data/work_v12/AwemeLiquidBar_1.0.58_auth47_InteractionWarp_v12_project/Tweak.x	2026-09-03 06:45:38.881886855 +0000
+@@ -245,6 +245,10 @@
+ static char kAWEHomeActionStackLastLayoutRefreshKey;
+ static char kAWEGlassPressFeedbackRecognizerKey;
+ static char kAWEGlassPressFeedbackTargetKey;
++static char kAWEGlassNativeTrackingOwnerKey;
++static char kAWEGlassNativeTrackingTouchKey;
++static char kAWEGlassNativeTrackingAcceptedKey;
++static NSMapTable<UIView *, UIButton *> *gAWEGlassNativeTrackingMirrors = nil;
+ static char kAWEExternalBridgeMenuSlotKey;
+ static char kAWEExternalBridgeMenuButtonKey;
+ static char kAWEExternalBridgeMenuModelIdentityKey;
+@@ -3693,27 +3697,21 @@
+         (!AWEIsOurNativeBar(nativeBar) && !AWEIsAlbumMorphSystemBar(nativeBar))) return;
+ 
+     BOOL wantsClear = AWEIOS27WantsClearBottomMaterial();
+-    /* Search and the main platter are private sibling implementations on newer
+-       UIKit builds. Patch both glassEffect owners to the same Clear effect so
+-       UIKit's pre-existing GlassContainer can treat them as one material set. */
+-    UIView *root = nativeBar;
+-    for (NSUInteger i = 0; i < 2 && root.superview; i++) root = root.superview;
+-    NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:root];
++    /* v12 deliberately returns to the v10 target that was verified on-device:
++       _UITabBarItemPlatterView itself. v11 widened the search to arbitrary
++       "Platter"/"Search" siblings and could replace/restyle the wrong private
++       object before UIKit materialised the real floating platter, leaving the
++       switch visually stuck on Regular/Dark. */
++    NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:nativeBar];
+     NSUInteger index = 0;
+-    while (index < queue.count && index < 260) {
++    while (index < queue.count && index < 200) {
+         UIView *view = queue[index++];
+         for (UIView *child in view.subviews) [queue addObject:child];
+         NSString *name = NSStringFromClass(view.class);
+-        BOOL candidate =
+-            [name rangeOfString:@"Platter" options:NSCaseInsensitiveSearch].location != NSNotFound ||
+-            [name rangeOfString:@"Search" options:NSCaseInsensitiveSearch].location != NSNotFound;
+-        if (!candidate) continue;
+-        CGRect wr = [view convertRect:view.bounds toView:nativeBar.window];
+-        CGRect barFrame = [nativeBar convertRect:nativeBar.bounds toView:nativeBar.window];
+-        if (!CGRectIntersectsRect(wr, CGRectInset(barFrame, -36.0, -36.0))) continue;
+-        SEL getter = NSSelectorFromString(@"glassEffect");
+-        SEL setter = NSSelectorFromString(@"setGlassEffect:");
+-        if (![view respondsToSelector:getter] && ![view respondsToSelector:setter]) continue;
++        if ([name rangeOfString:@"UITabBarItemPlatterView"
++                         options:NSCaseInsensitiveSearch].location == NSNotFound) {
++            continue;
++        }
+ 
+         id current = nil;
+         @try { current = [view valueForKey:@"glassEffect"]; }
+@@ -3726,13 +3724,14 @@
+                 id restore = original == NSNull.null ? nil : original;
+                 @try { [view setValue:restore forKey:@"glassEffect"]; }
+                 @catch (__unused NSException *exception) {}
++                [view setNeedsLayout];
+             }
+             objc_setAssociatedObject(view, &kAWEIOS27PlatterInstalledGlassKey,
+                                      nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+             continue;
+         }
+ 
+-        if (current && installed && current == installed) continue;
++        if (installed && current == installed) continue;
+         if (!original) {
+             objc_setAssociatedObject(view, &kAWEIOS27PlatterOriginalGlassKey,
+                                      current ?: NSNull.null,
+@@ -3744,13 +3743,15 @@
+             id value = current ? [current valueForKey:@"interactive"] : nil;
+             if ([value respondsToSelector:@selector(boolValue)]) interactive = [value boolValue];
+         } @catch (__unused NSException *exception) {}
++
+         id clear = AWEIOS27MakeUntintedClearGlassEffect(interactive);
+         if (!clear) continue;
+         @try {
+             [view setValue:clear forKey:@"glassEffect"];
+             id readback = [view valueForKey:@"glassEffect"];
+             objc_setAssociatedObject(view, &kAWEIOS27PlatterInstalledGlassKey,
+-                                     readback, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++                                     readback ?: clear,
++                                     OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+             [view setNeedsLayout];
+         } @catch (__unused NSException *exception) {
+             objc_setAssociatedObject(view, &kAWEIOS27PlatterInstalledGlassKey,
+@@ -3760,6 +3761,24 @@
+     AWETuneIOS27SharedGlassContainer(nativeBar, wantsClear);
+ }
+ 
++static void AWEScheduleIOS27BottomMaterialCommit(UITabBar *nativeBar) {
++    if (!nativeBar || !AWEIsIOS27OrLater()) return;
++    __weak UITabBar *weakBar = nativeBar;
++    /* Route/style changes rebuild _UITabBarItemPlatterView asynchronously.
++       v11 wrote Clear before that rebuild and UIKit immediately replaced it
++       with the page's Regular/Dark platter, which made the switch look inert.
++       Commit only around a route/settings transition, never per video/frame. */
++    for (NSNumber *delay in @[@0.0, @0.05, @0.16]) {
++        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
++            (int64_t)(delay.doubleValue * NSEC_PER_SEC)),
++            dispatch_get_main_queue(), ^{
++                UITabBar *bar = weakBar;
++                if (!bar || !bar.window) return;
++                AWEApplyIOS27UntintedClearPlatter(bar);
++            });
++    }
++}
++
+ static void AWEConfigureNativeBarAppearance(UITabBar *nativeBar,
+                                              UIColor *accentColor) {
+     if (!nativeBar) return;
+@@ -8865,9 +8884,113 @@
+ }
+ @end
+ 
++/* v12: passive-native tracking bridge. The user touches Douyin's real
++   control, so its business action is never synthesized or intercepted. We
++   mirror that *same UITouch/UIEvent* into the visual Glass UIButton's public
++   UIControl tracking lifecycle. UIKit therefore owns highlighted state,
++   touch-location distortion and release spring, while the glass button itself
++   remains outside hit testing. This is materially different from the older
++   scale-only long-press imitation. */
++#ifdef __cplusplus
++extern "C"
++#endif
++void AWERegisterNativeGlassTrackingMirror(UIView *touchOwner,
++                                          UIButton *glassButton) {
++    if (!touchOwner || !glassButton) return;
++    if (!gAWEGlassNativeTrackingMirrors) {
++        gAWEGlassNativeTrackingMirrors = [NSMapTable weakToWeakObjectsMapTable];
++    }
++    UIView *oldOwner = objc_getAssociatedObject(
++        glassButton, &kAWEGlassNativeTrackingOwnerKey);
++    if (oldOwner && oldOwner != touchOwner) {
++        [gAWEGlassNativeTrackingMirrors removeObjectForKey:oldOwner];
++    }
++    objc_setAssociatedObject(glassButton, &kAWEGlassNativeTrackingOwnerKey,
++                             touchOwner, OBJC_ASSOCIATION_ASSIGN);
++    [gAWEGlassNativeTrackingMirrors setObject:glassButton forKey:touchOwner];
++}
++
++static BOOL AWEGlassTouchBelongsToOwner(UITouch *touch, UIView *owner) {
++    if (!touch || !owner || !owner.window) return NO;
++    UIView *view = touch.view;
++    if (view == owner || [view isDescendantOfView:owner]) return YES;
++    /* Some private Douyin controls put their tap recognizer on a compact
++       ancestor while UIKit reports the visual child as touch.view. Geometry
++       is a safe secondary check only when both are in the same window. */
++    if (view.window != owner.window) return NO;
++    CGPoint p = [touch locationInView:owner];
++    CGRect hit = CGRectInset(owner.bounds, -3.0, -3.0);
++    return CGRectContainsPoint(hit, p) && owner.userInteractionEnabled;
++}
++
++static void AWEGlassMirrorNativeTrackingEvent(UIEvent *event) {
++    if (!event || !gAWEGlassNativeTrackingMirrors ||
++        gAWEGlassNativeTrackingMirrors.count == 0) return;
++    NSSet<UITouch *> *touches = event.allTouches;
++    if (touches.count == 0) return;
++
++    NSArray<UIView *> *owners = gAWEGlassNativeTrackingMirrors.keyEnumerator.allObjects;
++    for (UIView *owner in owners) {
++        UIButton *glass = [gAWEGlassNativeTrackingMirrors objectForKey:owner];
++        if (!owner || !glass || !owner.window || !glass.window || glass.hidden || glass.alpha < 0.01)
++            continue;
++
++        UITouch *active = nil;
++        NSValue *activeValue = objc_getAssociatedObject(glass, &kAWEGlassNativeTrackingTouchKey);
++        if ([activeValue isKindOfClass:NSValue.class]) active = activeValue.nonretainedObjectValue;
++
++        for (UITouch *touch in touches) {
++            UITouchPhase phase = touch.phase;
++            if (phase == UITouchPhaseBegan) {
++                if (active || !AWEGlassTouchBelongsToOwner(touch, owner)) continue;
++                objc_setAssociatedObject(glass, &kAWEGlassNativeTrackingTouchKey,
++                    [NSValue valueWithNonretainedObject:touch], OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++                BOOL accepted = [glass beginTracking:touch withEvent:event];
++                objc_setAssociatedObject(glass, &kAWEGlassNativeTrackingAcceptedKey,
++                                         @(accepted), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++                if (!accepted) {
++                    glass.highlighted = YES;
++                    [glass setNeedsUpdateConfiguration];
++                }
++                active = touch;
++            } else if (active == touch) {
++                BOOL accepted = [objc_getAssociatedObject(
++                    glass, &kAWEGlassNativeTrackingAcceptedKey) boolValue];
++                if (phase == UITouchPhaseMoved || phase == UITouchPhaseStationary) {
++                    if (accepted) [glass continueTracking:touch withEvent:event];
++                } else if (phase == UITouchPhaseEnded) {
++                    if (accepted) [glass endTracking:touch withEvent:event];
++                    else {
++                        glass.highlighted = NO;
++                        [glass setNeedsUpdateConfiguration];
++                    }
++                    objc_setAssociatedObject(glass, &kAWEGlassNativeTrackingTouchKey,
++                                             nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++                    objc_setAssociatedObject(glass, &kAWEGlassNativeTrackingAcceptedKey,
++                                             nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++                    active = nil;
++                } else if (phase == UITouchPhaseCancelled) {
++                    if (accepted) [glass cancelTrackingWithEvent:event];
++                    glass.highlighted = NO;
++                    [glass setNeedsUpdateConfiguration];
++                    objc_setAssociatedObject(glass, &kAWEGlassNativeTrackingTouchKey,
++                                             nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++                    objc_setAssociatedObject(glass, &kAWEGlassNativeTrackingAcceptedKey,
++                                             nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++                    active = nil;
++                }
++            }
++        }
++    }
++}
++
+ static void AWEInstallGlassPressFeedback(UIView *touchOwner,
+                                          UIButton *glassButton) {
+     if (!touchOwner || !glassButton) return;
++    if (@available(iOS 26.0, *)) {
++        AWERegisterNativeGlassTrackingMirror(touchOwner, glassButton);
++        return;
++    }
+     UILongPressGestureRecognizer *recognizer = objc_getAssociatedObject(
+         touchOwner, &kAWEGlassPressFeedbackRecognizerKey);
+     AWEGlassPressFeedbackTarget *target = objc_getAssociatedObject(
+@@ -9327,6 +9450,50 @@
+     AWEApplyResolvedGlassStyleToAdaptiveButton(button);
+ }
+ 
++/* v12 / VVebo verified content-warp rule: foreground content that must deform
++   with Liquid Glass belongs inside UIKit's UIButtonConfiguration content
++   container, not as a normal UIButton subview. A single blank configuration
++   title forces UIKit to materialise that container without rendering visible
++   text. */
++static UIView *AWEGlassNativeContentContainer(UIButton *button) {
++    if (!button) return nil;
++    [button layoutIfNeeded];
++    UIView *titleParent = button.titleLabel.superview;
++    if (titleParent && titleParent != button) return titleParent;
++    UIView *imageParent = button.imageView.superview;
++    if (imageParent && imageParent != button) return imageParent;
++
++    UIButtonConfiguration *cfg = button.configuration;
++    if (cfg) {
++        UIButtonConfiguration *copy = [cfg copy];
++        copy.title = @" ";
++        copy.baseForegroundColor = UIColor.clearColor;
++        button.configuration = copy;
++        [button layoutIfNeeded];
++        titleParent = button.titleLabel.superview;
++        if (titleParent && titleParent != button) return titleParent;
++        imageParent = button.imageView.superview;
++        if (imageParent && imageParent != button) return imageParent;
++    }
++    return button;
++}
++
++static void AWEPlaceForegroundInsideGlassContent(UIButton *button,
++                                                  UIView *foreground,
++                                                  CGRect frameInButton) {
++    if (!button || !foreground) return;
++    UIView *content = AWEGlassNativeContentContainer(button) ?: button;
++    if (foreground.superview != content) {
++        [foreground removeFromSuperview];
++        [content addSubview:foreground];
++    }
++    CGRect converted = content == button
++        ? frameInButton
++        : [button convertRect:frameInButton toView:content];
++    foreground.frame = converted;
++    [content bringSubviewToFront:foreground];
++}
++
+ static BOOL AWEViewHasSameStyleMarker(UIView *view) {
+     if (!view) return NO;
+     NSArray<NSString *> *markers = @[@"拍同款", @"听抖音"];
+@@ -9654,7 +9821,6 @@
+         mirror.userInteractionEnabled = NO;
+         mirror.contentMode = UIViewContentModeScaleAspectFill;
+         mirror.clipsToBounds = YES;
+-        [plate addSubview:mirror];
+         forwarder.contentMirror = mirror;
+     }
+     if (contentSource && contentSource.image) {
+@@ -9663,12 +9829,14 @@
+                                  CGRectGetHeight(contentSource.bounds));
+         CGFloat side = MIN(44.0, MAX(34.0, sourceSide));
+         forwarder.contentMirror.image = contentSource.image;
+-        forwarder.contentMirror.frame = CGRectMake(
++        CGRect mirrorFrame = CGRectMake(
+             (diameter - side) * 0.5, (diameter - side) * 0.5, side, side);
++        AWEPlaceForegroundInsideGlassContent(plate, forwarder.contentMirror, mirrorFrame);
+         forwarder.contentMirror.layer.cornerRadius = side * 0.5;
+         forwarder.contentMirror.layer.cornerCurve = kCACornerCurveContinuous;
+         forwarder.contentMirror.hidden = NO;
+-        [plate bringSubviewToFront:forwarder.contentMirror];
++        UIView *nativeContent = AWEGlassNativeContentContainer(plate) ?: plate;
++        [nativeContent bringSubviewToFront:forwarder.contentMirror];
+     } else {
+         if (forwarder.iconSource) AWESameStyleRestoreIconSource(forwarder.iconSource);
+         forwarder.iconSource = nil;
+@@ -11616,20 +11784,24 @@
+         mirror.userInteractionEnabled = NO;
+         mirror.contentMode = UIViewContentModeScaleAspectFill;
+         mirror.clipsToBounds = YES;
+-        [slot.glassButton addSubview:mirror];
+         slot.contentImageView = mirror;
+     }
+     CGRect sourceRect = [avatar convertRect:avatar.bounds toView:stack];
+     CGFloat sourceSide = MIN(CGRectGetWidth(sourceRect), CGRectGetHeight(sourceRect));
+     CGFloat contentSide = MIN(46.0, MAX(36.0, sourceSide));
+     slot.contentImageView.image = liveAvatarImage;
+-    slot.contentImageView.frame = CGRectMake(
++    CGRect avatarFrame = CGRectMake(
+         (diameter - contentSide) * 0.5, (diameter - contentSide) * 0.5,
+         contentSide, contentSide);
++    AWEPlaceForegroundInsideGlassContent(slot.glassButton,
++                                         slot.contentImageView,
++                                         avatarFrame);
+     slot.contentImageView.layer.cornerRadius = contentSide * 0.5;
+     slot.contentImageView.layer.cornerCurve = kCACornerCurveContinuous;
+     slot.contentImageView.hidden = NO;
+-    [slot.glassButton bringSubviewToFront:slot.contentImageView];
++    UIView *avatarNativeContent = AWEGlassNativeContentContainer(slot.glassButton)
++        ?: slot.glassButton;
++    [avatarNativeContent bringSubviewToFront:slot.contentImageView];
+     slot.glassButton.menu = AWEAvatarBaseMenuForStack(stack, pictureHost);
+ 
+     /* Menu presentation: iOS 27 stays unpinned/clear. iOS 26 deliberately
+@@ -11662,19 +11834,19 @@
+         slot = [[AWEHomeActionSlotView alloc] initWithFrame:CGRectZero];
+         slot.accessibilityIdentifier = [NSString stringWithFormat:
+             @"AwemeLiquidBar.HomeActionSlot.%ld", (long)kind];
+-        slot.userInteractionEnabled = YES;
++        /* v12: restore the old v7 ownership model exactly. The replacement
++           right-rail slot is never a hit-test participant; Douyin's original
++           AWEFeedVideoButton remains the only business-action owner. */
++        slot.userInteractionEnabled = NO;
+         slot.backgroundColor = UIColor.clearColor;
+         slot.opaque = NO;
+ 
+         if (@available(iOS 26.0, *)) {
+             UIButton *glassButton = [UIButton buttonWithType:UIButtonTypeCustom];
+-            glassButton.userInteractionEnabled = YES;
+-            glassButton.exclusiveTouch = YES;
++            glassButton.userInteractionEnabled = NO;
+             glassButton.backgroundColor = UIColor.clearColor;
+             glassButton.opaque = NO;
+             glassButton.clipsToBounds = NO;
+-            [glassButton addTarget:slot action:@selector(alb_nativeGlassTap:)
+-                   forControlEvents:UIControlEventTouchUpInside];
+             [slot addSubview:glassButton];
+             slot.systemGlassButton = glassButton;
+         }
+@@ -11712,11 +11884,13 @@
+     slot.hidden = NO;
+     slot.alpha = 1.0;
+     slot.overrideUserInterfaceStyle = UIUserInterfaceStyleUnspecified;
+-    /* v9: the visible UIButton is the real touch owner so UIKit can render
+-       native Liquid Glass touch-down/stretch/motion. A completed tap is then
+-       forwarded once to Douyin's original action owner. */
+-    slot.userInteractionEnabled = YES;
+-    slot.systemGlassButton.userInteractionEnabled = YES;
++    /* v12: never interpose on Douyin's right-action hit chain. The original
++       AWEFeedVideoButton/count hierarchy receives the real touch exactly as it
++       did before the LiquidBar overlay. A simultaneous, non-cancelling driver
++       only mirrors that touch into our glass visual, so Like/Comment/Favourite/
++       Share can no longer become "glass works but action is dead". */
++    slot.userInteractionEnabled = NO;
++    slot.systemGlassButton.userInteractionEnabled = NO;
+     slot.systemGlassButton.frame = slot.bounds;
+ 
+     UIColor *foregroundColor = nil;
+@@ -11752,8 +11926,7 @@
+             originalPNG,
+             AWEHomeTintedGlassEnabled(),
+             NO);
+-        /* No synthetic scale/long-press mirror: UIButton owns its native
+-           Liquid Glass interaction state directly. */
++        AWEInstallGlassPressFeedback(button, slot.systemGlassButton);
+     } else {
+         slot.hidden = YES;
+     }
+@@ -14557,6 +14730,12 @@
+                               object:nil];
+         }
+     }
++    if (ios27 && gAWEAlbumMorphController.tabBar) {
++        /* Whether or not the semantic trait changed, the route can replace the
++           private platter. Re-commit the user-selected Clear/Regular policy
++           after UIKit has finished that one page transition. */
++        AWEScheduleIOS27BottomMaterialCommit(gAWEAlbumMorphController.tabBar);
++    }
+ 
+     BOOL fixedHomeDark = AWEOperatingSystemMajorVersion() >= 26 && originalIndex == 0;
+     NSString *mode = fixedHomeDark
+@@ -14695,9 +14874,31 @@
+ }
+ 
+ - (void)albumMorphDidRequestSearch {
+-    BOOL forwarded = AWETriggerOriginalSearchAction();
++    /* v12: this is the exact old-v7 route that previously opened Search.
++       Do not depend on the replacement search button or move a private
++       recognizer between views. Resolve Douyin's live top owner and invoke
++       its own control/gesture action. */
++    UIWindow *window = AWEActiveMainWindow();
++    UIView *topContainer = window
++        ? AWEFindViewByExactRuntimeClass(window, @"AWEFeedTopBarContainer", 0)
++        : nil;
++    UIView *owner = topContainer
++        ? AWEFindTopOwnerCandidate(topContainer, YES)
++        : nil;
++    if (!owner && window) {
++        owner = AWEFindViewByExactRuntimeClass(
++            window, @"AWEHPDiscoverFeedEntranceView", 0);
++    }
++    if (!owner && window) {
++        owner = AWEFindViewByExactRuntimeClass(
++            window, @"AWEHPSearchBubbleEntranceView", 0);
++    }
++    BOOL forwarded = AWEForwardTopActionOwner(
++        owner, AWEHomeTopActionKindSearch);
++    if (!forwarded) forwarded = AWETriggerOriginalSearchAction();
+     AWEInteractionDiagnosticWrite(
+-        @"ALBUM_MORPH_SEARCH directNative=1 result=%d", forwarded);
++        @"ALBUM_MORPH_SEARCH v7-owner=%@ result=%d",
++        AWEInteractionObjectSummary(owner), forwarded);
+ }
+ 
+ @end
+@@ -15354,13 +15555,10 @@
+ 
+         if (@available(iOS 26.0, *)) {
+             UIButton *glassButton = [UIButton buttonWithType:UIButtonTypeCustom];
+-            glassButton.userInteractionEnabled = YES;
+-            glassButton.exclusiveTouch = YES;
++            glassButton.userInteractionEnabled = NO;
+             glassButton.backgroundColor = UIColor.clearColor;
+             glassButton.opaque = NO;
+             glassButton.clipsToBounds = NO;
+-            [glassButton addTarget:slot action:@selector(alb_handleTopTap:)
+-                   forControlEvents:UIControlEventTouchUpInside];
+             [slot addSubview:glassButton];
+             slot.systemGlassButton = glassButton;
+         }
+@@ -15445,6 +15643,22 @@
+ 
+     const CGFloat diameter = 46.0;
+     CGPoint center = AWETopDesiredCenter(container, kind);
++    if (kind == AWEHomeTopActionKindSearch && owner.superview) {
++        /* Direct passthrough only works when the visible glass and Douyin's
++           real search hit target occupy the same place. Recent versions moved
++           only the glass to a synthetic x coordinate, so taps landed on empty
++           chrome. Use the live owner's actual centre whenever it is sane. */
++        CGRect ownerRect = [owner convertRect:owner.bounds toView:container];
++        CGPoint ownerCenter = CGPointMake(CGRectGetMidX(ownerRect), CGRectGetMidY(ownerRect));
++        if (!CGRectIsEmpty(ownerRect) && !CGRectIsNull(ownerRect) &&
++            isfinite(ownerCenter.x) && isfinite(ownerCenter.y) &&
++            ownerCenter.x >= CGRectGetWidth(container.bounds) * 0.58 &&
++            ownerCenter.x <= CGRectGetWidth(container.bounds) + 12.0 &&
++            ownerCenter.y >= -12.0 &&
++            ownerCenter.y <= CGRectGetHeight(container.bounds) + 12.0) {
++            center = ownerCenter;
++        }
++    }
+     if (!isfinite(center.x) || !isfinite(center.y)) return;
+ 
+     if (!AWETopSourceIsNearExpectedPoint(container, source, kind)) source = nil;
+@@ -15541,11 +15755,15 @@
+         AWEClearTopMenuMorph(slot);
+         slot.hitButton.hidden = YES;
+         slot.hitButton.userInteractionEnabled = NO;
+-        slot.systemGlassButton.userInteractionEnabled = YES;
+-        slot.userInteractionEnabled = YES;
++        /* Do not steal Search touches. The source owner remains at Douyin's
++           native geometry and receives the user's actual UIGesture/UIControl
++           event. We only mirror the press state into the glass visual. */
++        slot.systemGlassButton.userInteractionEnabled = NO;
++        slot.userInteractionEnabled = NO;
++        AWEInstallGlassPressFeedback(owner, slot.systemGlassButton);
+         [slot bringSubviewToFront:slot.systemGlassButton];
+         AWEInteractionDiagnosticWrite(
+-            @"TOP_BIND kind=SEARCH mode=native-glass-forward-v10 owner=%@ source=%@ slot=%@",
++            @"TOP_BIND kind=SEARCH mode=native-source-passthrough-v12 owner=%@ source=%@ slot=%@",
+             AWEInteractionObjectSummary(owner),
+             AWEInteractionObjectSummary(slot.sourceImageView),
+             AWEInteractionObjectSummary(slot));
+@@ -15861,6 +16079,27 @@
+  window so the next hidden channel becomes available.
+ */
+ @class AWETopLiquidGroupView;
++static BOOL AWETopCarrierLooksDark(UIView *view) {
++    if (!view) return NO;
++    UITraitCollection *trait = view.traitCollection ?: UIScreen.mainScreen.traitCollection;
++    NSUInteger depth = 0;
++    for (UIView *cursor = view; cursor && depth++ < 7; cursor = cursor.superview) {
++        UIColor *bg = cursor.backgroundColor;
++        if (!bg) continue;
++        UIColor *resolved = [bg resolvedColorWithTraitCollection:trait];
++        CGFloat white = 0.0, alpha = 0.0;
++        if ([resolved getWhite:&white alpha:&alpha] && alpha >= 0.55) {
++            return white < 0.42;
++        }
++        CGFloat r=0,g=0,b=0,a=0;
++        if ([resolved getRed:&r green:&g blue:&b alpha:&a] && a >= 0.55) {
++            CGFloat lum = 0.2126*r + 0.7152*g + 0.0722*b;
++            return lum < 0.42;
++        }
++    }
++    return NO;
++}
++
+ static void AWELayoutTopLiquidGroup(AWETopLiquidGroupView *group,
+                                     BOOL animated);
+ 
+@@ -16296,15 +16535,25 @@
+              available; dynamic colors continue to resolve in Douyin's own
+              trait environment.  labelColor is only a cold-start fallback.
+             */
+-            UIColor *titleColor = nil;
+-            if (AWEOperatingSystemMajorVersion() >= 26) {
+-                /* Home is deliberately a dark material island even when the
+-                   app itself is Light. Resolve category text inside that same
+-                   dark trait instead of reusing a Light-mode native snapshot. */
+-                titleColor = UIColor.labelColor;
+-            } else {
+-                titleColor = [definition[@"textColor"] isKindOfClass:UIColor.class]
+-                    ? definition[@"textColor"] : UIColor.labelColor;
++            UIColor *titleColor = [definition[@"textColor"] isKindOfClass:UIColor.class]
++                ? definition[@"textColor"] : nil;
++            /* The hidden Douyin label already knows whether this feed frame
++               needs white or black text. Reuse that live colour directly;
++               only fall back to white on Home, where the top chrome normally
++               overlays video/black safe-area content. */
++            if (!titleColor) {
++                titleColor = AWECurrentOriginalMainTabIndex() == 0
++                    ? UIColor.whiteColor : UIColor.labelColor;
++            }
++            /* Native Douyin labels can remain black because their original
++               light-mode carrier was hidden while our top area is visibly
++               black. Guard only that objectively unreadable combination; do
++               not globally pin every title white or black. */
++            if (AWETopCarrierLooksDark(group)) {
++                BOOL colorValid = NO;
++                BOOL titleIsLight = AWEColorPrefersLightForeground(
++                    titleColor, button.traitCollection, &colorValid);
++                if (colorValid && !titleIsLight) titleColor = UIColor.whiteColor;
+             }
+             [button setTitleColor:titleColor forState:UIControlStateNormal];
+             [button setTitleColor:titleColor forState:UIControlStateHighlighted];
+@@ -19734,6 +19983,7 @@
+     [NSUserDefaults.standardUserDefaults synchronize];
+     if (gAWEAlbumMorphController.tabBar) {
+         AWEApplyIOS27UntintedClearPlatter(gAWEAlbumMorphController.tabBar);
++        AWEScheduleIOS27BottomMaterialCommit(gAWEAlbumMorphController.tabBar);
+         [gAWEAlbumMorphController.tabBar setNeedsLayout];
+     }
+     AWEApplyHomeOnlyGlassStyleToExistingSurfaces();
+@@ -23407,6 +23657,20 @@
+ }
+ 
+ %end
++
++/* Observe only; never swallow or rewrite app events. This keeps the
++   original Douyin controls as the actual responders while visual Glass
++   buttons receive the same native tracking lifecycle. */
++%hook UIApplication
++
++- (void)sendEvent:(UIEvent *)event {
++    if (@available(iOS 26.0, *)) {
++        AWEGlassMirrorNativeTrackingEvent(event);
++    }
++    %orig(event);
++}
++
++%end
+ 
+ %ctor {
+     @autoreleasepool {

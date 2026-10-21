@@ -1,0 +1,27 @@
+{
+  "baseline": "TEST18 source; compiled arm64e UUID AB32436E-767A-3656-B1D7-7647E6EE2544",
+  "expected_unchanged_sha256": {
+    "ALB5Options.h": "1ebdc5f9789cb2f5993c8c9ea9ffbfc59ae2bffc89b4635ef877a321fa323fcb",
+    "ALB5BottomGeometry.m": "df35dfaa0b9b0990502e4383b74922d29b4f7dba29f27d14c45baf72054fc6a7",
+    "ALB7BottomMath.h": "5dae13ed134eedaac6d4f931f96c11cd4afe5f54a074aa84f846212fed022dce",
+    "ALBTopNative/ALBTopNativeGroup.m": "dfca42745766e17d418d6171d061c5e982d5eff164fb69b9fe7c190fb9214c2b",
+    "ALBTopNative/ALBTopNativeGroup.h": "1b06353f3bffc98c697d804d22b446394eca79087a6baf0a9d219807dc69855d",
+    "ALBTopNative/ALBNativeBarSurface.h": "cf040bb4a537f761744b2aa9dc4c0f2c3b389a2a325deb302d1407c656646dab",
+    "AwemeAlbumMorphBar.swift": "c5c7ba9657e421bfce0f5d7f37a3335ac5446a2ab27f7a8db90121ca024e744d",
+    "ALBNativeMinimize.h": "c547b6751944467b324aeacbe1f5479c517046377444e613768b59f7ab9296b3",
+    "ALBNativeState.h": "e303f7a464ff1a0856db6c509e98ca6bf2e96bf86f1fad720e50dc12c49284f3",
+    "ALBGlassMaterials.h": "6f028f675525b46f19bb1227800e375708e2e6496c9252abbf8d59a279fe1e64",
+    "ALBRootScroll.h": "9641e3ef1787c0616cf57b3ec12f4db2a55bccad85b426b13f30503aef9b4e7b",
+    "ALBSidePalette.h": "1491c4a2e46a26a4ee0c9472a70b3c67dfca0565c75e02f47b793c514e9c3fee",
+    "CommentGlassDYKiller.xm": "d2647669fd79d70d59945ad5ffc215df60ce04d018a5099eb30f42131dcf51b0",
+    "MessageTopGlassV3.xm": "8ec1835ac9e6a55ae086df9a436cf7e78fba6c4fd591a578353a472931bac355",
+    "ALB5Settings.h": "a264fd89af3e007128783fcfb526adc3eb5acff5ebd3c84c01ce557930824148",
+    "ALBClearContrast.h": "05dc02e607faf26025715f3ec0a3ccd195cdd8aed0ddce36670b3828fb08da1d"
+  },
+  "intentional_runtime_changes": [
+    "ALB5RightLayout.h: persistent projection, no-op guards, inactive gate",
+    "ALBNativeInteraction.h: coordinate conversion and geometry setters only",
+    "Tweak.x: right-rail callsites and version strings"
+  ],
+  "note": "Source equality is not a device/rendering validation."
+}

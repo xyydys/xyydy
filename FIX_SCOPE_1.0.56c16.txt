@@ -1,0 +1,7 @@
+AwemeLiquidBar 1.0.56c16 — IM semantic-route + comment-bottom transparency recovery + auth42
+
+1. Authorization table now contains 42 unique accounts. This auth-only rebuild adds two additional masked entries without embedding their plaintext identifiers.
+2. Keeps the custom "显示液态底栏" ownership-release switch limited to the existing two compatibility accounts; Wake54174 and the two newly authorized accounts do not receive that setting.
+3. Fixes a semantic-tab bug in Messages: Douyin native selectedIndex may omit Publish and report Messages as index 2. IM/fullscreen/right-recovery guards now use LiquidBar's semantic original index (Messages=3), preventing fullscreen geometry and delayed right-stack recovery from mutating forwarded works in private messages.
+4. Tracks only the two known comment-bottom background containers. After the visible comment panel closes, bounded passes re-clear lingering opaque comment-input surfaces and native tab backgrounds while fullscreen is active. No polling timer and no process-wide UIView hook are added.
+5. No changes to the already-stable foreground/Friends playback lifecycle, article-route fix, avatar-route fix, clean-screen hard gate, max-five tabs, or native Settings injection.

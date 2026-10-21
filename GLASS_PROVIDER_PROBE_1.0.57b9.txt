@@ -1,0 +1,15 @@
+AwemeLiquidBar 1.0.57b9 — UITabBar visual-provider / glass-group probe
+
+Purpose
+- Return to the stable 1.0.57b layout and keep the existing safe 57b7 read-only hierarchy probe.
+- Do not archive, decode, copy, reparent, instantiate, resize, hide, or mutate private UIKit views.
+- Read the live UITabBar's `_visualProvider`, `__glassGroupContainer`, `_backgroundEffects`, and accessory ivars through the Objective-C runtime.
+- Record the provider object's object-valued ivars and runtime class metadata.
+- Record the glass-group container's live UIView subtree and correlate it with the real UISearchTab auxiliary/platter/button branch by pointer identity.
+- Repeat after initial layout and trait changes so Clear/Tinted and light/dark changes can be compared.
+
+Log
+- Documents/AwemeLiquidBar_1.0.57b9_probe.log
+
+Safety
+- Runtime reads only. No NSKeyedArchiver/NSKeyedUnarchiver. No KVC into private UIKit. No selector invocation on the private provider.

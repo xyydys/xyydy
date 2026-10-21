@@ -1,0 +1,15 @@
+AwemeLiquidBar 1.0.57b8 search hierarchy probe
+
+Baseline: 1.0.57b.
+UI/interaction geometry is intentionally unchanged.
+
+Probe behavior:
+- always writes the dedicated sandbox Documents log in this diagnostic build;
+- dumps the real UITabBar view tree at 0.12s, 0.65s and 1.80s after stable layout;
+- records view/private class names, frames, alpha/hidden/interaction, corner geometry, traits, transforms, visual-effect class, CALayer filters, gestures and control state;
+- records the right-most native control as the Search candidate and its full ancestor/subtree chain;
+- records Objective-C runtime ivar names and search/glass/platter/effect-related methods for discovered private classes;
+- samples control-state changes for 18 seconds to catch press/highlight transforms;
+- dumps again when Search is selected or the interface style/contrast changes.
+
+Log file: AwemeLiquidBar_1.0.57b8_probe.log in Douyin's sandbox Documents directory.

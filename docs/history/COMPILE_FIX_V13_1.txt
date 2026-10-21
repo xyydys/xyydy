@@ -1,0 +1,15 @@
+AwemeLiquidBar 1.0.56c16 auth44 v13.1 compile fix
+
+Cloud build failure fixed:
+MessageTopGlassV3.xm: property 'class' cannot be found in forward class object 'AWEIMMessageTabViewController'.
+
+Cause:
+Inside a Logos %hook for a runtime class, `self` is compiled against a forward declaration. Dot-property syntax `self.class` therefore triggers a compile-time property lookup on the incomplete class.
+
+Fix:
+Replaced:
+    NSStringFromClass(self.class)
+with:
+    NSStringFromClass(object_getClass((id)self))
+
+<objc/runtime.h> is already imported by MessageTopGlassV3.xm. No v13 behavior or logging logic was rolled back.

@@ -1,0 +1,11 @@
+--- /mnt/data/aweme_v7_inspect/AwemeLiquidBar_1.0.58_auth47_iOS27LuminanceAdaptive_v7_project/MessageTopGlassV3.xm	2026-09-02 17:56:04.000000000 +0000
++++ /mnt/data/AwemeLiquidBar_1.0.58_auth47_iOS27LuminanceAdaptive_v8_project/MessageTopGlassV3.xm	2026-09-02 18:34:16.949143937 +0000
+@@ -1465,7 +1465,7 @@
+                 AWEMessageApplyFullSurface(live);
+             }
+         }];
+-        AWEMessageProbe(@"SESSION message-top-glass-1.0.58-native-menu-blur-v7 loaded os=%@",
++        AWEMessageProbe(@"SESSION message-top-glass-1.0.58-native-menu-blur-v8 loaded os=%@",
+                         NSProcessInfo.processInfo.operatingSystemVersionString);
+     }
+ }

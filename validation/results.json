@@ -1,0 +1,137 @@
+{
+  "preflight": "2.0.15 TEST15 source/package preflight passed; compile and device testing still required.",
+  "swift_parser": {
+    "compiler": "Swift version 6.2.1 (swift-6.2.1-RELEASE)\nTarget: x86_64-unknown-linux-gnu",
+    "files": {
+      "AwemeAlbumMorphBar.swift": {
+        "exit": 0,
+        "diagnostics": "",
+        "sha256": "efb0f20e555e1edc089509b9f62f564f6756d26cd7a45d98b9d1dab35085b334"
+      },
+      "ALB15SystemGlass.swift": {
+        "exit": 0,
+        "diagnostics": "",
+        "sha256": "502e40cb3d10913dc9dc51571f895478fce63d09200b19958f5bcb4d9aa9bf6b"
+      }
+    }
+  },
+  "c_tests": [
+    {
+      "source": "Tests/bottom_geometry_test.c",
+      "exit": 0,
+      "output": "bottom geometry: native pair, pivot, 256000 idempotent layouts, uniform scale invariants passed (native animation not simulated)"
+    },
+    {
+      "source": "Tests/download_state_test.c",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "source": "Tests/native_glass_state_test.c",
+      "exit": 0,
+      "output": "native glass: interrupted/reversed/reset/stale/one-shot completion checks passed"
+    },
+    {
+      "source": "Tests/right_layout_test.c",
+      "exit": 0,
+      "output": "right layout: coordinate transforms + icon-slot packing + repeated cycles passed"
+    },
+    {
+      "source": "Tests/scroll_intent_test.c",
+      "exit": 0,
+      "output": "scroll intent: up, down, reversal, dedup, horizontal, slow and invalid input passed"
+    },
+    {
+      "source": "ALBTopNative/Tests/window_geometry_test.c",
+      "exit": 0,
+      "output": "top native window, platter and shared baseline geometry: PASS"
+    }
+  ],
+  "source_constraints": "native capsule + shared container; no authored duration/curve/mask/carrier-bounds resize; no root compact tap",
+  "unchanged_from_test14": [
+    "ALB5Options.h",
+    "ALB5RightLayout.h",
+    "ALBNativeInteraction.h",
+    "ALB8Profile.h",
+    "ALBRootScroll.h",
+    "ALBAvatarMenuTouch.h",
+    "ALBSettingsGlass.h",
+    "ALBSidePalette.h",
+    "ALBDownloadJob.h",
+    "ALBDownloadState.h",
+    "ALBAlbumVideoExporter.h",
+    "MessageTopGlassV3.xm",
+    "CommentGlassDYKiller.xm"
+  ],
+  "push_test": {
+    "remote": "isolated local bare git repository",
+    "branch": "original-fixes-test15",
+    "first_run": 0,
+    "second_run": 0,
+    "second_commit_created": false,
+    "main_unchanged": true,
+    "unrelated_file_preserved": true,
+    "uses_phone_python": false
+  },
+  "negative_missing_file": {
+    "exit": 1,
+    "diagnostic": "工程缺少文件：CHANGELOG_TEST15.md"
+  },
+  "negative_wrong_version": {
+    "exit": 1,
+    "diagnostic": "Unexpected package version"
+  },
+  "new_api_apple_sdk_typecheck_in_workflow": true,
+  "limitations": {
+    "objc_uikit_compilation_executed": false,
+    "apple_swift_typecheck_executed": false,
+    "ios_runtime_or_touch_validation": false,
+    "pixel_material_parity_tested": false,
+    "remote_github_accessed": false
+  },
+  "source_sha256": {
+    "ALB15NativeGlass.h": "64f824ade9150559e6e33ba459c79ab1339bc10d6a10654184b50e8bbc10d845",
+    "ALB15NativeGlass.m": "dde2d71e37ff34c222e0560322ab8362ac0ed8a0e5d1db0b080dcedbcfd3d0ec",
+    "ALB15SystemGlass.swift": "502e40cb3d10913dc9dc51571f895478fce63d09200b19958f5bcb4d9aa9bf6b",
+    "ALB15TransitionState.h": "5ee8e43cc7f90540cd9890870276a6fca1228e72ae0690e279b6580c1af05209",
+    "ALB5BottomGeometry.m": "d57261eb0ae7bf028c672c14b56701ddb41ceb7062ab35212c2f62ed48627d63",
+    "ALB5Options.h": "18490859838d905c86ea92168c3492a7425eb93467af21ff8a282000ccca462c",
+    "ALB5RightLayout.h": "4022cc436a49d7577ae4f7143b1ca0fd53d7fdc59e5405da6b71a6f1e170bc40",
+    "ALB5Settings.h": "2fecf02bc098d71d22cf9997ca2167bb1a922d5b42b9fc32b1c6e15726a46ad7",
+    "ALB7BottomMath.h": "7ebbeb95f3aab9327c519dd4d01b7d269e9dc60c3d45b5d819f18bdac942d30a",
+    "ALB8Profile.h": "b66a199bc853ca163edf7236b72fb4d2bf0262b9cb351a705a3d4eb02a41d9c4",
+    "ALBAlbumVideoExporter.h": "8e0af908bdc29259981a1127da018a227ef0857e4375214924ccb70d4c02b476",
+    "ALBAvatarMenuTouch.h": "c8fc559ec32b79ecb81f70b9f9377eb335e94702b022603749678a2736d6b642",
+    "ALBClearContrast.h": "02a6e2ef5a6a46f4d1b5a9d0dd5a08c7dd953ac0339bbf6724c2df7a0557520c",
+    "ALBDownloadJob.h": "994615b02723162eae8ebbcc2fa8e74f46b0711c53bfc3dba0ac73e883788cc5",
+    "ALBDownloadState.h": "3988f4b2d718e8ab696018cdfd51a4f837351b5f084a576bcae2eedac9abde63",
+    "ALBGlassMaterials.h": "6f028f675525b46f19bb1227800e375708e2e6496c9252abbf8d59a279fe1e64",
+    "ALBNativeInteraction.h": "3667b60fd60152987cc2421350a3f9b410050e211c5b69734acc2506be3c73ae",
+    "ALBNativeMinimize.h": "b29ac1722b5db3f99f0d02b80b9a937eee7a67f7a02c343ff1677ccb8bf9123d",
+    "ALBRootScroll.h": "9641e3ef1787c0616cf57b3ec12f4db2a55bccad85b426b13f30503aef9b4e7b",
+    "ALBScrollIntent.h": "ff46ae61dec0a7846cdcdd94b6d327afc15122800bedc81a0be1380fd9b1067e",
+    "ALBSettingsGlass.h": "fa3ea723455a9761a9da1e62989c25b3757a94d9aa9d4b400df723f6cc71e714",
+    "ALBSidePalette.h": "1491c4a2e46a26a4ee0c9472a70b3c67dfca0565c75e02f47b793c514e9c3fee",
+    "ALBTopNative/ALBCompactGeometry.h": "cda1ed80b1e8d98cf63165efcb27b8dce0e5bc06085f9b42863e712b25fddf09",
+    "ALBTopNative/ALBNativeBarSurface.h": "cf040bb4a537f761744b2aa9dc4c0f2c3b389a2a325deb302d1407c656646dab",
+    "ALBTopNative/ALBTopNativeGroup.h": "5a850c73b785117d6d198ece3d9767c597fd8c1ebbe3e8d2690bdecdff030991",
+    "ALBTopNative/ALBTopNativeGroup.m": "9beb3e9ac8b854090be0d3d67cc243c8df5a4485163e97349f36407c1c625a0a",
+    "ALBTopNative/Tests/window_geometry_test.c": "0442e53629cc05996285189ea744ad17333210bfc294d872591c8abd0fabe58e",
+    "AwemeAlbumMorphBar.swift": "efb0f20e555e1edc089509b9f62f564f6756d26cd7a45d98b9d1dab35085b334",
+    "AwemeLiquidBar-Bridging-Header.h": "61b6baf026cf8faed4156bf071008b7e18795f9ab350362991f7302ac1a89846",
+    "CommentGlassDYKiller.xm": "7d00276ab4dafa3f8c390a56b0c647296944c323bacb0820e13243c3e9e7c894",
+    "MessageTopGlassV3.xm": "167825439f2bb2376e543505aab92acf94dbe58188297aa652d42148c4e242e1",
+    "Tests/bottom_geometry_test.c": "10cb1493ed8b47ea0e15b3654b748b20b21c2e9b3a274cd41c61b39b8da431f3",
+    "Tests/download_state_test.c": "ffc6d39ed841b08c98abb228610aba3bb875b5d750fcfe67012bf0d8c2958ddf",
+    "Tests/native_glass_state_test.c": "8d7fcb9b909158ea9de30d8d1297422ffa36e36aef6510144db288612208e472",
+    "Tests/right_layout_test.c": "3e0d8bf6498641e9427fcf0ac17c4e93507bffa48f631e368d78923a190170eb",
+    "Tests/scroll_intent_test.c": "04268a9d18ed91723ec91bd2882a69d993f01b2c82b88566ba15a9eef5e68ef7",
+    "Tweak.x": "de896a237dda500a3eb7f1d65602f7d0ead4d844acb999e62906404b8936e77a",
+    "WCLGBackdropLayer.h": "92567c67756429bbc9514fc6c407af786eb84b7d7efcea66c29c4b9c2f8975d0",
+    "WCLGBackdropLayer.m": "f84ddc951556a126035206069a0fc0f298f5effaf279f26ac3de9a347c52987e",
+    "WCLGEdgeEffect.h": "938b609230f8cc08f2577690a294f0c9d4ef1f1b6b3b0d3481b746b50eb2fabd",
+    "WCLGEdgeEffect.m": "b22253f1e354257eb97a415a3e902949c733e13be89aca00bbc4d82f9fa572c2",
+    "WCLGEdgeGradientTables.h": "93e3b224f6741d2da504c7a62b77eaeec177f5f6131cdb82fc219f0b8de474bd",
+    "WCLGEdgeGradientTables.m": "b79150689859d87497e9bdd446e0a22985e52c57427d72f7ced72beaee6d9b6e"
+  }
+}

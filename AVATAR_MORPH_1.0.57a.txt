@@ -1,0 +1,39 @@
+AwemeLiquidBar 1.0.57a — avatar launcher morph scope
+
+Goal
+- Reproduce the supplied reference interaction without replacing the stable c16
+  route/fullscreen/comment/IM/auth foundation.
+
+Default behavior
+- Collapsed: only the signed-in user's circular avatar at bottom center.
+- Tap avatar: spring-expand to main native tab capsule | native search capsule |
+  avatar.
+- Expanded avatar: opens semantic original index 4 (Profile), then collapses.
+- Any regular tab, Publish, or Search action collapses after selection.
+
+Architecture
+- Existing AWEAlbumMorphTabController and real UITabBar stay resident.
+- Launcher mode removes only the duplicate Profile UITab from the effective tab
+  list and fixes UISearchTab as the middle function capsule; stored button
+  configuration remains unchanged for instant rollback.
+- A window-level SwiftUI Liquid Glass avatar button stays outside the tab reveal
+  mask. Its carrier passes through every point outside the circular control.
+- The bar reveal is a center-out UIView mask animation (0.42 s spring). No tab
+  controller reconstruction or source-view reparent occurs during a tap.
+- The right 64 pt of the live tab-bar width is reserved for the expanded avatar;
+  UIKit still owns the bar's measured Y position and height.
+
+Own-avatar resolution
+- Targeted current-account manager/service selectors first.
+- Conservative one-shot AWE/IES manager/service runtime fallback.
+- avatarMedium/avatar300x300/avatar168x168/avatarLarger/avatarThumb URL models.
+- Local Caches/AwemeLiquidBar/own-avatar.png fallback.
+- Own-profile-only visible UIImageView capture when authorization/profile logic
+  has positively identified the signed-in user's page.
+
+Safety and preserved behavior
+- Collapsed non-avatar space is true touch passthrough.
+- Search re-hosting is disabled while collapsed and restored after expansion.
+- Clean screen and route suppression hide both the native bar and avatar.
+- Native Friends/Messages badge paths remain unchanged.
+- The setting can disable the experiment and restore the c16 effective tab list.

@@ -1,0 +1,15 @@
+AwemeLiquidBar 1.0.56c16 auth44 - comment/settings/right-action/bottom-background v6
+
+1. Comment Liquid Glass gets its own settings card.
+   - Master switch (default ON for upgrade compatibility).
+   - Material selector: Pure Clear / Adaptive.
+   - Pure Clear = clear UIGlassEffect style used by the successful v4 panel.
+   - Adaptive = native default UIGlassEffect, matching bottom/right system glass.
+2. Shortens the settings gesture label to: 双指长按仅在‘我’页面触发
+3. Adds a native Liquid Glass plate behind the right-side 拍同款 control.
+   - 58 pt plate, slightly lower than the native 44 pt target so the three-character caption is covered.
+   - Does not replace or intercept the original control.
+4. Removes the original Douyin bottom-bar blur/skin background layers.
+5. Extends the main Shop scroll view behind the bottom bar when a stopped 48-110 pt bottom gap is detected.
+6. Extends AWEProfileStickCollectionView behind the bottom bar for profile/favorites pages.
+7. Keeps v5 comment round-glass geometry, fullscreen comment protection, Live Photo protection, top-black suppression and message-top code unchanged apart from shared v6 probe filename.

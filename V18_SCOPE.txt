@@ -1,0 +1,10 @@
+AwemeLiquidBar 1.0.58 auth47 — v18 RealTouchLease
+
+Scope:
+1. Home and Friends are one visual policy. Shop remains independent.
+2. iOS 27 clear switch: Home + Friends + Profile bottom bar uses the clear platter path.
+3. Right action glass no longer owns the Douyin business tap. Real AWEFeedVideoButton touch remains native; glass mirrors the same physical touch only for UIKit press/stretch feedback.
+4. Top and bottom Search share the original Douyin Search recognizer using a bounded real-touch lease; no synthetic recognizer-state business dispatch is used for Search.
+5. Retains v17 fixes: Favorites no-jump, vertical-offset geometry correction, compact settings typography, commerce fullscreen guard, separate message top/bottom blur distance, save-menu appearance pre-resolution, auth47.
+
+Packaging note: Tweak.x.v17 is removed from the release archive after generating V17_TO_V18_Tweak.diff.

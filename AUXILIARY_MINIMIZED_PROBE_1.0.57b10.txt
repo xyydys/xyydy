@@ -1,0 +1,15 @@
+AwemeLiquidBar 1.0.57b10 — system auxiliary/minimized search probe
+
+Purpose
+- Keep the stable 1.0.57b UI unchanged.
+- Read only the live UIKit._UITabBarVisualProvider_Floating / _UITabBarAuxiliaryView objects.
+- Resolve provider auxiliaryView, platterView, lensView, selectedContentView.
+- Resolve auxiliary tabBarButton, minimizedTabButton, primaryPlatterView, minimizedPlatterView.
+- Resolve _UITabButton linkedButton relationships.
+- No private UIKit object is moved, cloned, archived, resized, hidden or mutated.
+
+Key log markers
+- MINIMIZED_IVAR
+- MINIMIZED_AUXILIARY
+- MINIMIZED_RELATION
+- Documents/AwemeLiquidBar_1.0.57b10_probe.log

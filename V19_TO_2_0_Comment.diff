@@ -1,0 +1,20 @@
+--- /mnt/data/AwemeLiquidBar_1.0.58_auth47_GlassPolish_v19_project/CommentGlassDYKiller.xm	2026-09-05 21:15:26.341783365 +0000
++++ /mnt/data/AwemeLiquidBar_2.0_auth47_SettingsRefactor_project/CommentGlassDYKiller.xm	2026-09-05 22:01:00.764240607 +0000
+@@ -71,7 +71,7 @@
+     NSString *documents = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,
+                                                                 NSUserDomainMask,
+                                                                 YES) firstObject];
+-    return [documents stringByAppendingPathComponent:@"AwemeLiquidBar_comment_message_probe_1.0.58.log"];
++    return [documents stringByAppendingPathComponent:@"AwemeLiquidBar_comment_message_probe_2.0.log"];
+ }
+ 
+ static void AWECommentProbe(NSString *format, ...) {
+@@ -1139,7 +1139,7 @@
+ %ctor {
+     @autoreleasepool {
+         %init;
+-        AWECommentProbe(@"SESSION comment-glass-1.0.58-system-style-radius-dismiss-recovery loaded os=%@",
++        AWECommentProbe(@"SESSION comment-glass-2.0-system-style-radius-dismiss-recovery loaded os=%@",
+                         NSProcessInfo.processInfo.operatingSystemVersionString);
+         Class imageClass = objc_getClass("BDMultiContentContainer.ImageContentView");
+         if (imageClass) {

@@ -1,0 +1,20 @@
+Base: AwemeLiquidBar 1.0.56c16 auth44 clean project.
+
+Fresh comment path:
+- no previous CommentGlassFresh/FLEX/comment-glass implementation retained
+- DYKiller panel-slot + opaque-cover strategy
+- Clear UIGlassEffect, mounted before effect materialization
+- DYKiller render-optimize AB gateway disabled while feature is active
+- DYYY player x-shift block, story y-shift block, image-transform block
+- comment route no longer disables the existing 1.0.56c16 internal fullscreen geometry
+- outer CommentInputContainerView background cleared; original inner 416x36 input field retained
+
+Fresh message path:
+- transparent AWENavigationBar backgrounds
+- actual AWEIMChatTabTableView content-host lifted under nav, keeping native topEdgeEffect
+- left colored advertising icon slot hidden by geometry
+- exact native source classes for menu/search/add; plugin plates are excluded from future detection
+- 40x40 glass buttons; 76x36 message title capsule
+
+Probe:
+Documents/AwemeLiquidBar_comment_message_probe_v3.log

@@ -1,0 +1,7 @@
+AwemeLiquidBar 1.0.58 auth47
+
+- Preserves all 46 previously authorized digest entries unchanged.
+- Adds 1 authorized account as a salted SHA-256 digest split into a fresh random XOR mask/value pair.
+- Authorization rows: 46 -> 47.
+- Adds the matching fast digest tag.
+- No plaintext account identifier is stored in this project.

@@ -1,0 +1,392 @@
+--- /mnt/data/AwemeLiquidBar_1.0.58_auth47_V9ActionForward_v16_project/Tweak.x	2026-09-03 11:29:25.891428219 +0000
++++ /mnt/data/AwemeLiquidBar_1.0.58_auth47_V9ActionForward_v17_project/Tweak.x	2026-09-03 12:18:33.243338410 +0000
+@@ -3644,41 +3644,39 @@
+ static void AWEApplyIOS27UntintedClearPlatter(UITabBar *nativeBar) {
+     if (!nativeBar || !nativeBar.window || !AWEIsIOS27OrLater() ||
+         (!AWEIsOurNativeBar(nativeBar) && !AWEIsAlbumMorphSystemBar(nativeBar))) return;
++
+     BOOL wantsClear = AWEIOS27WantsClearBottomMaterial();
+-    UIView *root = nativeBar;
+-    for (NSUInteger i = 0; i < 2 && root.superview; i++) root = root.superview;
+-    NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:root];
++    /* v17 restores the exact narrow path that was verified on-device in v10:
++       search only inside this UITabBar and only touch the real item platter.
++       The v15/v16 broad ancestor scan could exhaust its queue before reaching
++       _UITabBarItemPlatterView and therefore silently left the regular glass. */
++    NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:nativeBar];
+     NSUInteger index = 0;
+-    CGRect barFrame = [nativeBar convertRect:nativeBar.bounds toView:nativeBar.window];
+-    while (index < queue.count && index < 260) {
++    NSUInteger matched = 0, changed = 0;
++    while (index < queue.count && index < 220) {
+         UIView *view = queue[index++];
+         for (UIView *child in view.subviews) [queue addObject:child];
+         NSString *name = NSStringFromClass(view.class);
+-        BOOL candidate =
+-            [name rangeOfString:@"Platter" options:NSCaseInsensitiveSearch].location != NSNotFound ||
+-            [name rangeOfString:@"Search" options:NSCaseInsensitiveSearch].location != NSNotFound;
+-        if (!candidate) continue;
+-        CGRect wr = [view convertRect:view.bounds toView:nativeBar.window];
+-        if (!CGRectIntersectsRect(wr, CGRectInset(barFrame, -36.0, -36.0))) continue;
+-        SEL getter = NSSelectorFromString(@"glassEffect");
+-        SEL setter = NSSelectorFromString(@"setGlassEffect:");
+-        if (![view respondsToSelector:getter] && ![view respondsToSelector:setter]) continue;
++        if ([name rangeOfString:@"UITabBarItemPlatterView"
++                        options:NSCaseInsensitiveSearch].location == NSNotFound) continue;
++        matched++;
+         id current = nil;
+         @try { current = [view valueForKey:@"glassEffect"]; }
+         @catch (__unused NSException *exception) { continue; }
+         id installed = objc_getAssociatedObject(view, &kAWEIOS27PlatterInstalledGlassKey);
+         id original = objc_getAssociatedObject(view, &kAWEIOS27PlatterOriginalGlassKey);
++
+         if (!wantsClear) {
+             if (installed && current == installed && original) {
+                 id restore = original == NSNull.null ? nil : original;
+-                @try { [view setValue:restore forKey:@"glassEffect"]; }
++                @try { [view setValue:restore forKey:@"glassEffect"]; changed++; }
+                 @catch (__unused NSException *exception) {}
+             }
+             objc_setAssociatedObject(view, &kAWEIOS27PlatterInstalledGlassKey,
+                                      nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+             continue;
+         }
+-        if (current && installed && current == installed) continue;
++        if (installed && current == installed) continue;
+         if (!original) {
+             objc_setAssociatedObject(view, &kAWEIOS27PlatterOriginalGlassKey,
+                                      current ?: NSNull.null,
+@@ -3696,10 +3694,23 @@
+             id readback = [view valueForKey:@"glassEffect"];
+             objc_setAssociatedObject(view, &kAWEIOS27PlatterInstalledGlassKey,
+                                      readback, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-        } @catch (__unused NSException *exception) {
+-            objc_setAssociatedObject(view, &kAWEIOS27PlatterInstalledGlassKey,
+-                                     nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-        }
++            changed++;
++        } @catch (__unused NSException *exception) {}
++    }
++    AWEIOS27BottomProbeWrite(@"CLEAR_PLATTER_V17 wants=%d tab=%ld matched=%lu changed=%lu",
++        wantsClear, (long)AWECurrentMainTabIndex(),
++        (unsigned long)matched, (unsigned long)changed);
++}
++
++static void AWEScheduleIOS27ClearPlatterReapply(void) {
++    if (!AWEIsIOS27OrLater()) return;
++    NSArray<NSNumber *> *delays = @[@0.0, @0.05, @0.16];
++    for (NSNumber *delay in delays) {
++        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
++            (int64_t)(delay.doubleValue * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
++            UITabBar *bar = gAWEAlbumMorphController.tabBar;
++            if (bar.window) AWEApplyIOS27UntintedClearPlatter(bar);
++        });
+     }
+ }
+ 
+@@ -6766,23 +6777,74 @@
+     if (!ivar) return NO;
+ 
+     const char *type = ivar_getTypeEncoding(ivar);
+-    if (!type || (type[0] != 'q' && type[0] != 'i' && type[0] != 'l')) {
+-        return NO;
+-    }
++    if (!type || !type[0]) return NO;
+ 
+     ptrdiff_t offset = ivar_getOffset(ivar);
+     uint8_t *bytes = (uint8_t *)(__bridge void *)object;
++    switch (type[0]) {
++        case 'q': { long long *slot = (long long *)(bytes + offset); if (oldValue) *oldValue = (NSInteger)*slot; *slot = (long long)value; return YES; }
++        case 'Q': { unsigned long long *slot = (unsigned long long *)(bytes + offset); if (oldValue) *oldValue = (NSInteger)*slot; *slot = (unsigned long long)value; return YES; }
++        case 'l': { long *slot = (long *)(bytes + offset); if (oldValue) *oldValue = (NSInteger)*slot; *slot = (long)value; return YES; }
++        case 'L': { unsigned long *slot = (unsigned long *)(bytes + offset); if (oldValue) *oldValue = (NSInteger)*slot; *slot = (unsigned long)value; return YES; }
++        case 'i': { int *slot = (int *)(bytes + offset); if (oldValue) *oldValue = (NSInteger)*slot; *slot = (int)value; return YES; }
++        case 'I': { unsigned int *slot = (unsigned int *)(bytes + offset); if (oldValue) *oldValue = (NSInteger)*slot; *slot = (unsigned int)value; return YES; }
++        case 's': { short *slot = (short *)(bytes + offset); if (oldValue) *oldValue = (NSInteger)*slot; *slot = (short)value; return YES; }
++        case 'S': { unsigned short *slot = (unsigned short *)(bytes + offset); if (oldValue) *oldValue = (NSInteger)*slot; *slot = (unsigned short)value; return YES; }
++        case 'c': { signed char *slot = (signed char *)(bytes + offset); if (oldValue) *oldValue = (NSInteger)*slot; *slot = (signed char)value; return YES; }
++        case 'C':
++        case 'B': { unsigned char *slot = (unsigned char *)(bytes + offset); if (oldValue) *oldValue = (NSInteger)*slot; *slot = (unsigned char)value; return YES; }
++        default: return NO;
++    }
++}
+ 
+-    if (type[0] == 'q') {
+-        NSInteger *slot = (NSInteger *)(bytes + offset);
+-        if (oldValue) *oldValue = *slot;
+-        *slot = value;
+-    } else {
+-        int *slot = (int *)(bytes + offset);
+-        if (oldValue) *oldValue = *slot;
+-        *slot = (int)value;
++/* iOS 27 no longer guarantees the historical UIGestureRecognizer state ivar
++   name.  Locate the actual numeric state storage, verify through the public
++   getter, and restore it immediately after forwarding. */
++static BOOL AWEForceRecognizerState(UIGestureRecognizer *recognizer,
++                                    UIGestureRecognizerState desired,
++                                    NSInteger *oldValue,
++                                    NSString **storageName) {
++    if (!recognizer) return NO;
++    NSArray<NSString *> *preferred = @[@"_state_DO_NOT_USE_DIRECTLY", @"_state"];
++    for (NSString *name in preferred) {
++        NSInteger old = 0;
++        if (!AWESetIntegerIvar(recognizer, name.UTF8String, desired, &old)) continue;
++        if (recognizer.state == desired) {
++            if (oldValue) *oldValue = old;
++            if (storageName) *storageName = name;
++            return YES;
++        }
++        AWESetIntegerIvar(recognizer, name.UTF8String, old, NULL);
+     }
+-    return YES;
++
++    for (Class cls = object_getClass(recognizer); cls; cls = class_getSuperclass(cls)) {
++        unsigned int count = 0;
++        Ivar *ivars = class_copyIvarList(cls, &count);
++        for (unsigned int i = 0; i < count; i++) {
++            const char *raw = ivar_getName(ivars[i]);
++            if (!raw) continue;
++            NSString *name = [NSString stringWithUTF8String:raw];
++            if ([name.lowercaseString rangeOfString:@"state"].location == NSNotFound) continue;
++            NSInteger old = 0;
++            if (!AWESetIntegerIvar(recognizer, raw, desired, &old)) continue;
++            if (recognizer.state == desired) {
++                if (oldValue) *oldValue = old;
++                if (storageName) *storageName = name;
++                free(ivars);
++                return YES;
++            }
++            AWESetIntegerIvar(recognizer, raw, old, NULL);
++        }
++        free(ivars);
++    }
++    return NO;
++}
++
++static void AWERestoreRecognizerState(UIGestureRecognizer *recognizer,
++                                      NSString *storageName,
++                                      NSInteger oldValue) {
++    if (!recognizer || !storageName.length) return;
++    AWESetIntegerIvar(recognizer, storageName.UTF8String, oldValue, NULL);
+ }
+ 
+ static BOOL AWEInvokeRealTabTapGesture(UIView *buttonView) {
+@@ -8380,6 +8442,22 @@
+     return score;
+ }
+ 
++static BOOL AWEExactNativeTargetIsTelemetry(id target, SEL action) {
++    NSString *targetName = target ? NSStringFromClass([target class]).lowercaseString : @"";
++    NSString *actionName = action ? NSStringFromSelector(action).lowercaseString : @"";
++    if ([targetName containsString:@"bstuigesturerecognizerobserver"] ||
++        [targetName containsString:@"uiselectioninteraction"] ||
++        [actionName containsString:@"bsthandlegesture"] ||
++        [actionName containsString:@"selectgesturehandler"] ||
++        [actionName containsString:@"awe_uitracker"] ||
++        [actionName containsString:@"tracker"] ||
++        [actionName containsString:@"analytics"] ||
++        [actionName containsString:@"statistics"]) {
++        return YES;
++    }
++    return NO;
++}
++
+ static BOOL AWEInvokeExactNativeRecognizer(UIGestureRecognizer *recognizer,
+                                            NSString *context) {
+     if (!recognizer || !recognizer.enabled || !recognizer.view) return NO;
+@@ -8389,51 +8467,54 @@
+         @catch (__unused NSException *exception) { targetContainers = nil; }
+     }
+     if (![targetContainers isKindOfClass:NSArray.class] ||
+-        [(NSArray *)targetContainers count] == 0) {
+-        AWEInteractionDiagnosticWrite(
+-            @"EXACT_NATIVE_FORWARD context=%@ stage=no-targets recognizer=%@ view=%@",
+-            context ?: @"unknown", NSStringFromClass(recognizer.class),
+-            AWEInteractionObjectSummary(recognizer.view));
+-        return NO;
+-    }
++        [(NSArray *)targetContainers count] == 0) return NO;
+ 
+     NSInteger oldState = recognizer.state;
+-    BOOL changedState = AWESetIntegerIvar(
+-        recognizer, "_state_DO_NOT_USE_DIRECTLY",
+-        UIGestureRecognizerStateEnded, &oldState);
+-    BOOL dispatched = NO;
+-    NSUInteger validTargets = 0;
++    NSString *stateStorage = nil;
++    BOOL forced = AWEForceRecognizerState(recognizer, UIGestureRecognizerStateEnded,
++                                          &oldState, &stateStorage);
++    AWEInteractionDiagnosticWrite(
++        @"NATIVE_STATE_FORCE context=%@ recognizer=%@ before=%ld during=%ld forced=%d storage=%@",
++        context ?: @"unknown", NSStringFromClass(recognizer.class),
++        (long)oldState, (long)recognizer.state, forced, stateStorage ?: @"none");
++
++    BOOL businessDispatched = NO;
++    NSUInteger businessTargets = 0;
+     for (id container in [(NSArray *)targetContainers copy]) {
+         id target = AWEObjectIvar(container, "_target");
+         SEL action = AWESelectorIvar(container, "_action");
+         if (!target || !action || ![target respondsToSelector:action]) continue;
+-        validTargets++;
++        BOOL telemetry = AWEExactNativeTargetIsTelemetry(target, action);
++        if (telemetry) {
++            AWEInteractionDiagnosticWrite(
++                @"EXACT_NATIVE_SKIP context=%@ target=%@ action=%@ reason=telemetry",
++                context ?: @"unknown", NSStringFromClass([target class]),
++                NSStringFromSelector(action));
++            continue;
++        }
++        businessTargets++;
+         BOOL sent = NO;
+         @try {
+-            sent = [[UIApplication sharedApplication] sendAction:action
+-                                                              to:target
+-                                                            from:recognizer
+-                                                        forEvent:nil];
+-        } @catch (__unused NSException *exception) {
+-            sent = NO;
+-        }
+-        dispatched = dispatched || sent;
++            sent = [UIApplication.sharedApplication sendAction:action
++                                                            to:target
++                                                          from:recognizer
++                                                      forEvent:nil];
++        } @catch (__unused NSException *exception) { sent = NO; }
+         AWEInteractionDiagnosticWrite(
+-            @"EXACT_NATIVE_FORWARD context=%@ recognizer=%@ sourceView=%@ target=%@ action=%@ state=%ld dispatched=%d",
++            @"EXACT_NATIVE_BUSINESS context=%@ recognizer=%@ target=%@ action=%@ state=%ld dispatched=%d",
+             context ?: @"unknown", NSStringFromClass(recognizer.class),
+-            AWEInteractionObjectSummary(recognizer.view),
+             NSStringFromClass([target class]), NSStringFromSelector(action),
+             (long)recognizer.state, sent);
++        if (sent) businessDispatched = YES;
+     }
+-    if (changedState) {
+-        AWESetIntegerIvar(recognizer, "_state_DO_NOT_USE_DIRECTLY", oldState, NULL);
+-    }
+-    if (validTargets == 0) {
++
++    if (forced) AWERestoreRecognizerState(recognizer, stateStorage, oldState);
++    if (businessTargets == 0) {
+         AWEInteractionDiagnosticWrite(
+-            @"EXACT_NATIVE_FORWARD context=%@ stage=no-valid-target recognizer=%@",
++            @"EXACT_NATIVE_FORWARD context=%@ stage=no-business-target recognizer=%@",
+             context ?: @"unknown", NSStringFromClass(recognizer.class));
+     }
+-    return dispatched;
++    return businessDispatched;
+ }
+ 
+ static BOOL AWEForwardExactNativeTapFromView(UIView *sourceView,
+@@ -8511,12 +8592,29 @@
+                 }
+             }
+             if (chosen) {
+-                [control sendActionsForControlEvents:chosen];
+-                AWEInteractionDiagnosticWrite(
+-                    @"EXACT_NATIVE_FORWARD context=%@ path=control-fallback control=%@ event=%llu",
+-                    context ?: @"unknown", AWEInteractionObjectSummary(control),
+-                    (unsigned long long)chosen);
+-                return YES;
++                BOOL anySent = NO;
++                for (id target in control.allTargets) {
++                    NSArray<NSString *> *actions = [control actionsForTarget:target
++                                                              forControlEvent:chosen];
++                    for (NSString *actionName in actions) {
++                        SEL action = NSSelectorFromString(actionName);
++                        if (!action || ![target respondsToSelector:action]) continue;
++                        BOOL sent = NO;
++                        @try {
++                            sent = [UIApplication.sharedApplication sendAction:action
++                                                                            to:target
++                                                                          from:control
++                                                                      forEvent:nil];
++                        } @catch (__unused NSException *exception) { sent = NO; }
++                        AWEInteractionDiagnosticWrite(
++                            @"RIGHT_CONTROL_FORWARD context=%@ control=%@ target=%@ action=%@ event=%llu dispatched=%d",
++                            context ?: @"unknown", AWEInteractionObjectSummary(control),
++                            NSStringFromClass([target class]), actionName,
++                            (unsigned long long)chosen, sent);
++                        anySent = anySent || sent;
++                    }
++                }
++                if (anySent) return YES;
+             }
+         }
+         for (UIView *child in view.subviews) [controlQueue addObject:child];
+@@ -14162,7 +14260,10 @@
+         UIView *root = sourceWindow.rootViewController.view;
+         if (root && gAWEIOS27NativeHostView) {
+             gAWEIOS27NativeHostView.frame = root.bounds;
+-            gAWEAlbumMorphController.view.frame = gAWEIOS27NativeHostView.bounds;
++            gAWEAlbumMorphController.view.bounds = gAWEIOS27NativeHostView.bounds;
++        gAWEAlbumMorphController.view.center = CGPointMake(
++            CGRectGetMidX(gAWEIOS27NativeHostView.bounds),
++            CGRectGetMidY(gAWEIOS27NativeHostView.bounds));
+             [root bringSubviewToFront:gAWEIOS27NativeHostView];
+         }
+         CGFloat savedOffset = AWEStoredVerticalOffset();
+@@ -14628,7 +14729,9 @@
+         [root addSubview:host];
+ 
+         [parent addChildViewController:gAWEAlbumMorphController];
+-        gAWEAlbumMorphController.view.frame = host.bounds;
++        gAWEAlbumMorphController.view.bounds = host.bounds;
++        gAWEAlbumMorphController.view.center = CGPointMake(
++            CGRectGetMidX(host.bounds), CGRectGetMidY(host.bounds));
+         gAWEAlbumMorphController.view.autoresizingMask =
+             UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+         [host addSubview:gAWEAlbumMorphController.view];
+@@ -14645,7 +14748,10 @@
+ 
+     if (gAWEIOS27NativeHostView) {
+         gAWEIOS27NativeHostView.frame = root.bounds;
+-        gAWEAlbumMorphController.view.frame = gAWEIOS27NativeHostView.bounds;
++        gAWEAlbumMorphController.view.bounds = gAWEIOS27NativeHostView.bounds;
++        gAWEAlbumMorphController.view.center = CGPointMake(
++            CGRectGetMidX(gAWEIOS27NativeHostView.bounds),
++            CGRectGetMidY(gAWEIOS27NativeHostView.bounds));
+         gAWEIOS27NativeHostView.hidden = NO;
+         gAWEIOS27NativeHostView.alpha = 1.0;
+         [root bringSubviewToFront:gAWEIOS27NativeHostView];
+@@ -18214,13 +18320,15 @@
+ @end
+ 
+ static CGFloat AWESettingsResponsiveScaleForWidth(CGFloat width) {
+-    if (width <= 350.0) return 0.76;
+-    if (width <= 360.0) return 0.78;
+-    if (width <= 375.0) return 0.82;
+-    if (width <= 390.0) return 0.86;
+-    if (width <= 402.0) return 0.90;
+-    if (width <= 414.0) return 0.94;
+-    return 1.0;
++    /* v17: compact by default on every iPhone. The old curve reached 1.0 on
++       large screens, leaving long diagnostic/settings labels visibly oversized. */
++    if (width <= 350.0) return 0.74;
++    if (width <= 360.0) return 0.77;
++    if (width <= 375.0) return 0.80;
++    if (width <= 390.0) return 0.84;
++    if (width <= 402.0) return 0.87;
++    if (width <= 414.0) return 0.90;
++    return 0.92;
+ }
+ 
+ static void AWEApplyResponsiveSettingsTypography(UIView *root, CGFloat scale) {
+@@ -19189,7 +19297,8 @@
+ 
+     UILabel *diagnosticLabel = [UILabel new];
+     diagnosticLabel.text = @"交互诊断日志（反馈用）";
+-    diagnosticLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
++    diagnosticLabel.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightMedium];
++    diagnosticLabel.numberOfLines = 1;
+     UISwitch *diagnosticSwitch = [UISwitch new];
+     diagnosticSwitch.on = AWEInteractionDiagnosticsEnabled();
+     diagnosticSwitch.onTintColor = AWEStoredAccentColor();
+@@ -19708,6 +19817,7 @@
+     if (gAWEAlbumMorphController.tabBar) {
+         AWEApplyIOS27UntintedClearPlatter(gAWEAlbumMorphController.tabBar);
+         [gAWEAlbumMorphController.tabBar setNeedsLayout];
++        AWEScheduleIOS27ClearPlatterReapply();
+     }
+     if (gAWELastTabBar) {
+         UITabBar *native = objc_getAssociatedObject((UIView *)gAWELastTabBar, &kAWENativeBarKey);

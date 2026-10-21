@@ -1,0 +1,11 @@
+#!/bin/sh
+for base in /var/jb/Library/MobileSubstrate/DynamicLibraries /Library/MobileSubstrate/DynamicLibraries; do
+    [ -d "$base" ] || continue
+    for file in "$base"/AwemeLiquidBar*.dylib "$base"/AwemeLiquidBar*.plist; do
+        [ -e "$file" ] || continue
+        name="$(basename "$file")"
+        case "$name" in AwemeLiquidBar.dylib|AwemeLiquidBar.plist) continue ;; esac
+        rm -f "$file" 2>/dev/null || true
+    done
+done
+exit 0

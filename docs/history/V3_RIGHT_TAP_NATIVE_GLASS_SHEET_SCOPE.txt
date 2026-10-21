@@ -1,0 +1,14 @@
+AwemeLiquidBar 2.0 auth47 — V3 right-tap + native glass sheet
+
+- Right Like/Comment/Favorite/Share touch ownership restored to the verified V3 path:
+  native AWEFeedVideoButton receives the untouched physical touch and business action;
+  the overlay system-glass UIButton is pass-through and mirrors that same real touch only
+  for Liquid Glass deformation.
+- No TouchUpInside synthetic business forwarding on the right glass overlay.
+- Gesture-opened medium/large settings sheet uses one real UIGlassEffect backdrop hosted
+  on the navigation controller view, with clear presentation surfaces, rounded glass chrome,
+  and no dimming of the source page through the large detent.
+- Modal settings cards use actual clear UIGlassEffect subviews rather than alpha-painted cards.
+- The custom manual top blur/fade strip is removed. The original title/right Done item remain,
+  and UINavigationBar is allowed to provide its native scroll-edge/material transition.
+- Native Douyin Settings push remains opaque/native and is not converted to the modal glass sheet.

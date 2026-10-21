@@ -1,0 +1,59 @@
+--- /mnt/data/v18fresh/AwemeLiquidBar_1.0.58_auth47_RealTouchLease_v18_project/CommentGlassDYKiller.xm	2026-08-22 09:06:22.000000000 +0000
++++ /mnt/data/AwemeLiquidBar_1.0.58_auth47_GlassPolish_v19_project/CommentGlassDYKiller.xm	2026-09-05 21:15:26.341783365 +0000
+@@ -423,7 +423,7 @@
+        the comment controller tree.  Gate it by the active comment/input state
+        instead of responder ancestry, then clear only its backdrop carriers. */
+     if (!panel || !panel.window || !AWECommentGlassFeatureEnabled() ||
+-        !gAWECommentVisible || !gAWECommentInputContainer) return;
++        !gAWECommentVisible) return;
+     AWECommentClearVisibleBackdrop(panel);
+     CGFloat width = CGRectGetWidth(panel.bounds);
+     NSMutableArray<NSArray *> *queue = [NSMutableArray arrayWithObject:@[panel, @0]];
+@@ -435,10 +435,18 @@
+         NSUInteger depth = [entry[1] unsignedIntegerValue];
+         if (depth < 3) for (UIView *sub in view.subviews) [queue addObject:@[sub, @(depth + 1)]];
+         if (view == panel || [view isKindOfClass:UILabel.class] || [view isKindOfClass:UIControl.class] ||
+-            [view isKindOfClass:UIImageView.class] || [view isKindOfClass:UIVisualEffectView.class]) continue;
++            [view isKindOfClass:UIImageView.class]) continue;
+         CGRect r = [view convertRect:view.bounds toView:panel];
+         if (CGRectGetWidth(r) < width * 0.92 || CGRectGetHeight(r) < 8.0 ||
+             CGRectGetHeight(r) > 100.0 || CGRectGetMinY(r) > 110.0) continue;
++        if ([view isKindOfClass:UIVisualEffectView.class]) {
++            ((UIVisualEffectView *)view).effect = nil;
++            view.backgroundColor = UIColor.clearColor;
++            view.layer.backgroundColor = UIColor.clearColor.CGColor;
++            view.opaque = NO;
++            cleared++;
++            continue;
++        }
+         if (AWECommentViewHasVisibleBackdrop(view)) {
+             AWECommentClearVisibleBackdrop(view);
+             cleared++;
+@@ -853,10 +861,26 @@
+     }
+ }
+ 
++static void AWECommentScheduleEmoticonTopStripClear(UIView *panel) {
++    if (!panel) return;
++    __weak UIView *weakPanel = panel;
++    for (NSNumber *delay in @[@0.0,@0.05,@0.18,@0.45]) {
++        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
++            (int64_t)(delay.doubleValue*NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
++            UIView *live = weakPanel;
++            if (live.window && gAWECommentVisible) AWECommentClearEmoticonTopStrip(live);
++        });
++    }
++}
++
+ %hook AWECommentMiniEmoticonPanelView
+ - (void)didMoveToWindow {
+     %orig;
+-    AWECommentClearEmoticonTopStrip((UIView *)self);
++    AWECommentScheduleEmoticonTopStripClear((UIView *)self);
++}
++- (void)didAddSubview:(UIView *)subview {
++    %orig(subview);
++    AWECommentScheduleEmoticonTopStripClear((UIView *)self);
+ }
+ - (void)layoutSubviews {
+     %orig;

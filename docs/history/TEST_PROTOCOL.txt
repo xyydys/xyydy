@@ -1,0 +1,24 @@
+AwemeLiquidBar 1.0.56c16 test protocol
+
+A. c12 route regressions
+1. Home -> article/read card -> continue swiping: LiquidBar must return/remain available on normal feed cards.
+2. IM -> open forwarded work: nickname/caption/buttons must not be lifted by LiquidBar fullscreen geometry.
+3. IM -> open a sent image/media viewer: LiquidBar must remain absent.
+4. Search -> tap video/image result: result detail must open normally; no freeze while vertical scrolling remains responsive.
+5. Configure top categories so only one is visible: the label must match the actual selected category.
+6. Rapidly swipe normal videos/Daily feed: no intermittent loss of vertical scrolling.
+
+B. Clean-screen no-show guard
+1. Enter clean screen and leave the video playing for 10-20 seconds.
+2. Tap once to pause, once to resume, and swipe to the next item while still in clean screen.
+3. LiquidBar/search must not flash for one/two frames at any point.
+4. Exit clean screen: LiquidBar must restore normally without requiring a page switch.
+
+C. Authorization / compatibility option
+1. Confirm total authorization table = 37 unique entries.
+2. Hoeyc_0505 and 0416xxd: “显示液态底栏” is visible and can release/reacquire bottom-bar ownership.
+3. Any other authorized account: that setting is absent and old OFF state cannot disable/release LiquidBar.
+
+D. Regression
+- Foreground return playback and Friends playback remain normal.
+- Fullscreen, clean-screen status bar, save HUD, native Settings entry, max-five bottom entries and badges remain unchanged.

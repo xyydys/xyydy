@@ -1,0 +1,47 @@
+AwemeLiquidBar 1.0.56c16 auth44 — v16 targeted log-guided build
+
+Baseline
+- Starts from v15 tree, but the message page is intentionally rebuilt from the stable v13.1 message implementation instead of preserving v15's native-button frame/config mutation.
+- Photo/Live Photo comment geometry is explicitly restored to the exact v14 transform policy requested by the tester.
+
+1. Photo / Live Photo geometry rollback
+- Removed v15's pre-open snapshot/restore guard and its persistent photo/live geometry state.
+- Restored v14's transform-only block for BDMultiContentContainer.ImageContentView and AWEMultiContentImpl.LivePhotoContentAdapterView.
+- Identity/native recovery and horizontal paging are not blocked.
+
+2. Message page recovery
+- Does not move Douyin's nested IESIMButton/AWEButton/source views.
+- Passive system glass plates are 46x46 for menu/search/add and 90x46 for the title, centered on the native source geometry.
+- Plates use iOS 26 glassButtonConfiguration and a continuous circular/capsule corner.
+- Search/add and any menu source with a UIControl ancestor receive a separate transparent hit proxy. The proxy forwards the original UIControl action while driving the glass plate's highlighted state, avoiding the v14/v15 configuration/layout feedback loop.
+- Removes the known translucent 440x440 UIImageView only when it belongs to AFDCloseFriendsPlaceHolderView.
+- Hides only the narrow header hairline; no broad message-page background wipe.
+- Message list bottom inset/indicator reserve is released to 0 while preserving the full-surface top extension.
+Markers: MESSAGE_V16, MESSAGE_V16_PRESS, MESSAGE_V16_VEIL_HIDE, MESSAGE_V16_HAIRLINE_HIDE.
+
+3. Same-style / Listen Douyin glass stability
+- Keeps per-anchor ownership from v15 (no cross-video coordinate reuse).
+- Rejects off-screen recycled anchors.
+- A transient 0x0 anchor now receives bounded retries at 0.06/0.18/0.42/0.80 s instead of losing its glass indefinitely.
+- View-controller refresh walks all visible same-style/listen anchors instead of binding the first recycled node it finds.
+Markers: SAMESTYLE_V16_WAIT, SAMESTYLE_V16_ATTACH.
+
+4. Shop bottom background
+- Keeps the already-successful v15 Profile/Favorites behavior unchanged.
+- Shop route extends the actual visible Mall feed/pager chain (IESECMallCoreFeedNode, IESECMitaViewPagerCell/ViewPager/PagerContainer) and ignores horizontally recycled off-screen pages.
+- A post-layout UICollectionView pass re-applies the visible shop extension after Mall resets its frame.
+- Adds a narrow shop-only bottom-strip cover clear for wide 32–150pt opaque/effect carriers in the last 155pt; excludes controls, images, cells, scroll views, tab bars, alerts/sheets and all AwemeLiquidBar glass.
+Markers: BOTTOM_V16_EXTEND, BOTTOM_V16_ROUTE, BOTTOM_V16_CHAIN, BOTTOM_V16_COVER_CLEAR.
+
+5. Comment adaptive contrast
+- Adaptive content style now freezes to the feed/material style captured before the panel appears; it no longer re-reads a panel trait that the tweak itself has just overridden.
+- Adds neutral text handling for selector-compatible Swift views, attributed text, template UIImageView/Button tint, and UIButtonConfiguration.baseForegroundColor.
+- Existing direct CommentInteractionBaseLabel runtime hooks remain.
+Markers: COMMENT_STYLE_SOURCE_V16, COMMENT_GENERIC_TEXT_V16, COMMENT_ICON_V16, COMMENT_ATTR_PERSIST_V16, COMMENT_BODY_V16_ENFORCE.
+
+6. Top-left menu
+- Forced title centering is disabled in v16. The iOS private UIMenu row matcher never reliably hit on the test device, and the tester explicitly chose to stop pursuing this item rather than risk global UILabel geometry side effects.
+
+Diagnostics
+- Comment/message: AwemeLiquidBar_comment_message_probe_v16.log
+- Combined export: AwemeLiquidBar_1.0.56c16_auth44_v16_diagnostic_export.txt

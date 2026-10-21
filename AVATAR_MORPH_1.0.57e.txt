@@ -1,0 +1,26 @@
+AwemeLiquidBar 1.0.57e — single native UITabBar avatar probe
+
+Purpose
+- Eliminate the material mismatch caused by a separate UIButton or a second UITabBarController.
+- Keep the one already-proven native UITabBar alive in both expanded and collapsed states.
+
+Expanded state
+- Real native page tabs remain: Home / Friends(or Shop) / Messages / Profile.
+- Real UISearchTab remains the Search control.
+- Profile is never removed.
+
+Collapsed state
+- The same UITabBarController replaces its tabs with exactly one UISearchTab.
+- That UISearchTab uses the captured own-profile avatar as its image.
+- The tab bar frame narrows to a centered 72pt host, so the native search surface is presented as the avatar capsule rather than leaving the old long platter behind.
+- The main UITabBar is never hidden/alpha-zero merely to create the collapsed state.
+
+Behavior
+- Launcher starts expanded when enabled.
+- Five seconds of idle collapses to avatar.
+- Home upward swipe can collapse immediately through the existing c16 hook.
+- Tapping the collapsed avatar expands the normal bar.
+- Ordinary page changes only re-arm the five-second timer; they do not immediately collapse.
+
+Scope
+- This is a feasibility probe for material identity and clean collapse. In expanded mode there is intentionally no separate avatar button yet; manual collapse remains idle/home-swipe driven. If this proves that the material is correct, a later iteration can evaluate a second native UISearchTab inside the same controller for a dedicated expanded-state avatar toggle.

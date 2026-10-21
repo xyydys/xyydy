@@ -1,0 +1,763 @@
+--- /tmp/tmp.SdSZC9halj/Tweak.x.v17	2026-09-03 13:52:36.299381652 +0000
++++ Tweak.x	2026-09-03 13:52:36.174013895 +0000
+@@ -160,6 +160,12 @@
+ UIUserInterfaceStyle AWEAppResolvedAppearanceStyle(UIWindow *window);
+ static UIUserInterfaceStyle AWESystemInterfaceStyle(void);
+ static UIView *AWEAlbumMorphSearchOwner(UIWindow *window);
++static UIGestureRecognizer *AWEAlbumMorphFindSearchGesture(UIView *root);
++static UIView *AWEAlbumMorphRightmostTabButton(UITabBar *tabBar);
++static BOOL AWELeaseSharedSearchGestureToView(UIView *destination,
++                                               UIView *owner,
++                                               NSString *reason);
++static void AWERestoreSharedSearchGestureToOriginal(NSString *reason);
+ static BOOL AWESearchForwardProxyActiveForView(UIView *view);
+ static UIView *AWEFindViewByExactRuntimeClass(UIView *root,
+                                               NSString *className,
+@@ -242,6 +248,7 @@
+ static char kAWEHomeActionStackApplyingKey;
+ static char kAWEHomeActionStackRefreshPendingKey;
+ static char kAWEHomeActionStackLastLayoutRefreshKey;
++static char kAWEHomeActionEmbeddedGlassSlotKey;
+ static char kAWEGlassPressFeedbackRecognizerKey;
+ static char kAWEGlassPressFeedbackTargetKey;
+ static char kAWEExternalBridgeMenuSlotKey;
+@@ -550,6 +557,15 @@
+ static UIGestureRecognizer *gAWEAlbumMorphSearchGesture = nil;
+ static __weak UIView *gAWEAlbumMorphSearchGestureOriginalView = nil;
+ static UIView *gAWEAlbumMorphSearchTouchProxy = nil;
++/* v18 search coexistence: one real Douyin AWEAlphaTapGesture is leased to
++   whichever visible Search control is about to receive the genuine UIKit
++   touch. The recognizer therefore reaches its own Began/Ended states instead
++   of receiving a synthetic sendAction while state==Possible. */
++static UIGestureRecognizer *gAWESharedSearchGesture = nil;
++static __weak UIView *gAWESharedSearchGestureOriginalView = nil;
++static __weak UIView *gAWESharedSearchOwner = nil;
++static BOOL gAWESharedSearchOriginalCancelsTouches = YES;
++static CFTimeInterval gAWESharedSearchBottomLeaseUntil = 0.0;
+ static NSUInteger gAWEAlbumMorphRouteRecoveryGeneration = 0;
+ static CFTimeInterval gAWEAlbumMorphPublishLaunchSuppressionUntil = 0.0;
+ static __weak UIViewController *gAWEAlbumMorphPublishSourceController = nil;
+@@ -889,18 +905,27 @@
+     return AWECurrentOriginalMainTabIndex();
+ }
+ 
++static BOOL AWEIndexUsesHomeVisualPolicy(NSInteger index) {
++    /* The second root is Friends on the normal build.  It must be a strict
++       visual twin of Home; Shop remains independent when Douyin assigns the
++       second slot to commerce. */
++    return index == 0 || (index == 1 && !AWESecondTabIsShop());
++}
++
+ static BOOL AWEIOS27WantsClearBottomMaterial(void) {
+     if (!AWEIOS27ClearBottomGlassEnabled()) return NO;
+     NSInteger index = gAWEAlbumMorphController
+         ? [gAWEAlbumMorphController currentOriginalIndex]
+         : AWECurrentOriginalMainTabIndex();
+     if (index == NSNotFound) index = AWECurrentOriginalMainTabIndex();
+-    return index == 0 || index == 4;
++    return AWEIndexUsesHomeVisualPolicy(index) || index == 4;
+ }
+ 
+ static BOOL AWEHomeTabSelectedForNativeBar(UITabBar *nativeBar) {
+-    if (nativeBar.selectedItem) return nativeBar.selectedItem.tag == 0;
+-    return AWECurrentMainTabIndex() == 0;
++    if (nativeBar.selectedItem) {
++        return AWEIndexUsesHomeVisualPolicy(nativeBar.selectedItem.tag);
++    }
++    return AWEIndexUsesHomeVisualPolicy(AWECurrentMainTabIndex());
+ }
+ 
+ /* 0.0.20a diagnostic state. These strings only de-duplicate log output;
+@@ -3697,7 +3722,7 @@
+             changed++;
+         } @catch (__unused NSException *exception) {}
+     }
+-    AWEIOS27BottomProbeWrite(@"CLEAR_PLATTER_V17 wants=%d tab=%ld matched=%lu changed=%lu",
++    AWEIOS27BottomProbeWrite(@"CLEAR_PLATTER_V18 wants=%d tab=%ld matched=%lu changed=%lu",
+         wantsClear, (long)AWECurrentMainTabIndex(),
+         (unsigned long)matched, (unsigned long)changed);
+ }
+@@ -3939,12 +3964,11 @@
+         return;
+     }
+ 
+-    /* v9 page-fixed policy: Home is always the dark Liquid Glass branch.
+-       Every other root tab follows Douyin's own app/window appearance. This
+-       changes only on root-page transitions or app appearance changes; no
+-       video/backdrop luminance sampling participates in the decision. */
++    /* v18: Home and Friends are one visual policy. Both use the same fixed
++       branch when clear glass is off; the other roots follow Douyin's app
++       appearance. Shop is deliberately not treated as Friends. */
+     NSInteger rootIndex = AWECurrentOriginalMainTabIndex();
+-    UIUserInterfaceStyle desired = rootIndex == 0
++    UIUserInterfaceStyle desired = AWEIndexUsesHomeVisualPolicy(rootIndex)
+         ? UIUserInterfaceStyleDark
+         : AWEAppResolvedAppearanceStyle(nativeBar.window ?: AWEActiveMainWindow());
+ 
+@@ -7244,9 +7268,6 @@
+ static NSArray<UIView *> *AWESortedVisibleHomeActionButtons(UIView *stack);
+ static AWEHomeActionKind AWEHomeActionKindForButton(UIView *button,
+                                                      NSArray<UIView *> *ordered);
+-static BOOL AWEForwardHomeActionKindFromStack(UIView *stack,
+-                                               AWEHomeActionKind kind,
+-                                               UIView **ownerInOut);
+ static BOOL AWEForwardExactNativeTapFromView(UIView *sourceView,
+                                               NSString *context);
+ 
+@@ -7256,23 +7277,138 @@
+ @property (nonatomic, assign) AWEHomeActionKind actionKind;
+ @property (nonatomic, strong) AWEPhotosExactGlassButtonHostView *photosGlassHost;
+ @property (nonatomic, strong) UIButton *systemGlassButton;
+-- (void)alb_nativeGlassTap:(UIButton *)sender;
+ @end
+ 
+ @implementation AWEHomeActionSlotView
+-- (void)alb_nativeGlassTap:(UIButton *)sender {
+-    (void)sender;
+-    UIView *owner = self.originalView;
+-    BOOL sent = AWEForwardHomeActionKindFromStack(
+-        self.superview, self.actionKind, &owner);
+-    if (owner && owner != self.originalView) self.originalView = owner;
+-    AWEInteractionDiagnosticWrite(
+-        @"HOME_NATIVE_GLASS_TAP kind=%ld dispatched=%d owner=%@",
+-        (long)self.actionKind, sent, AWEInteractionObjectSummary(owner));
+-    if (sent) AWEScheduleHomeActionStackRefresh(self.superview);
+-}
+ @end
+ 
++/* v18 real-touch bridge for the right action column.
++
++   The visual glass stays a PASS-THROUGH sibling exactly where the established
++   layout code put it, so the real AWEFeedVideoButton remains UIKit's hit-test
++   target and Douyin receives an untouched physical UITouch sequence.  To keep
++   the iOS 26/27 native Liquid Glass deformation, the same real UITouch/UIEvent
++   is mirrored into the visual UIButton's normal UIControl tracking methods.
++   This is not a synthetic business-action forward and does not touch private
++   recognizer state. */
++typedef NS_ENUM(NSInteger, AWEGlassTouchMirrorPhase) {
++    AWEGlassTouchMirrorPhaseBegan = 0,
++    AWEGlassTouchMirrorPhaseMoved,
++    AWEGlassTouchMirrorPhaseEnded,
++    AWEGlassTouchMirrorPhaseCancelled
++};
++
++static UITouch *AWEPrimaryTouchFromSet(NSSet<UITouch *> *touches) {
++    for (UITouch *touch in touches) {
++        if ([touch isKindOfClass:UITouch.class]) return touch;
++    }
++    return nil;
++}
++
++static void AWEMirrorRealTouchToHomeActionGlass(UIView *owner,
++                                                 NSSet<UITouch *> *touches,
++                                                 UIEvent *event,
++                                                 AWEGlassTouchMirrorPhase phase) {
++    if (!owner) return;
++    AWEHomeActionSlotView *slot = objc_getAssociatedObject(
++        owner, &kAWEHomeActionEmbeddedGlassSlotKey);
++    UIButton *glass = slot.systemGlassButton;
++    if (!slot || slot.originalView != owner || !glass || !glass.window ||
++        glass.hidden || !glass.enabled) return;
++
++    UITouch *touch = AWEPrimaryTouchFromSet(touches);
++    if (!touch) return;
++
++    /* Directly invoking UIControl tracking with the REAL owner touch is the
++       only visual mirror here. Business delivery stays entirely on owner. */
++    switch (phase) {
++        case AWEGlassTouchMirrorPhaseBegan: {
++            glass.userInteractionEnabled = YES;
++            SEL selector = NSSelectorFromString(@"beginTracking:withEvent:");
++            BOOL accepted = NO;
++            if ([glass respondsToSelector:selector]) {
++                accepted = ((BOOL (*)(id, SEL, UITouch *, UIEvent *))objc_msgSend)(
++                    glass, selector, touch, event);
++            } else {
++                glass.highlighted = YES;
++                accepted = YES;
++            }
++            AWEInteractionDiagnosticWrite(
++                @"RIGHT_REAL_TOUCH_BEGIN kind=%ld accepted=%d owner=%@ glass=%@",
++                (long)slot.actionKind, accepted,
++                AWEInteractionObjectSummary(owner),
++                AWEInteractionObjectSummary(glass));
++            break;
++        }
++        case AWEGlassTouchMirrorPhaseMoved: {
++            SEL selector = NSSelectorFromString(@"continueTracking:withEvent:");
++            if ([glass respondsToSelector:selector]) {
++                ((BOOL (*)(id, SEL, UITouch *, UIEvent *))objc_msgSend)(
++                    glass, selector, touch, event);
++            }
++            break;
++        }
++        case AWEGlassTouchMirrorPhaseEnded: {
++            SEL selector = NSSelectorFromString(@"endTracking:withEvent:");
++            if ([glass respondsToSelector:selector]) {
++                ((void (*)(id, SEL, UITouch *, UIEvent *))objc_msgSend)(
++                    glass, selector, touch, event);
++            } else {
++                glass.highlighted = NO;
++            }
++            dispatch_async(dispatch_get_main_queue(), ^{
++                if (slot.systemGlassButton == glass) glass.userInteractionEnabled = NO;
++            });
++            AWEInteractionDiagnosticWrite(
++                @"RIGHT_REAL_TOUCH_END kind=%ld owner=%@",
++                (long)slot.actionKind, AWEInteractionObjectSummary(owner));
++            break;
++        }
++        case AWEGlassTouchMirrorPhaseCancelled: {
++            SEL selector = NSSelectorFromString(@"cancelTrackingWithEvent:");
++            if ([glass respondsToSelector:selector]) {
++                ((void (*)(id, SEL, UIEvent *))objc_msgSend)(glass, selector, event);
++            } else {
++                glass.highlighted = NO;
++            }
++            dispatch_async(dispatch_get_main_queue(), ^{
++                if (slot.systemGlassButton == glass) glass.userInteractionEnabled = NO;
++            });
++            break;
++        }
++    }
++}
++
++static void AWEBindPassThroughHomeActionGlass(AWEHomeActionSlotView *slot,
++                                               UIView *owner) {
++    if (!slot || !slot.systemGlassButton || !owner) return;
++    UIView *oldOwner = slot.originalView;
++    if (oldOwner && oldOwner != owner &&
++        objc_getAssociatedObject(oldOwner, &kAWEHomeActionEmbeddedGlassSlotKey) == slot) {
++        objc_setAssociatedObject(oldOwner, &kAWEHomeActionEmbeddedGlassSlotKey,
++                                 nil, OBJC_ASSOCIATION_ASSIGN);
++    }
++    objc_setAssociatedObject(owner, &kAWEHomeActionEmbeddedGlassSlotKey,
++                             slot, OBJC_ASSOCIATION_ASSIGN);
++    owner.userInteractionEnabled = YES;
++    slot.userInteractionEnabled = NO;
++    slot.systemGlassButton.userInteractionEnabled = NO;
++    slot.systemGlassButton.frame = slot.bounds;
++}
++
++static void AWEUnbindPassThroughHomeActionGlass(AWEHomeActionSlotView *slot) {
++    if (!slot || !slot.systemGlassButton) return;
++    UIView *owner = slot.originalView;
++    if (owner && objc_getAssociatedObject(owner,
++            &kAWEHomeActionEmbeddedGlassSlotKey) == slot) {
++        objc_setAssociatedObject(owner, &kAWEHomeActionEmbeddedGlassSlotKey,
++                                 nil, OBJC_ASSOCIATION_ASSIGN);
++    }
++    slot.systemGlassButton.highlighted = NO;
++    slot.systemGlassButton.userInteractionEnabled = NO;
++    slot.systemGlassButton.hidden = YES;
++}
++
+ @interface AWEHomeProfileGlassView : UIView
+ @property (nonatomic, strong) UIButton *glassButton;
+ @property (nonatomic, strong) UIButton *menuButton;
+@@ -8182,6 +8318,24 @@
+                                   UIImageView *source);
+ 
+ @implementation AWEHomeTopSlotView
++
++- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
++    if (self.topKind == AWEHomeTopActionKindSearch &&
++        !self.systemGlassButton.hidden && self.systemGlassButton.userInteractionEnabled) {
++        CGPoint p = [self convertPoint:point toView:self.systemGlassButton];
++        if ([self.systemGlassButton pointInside:p withEvent:event]) {
++            UIView *owner = self.ownerView;
++            if ((!owner || !owner.window) && self.superview) {
++                owner = AWEFindTopOwnerCandidate(self.superview, YES);
++                self.ownerView = owner;
++            }
++            AWELeaseSharedSearchGestureToView(
++                self.systemGlassButton, owner, @"top.hit-test");
++        }
++    }
++    return [super hitTest:point withEvent:event];
++}
++
+ - (void)alb_handleTopTap:(UIButton *)sender {
+     (void)sender;
+     UIView *owner = self.ownerView;
+@@ -8630,26 +8784,6 @@
+     return activated;
+ }
+ 
+-static BOOL AWEForwardHomeActionKindFromStack(UIView *stack,
+-                                               AWEHomeActionKind kind,
+-                                               UIView **ownerInOut) {
+-    if (!stack || kind == AWEHomeActionKindUnknown) return NO;
+-    NSArray<UIView *> *ordered = AWESortedVisibleHomeActionButtons(stack);
+-    UIView *owner = ownerInOut ? *ownerInOut : nil;
+-    NSString *context = [NSString stringWithFormat:@"RIGHT_KIND_%ld", (long)kind];
+-    if (owner && owner.window && AWEViewIsDescendantOfView(owner, stack) &&
+-        AWEHomeActionKindForButton(owner, ordered) == kind) {
+-        if (AWEForwardExactNativeTapFromView(owner, context)) return YES;
+-    }
+-    for (UIView *candidate in ordered) {
+-        if (candidate == owner) continue;
+-        if (AWEHomeActionKindForButton(candidate, ordered) != kind) continue;
+-        if (ownerInOut) *ownerInOut = candidate;
+-        if (AWEForwardExactNativeTapFromView(candidate, context)) return YES;
+-    }
+-    return NO;
+-}
+-
+ static void AWECollectImageViews(UIView *root,
+                                  NSMutableArray<UIImageView *> *result,
+                                  NSUInteger depth) {
+@@ -11702,19 +11836,21 @@
+         slot = [[AWEHomeActionSlotView alloc] initWithFrame:CGRectZero];
+         slot.accessibilityIdentifier = [NSString stringWithFormat:
+             @"AwemeLiquidBar.HomeActionSlot.%ld", (long)kind];
+-        slot.userInteractionEnabled = YES;
++        /* Visual-only sibling. Douyin's native AWEFeedVideoButton remains
++           the real hit-test/business owner. */
++        slot.userInteractionEnabled = NO;
+         slot.backgroundColor = UIColor.clearColor;
+         slot.opaque = NO;
+ 
+         if (@available(iOS 26.0, *)) {
+             UIButton *glassButton = [UIButton buttonWithType:UIButtonTypeCustom];
+-            glassButton.userInteractionEnabled = YES;
+-            glassButton.exclusiveTouch = YES;
++            glassButton.userInteractionEnabled = NO;
++            glassButton.exclusiveTouch = NO;
+             glassButton.backgroundColor = UIColor.clearColor;
+             glassButton.opaque = NO;
+             glassButton.clipsToBounds = NO;
+-            [glassButton addTarget:slot action:@selector(alb_nativeGlassTap:)
+-                   forControlEvents:UIControlEventTouchUpInside];
++            /* v18: no synthetic TouchUpInside business forwarding. This
++               visual control stays pass-through; owner receives real touches. */
+             [slot addSubview:glassButton];
+             slot.systemGlassButton = glassButton;
+         }
+@@ -11742,8 +11878,15 @@
+     UIImage *symbol = AWEConfiguredRoleImage(
+         symbolKey, AWEHomeActionSymbolNames(kind, selected), symbolSize,
+         UIImageSymbolWeightSemibold, &originalPNG);
+-    if (!symbol) { slot.hidden = YES; return; }
++    if (!symbol) {
++        slot.hidden = YES;
++        slot.systemGlassButton.hidden = YES;
++        return;
++    }
+ 
++    if (slot.originalView && slot.originalView != button) {
++        AWEUnbindPassThroughHomeActionGlass(slot);
++    }
+     slot.originalView = button;
+     slot.sourceImageView = source;
+     slot.actionKind = kind;
+@@ -11752,37 +11895,32 @@
+     slot.hidden = NO;
+     slot.alpha = 1.0;
+     slot.overrideUserInterfaceStyle = UIUserInterfaceStyleUnspecified;
+-    /* v9: the visible UIButton is the real touch owner so UIKit can render
+-       native Liquid Glass touch-down/stretch/motion. A completed tap is then
+-       forwarded once to Douyin's original action owner. */
+-    slot.userInteractionEnabled = YES;
+-    slot.systemGlassButton.userInteractionEnabled = YES;
++
++    /* Bookkeeping/visual layer only. It never wins hit testing; the original
++       AWEFeedVideoButton underneath receives the real touch. */
++    slot.userInteractionEnabled = NO;
++    slot.systemGlassButton.userInteractionEnabled = NO;
+     slot.systemGlassButton.frame = slot.bounds;
+ 
+     UIColor *foregroundColor = nil;
+     if (!originalPNG) {
+         AWEConfiguredIconColorMode colorMode = AWEStoredSymbolColorMode(symbolKey);
+         if (colorMode != AWEConfiguredIconColorModeAutomatic) {
+-            /* Fixed/accent/custom always outrank every automatic state colour. */
+             foregroundColor = AWEApplyConfiguredIconColorMode(symbolKey, nil);
+         } else if (selected && kind == AWEHomeActionKindLike) {
+             foregroundColor = UIColor.systemPinkColor;
+         } else if (selected && kind == AWEHomeActionKindFavorite) {
+             foregroundColor = UIColor.systemYellowColor;
+         } else if (AWEHomeTransparentGlassEnabled()) {
+-            /* The experimental per-button material sampler is intentionally
+-               not used for the right action stack.  It could hide the glyph
+-               and, more importantly, forced the overlay to own touches.  Use
+-               the last stable source-tint fallback while the original Douyin
+-               button continues to receive every gesture. */
+             foregroundColor = AWEHomeExplicitForegroundForSource(
+-                source, slot, YES);
++                source, button, YES);
+         }
+     }
+ 
+     if (@available(iOS 26.0, *)) {
+         slot.photosGlassHost.hidden = YES;
+         slot.systemGlassButton.hidden = NO;
++        AWEBindPassThroughHomeActionGlass(slot, button);
+         AWEConfigureAdaptiveSystemGlassIconButton(
+             slot.systemGlassButton,
+             symbol,
+@@ -11792,9 +11930,15 @@
+             originalPNG,
+             AWEHomeTintedGlassEnabled(),
+             NO);
+-        /* No synthetic scale/long-press mirror: UIButton owns its native
+-           Liquid Glass interaction state directly. */
++        /* Configure may update UIButton internals; force pass-through back on. */
++        slot.systemGlassButton.userInteractionEnabled = NO;
++        AWEInteractionDiagnosticWrite(
++            @"RIGHT_REAL_TOUCH_BIND kind=%ld mode=passthrough-mirror owner=%@ glass=%@ recognizers=%lu",
++            (long)kind, AWEInteractionObjectSummary(button),
++            AWEInteractionObjectSummary(slot.systemGlassButton),
++            (unsigned long)button.gestureRecognizers.count);
+     } else {
++        AWEUnbindPassThroughHomeActionGlass(slot);
+         slot.hidden = YES;
+     }
+ }
+@@ -11808,10 +11952,9 @@
+                                  nil,
+                                  OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+     }
++    AWEUnbindPassThroughHomeActionGlass(slot);
+     slot.originalView = nil;
+     slot.sourceImageView = nil;
+-    slot.systemGlassButton.hidden = YES;
+-    slot.systemGlassButton.userInteractionEnabled = NO;
+     slot.userInteractionEnabled = NO;
+     slot.hidden = YES;
+ }
+@@ -11903,7 +12046,9 @@
+                 AWEViewIsDescendantOfView(slot.originalView, stack) &&
+                 slot.sourceImageView.image != nil;
+             /* Do not make a one-frame incomplete paging tree permanent. */
+-            if (!bindingStillLocal) slot.hidden = YES;
++            if (!bindingStillLocal) {
++                AWEHideAndReleaseHomeActionSlot(slot);
++            }
+         }
+     }
+     AWERefreshProfileAvatarGlass(stack);
+@@ -11930,8 +12075,10 @@
+         if (!isfinite(center.x) || !isfinite(center.y)) continue;
+         slot.bounds = CGRectMake(0.0, 0.0, 46.0, 46.0);
+         slot.center = CGPointMake(center.x, center.y - 4.0);
+-        slot.systemGlassButton.frame = slot.bounds;
+         slot.hidden = NO;
++        slot.systemGlassButton.frame = slot.bounds;
++        slot.systemGlassButton.hidden = NO;
++        AWEBindPassThroughHomeActionGlass(slot, owner);
+     }
+     AWELayoutExternalBridgeMenuForStack(stack);
+     [CATransaction commit];
+@@ -14319,9 +14466,11 @@
+     NSInteger originalIndex) {
+     UIWindow *window = sourceWindow ?: AWEActiveMainWindow();
+     if (AWEOperatingSystemMajorVersion() >= 26) {
+-        /* v9 page boundary is the only semantic switch:
+-           0 = Home -> DARK; all other root pages -> app Light/Dark. */
+-        if (originalIndex == 0) return UIUserInterfaceStyleDark;
++        /* v18: Friends mirrors Home exactly. Shop remains an independent
++           second-root appearance when the account exposes Shop there. */
++        if (AWEIndexUsesHomeVisualPolicy(originalIndex)) {
++            return UIUserInterfaceStyleDark;
++        }
+         return AWEAppResolvedAppearanceStyle(window);
+     }
+     return AWEAlbumMorphResolvedProbeStyle(window);
+@@ -14434,9 +14583,10 @@
+         AWEApplyIOS27UntintedClearPlatter(gAWEAlbumMorphController.tabBar);
+     }
+ 
+-    BOOL fixedHomeDark = AWEOperatingSystemMajorVersion() >= 26 && originalIndex == 0;
++    BOOL fixedHomeDark = AWEOperatingSystemMajorVersion() >= 26 &&
++        AWEIndexUsesHomeVisualPolicy(originalIndex);
+     NSString *mode = fixedHomeDark
+-        ? @"PAGE_FIXED_HOME_DARK"
++        ? @"PAGE_FIXED_HOME_FRIENDS_DARK"
+         : (AWEOperatingSystemMajorVersion() >= 26
+             ? @"PAGE_FIXED_APP_APPEARANCE" : @"SYSTEM_PROBE");
+     NSString *styleName = style == UIUserInterfaceStyleDark ? @"DARK" : @"LIGHT";
+@@ -14571,15 +14721,15 @@
+ }
+ 
+ - (void)albumMorphDidRequestSearch {
+-    dispatch_async(dispatch_get_main_queue(), ^{
+-        UIWindow *window = AWEActiveMainWindow();
+-        UIView *owner = AWEAlbumMorphSearchOwner(window);
+-        BOOL forwarded = AWEForwardTopActionOwner(
+-            owner, AWEHomeTopActionKindSearch);
+-        AWEInteractionDiagnosticWrite(
+-            @"ALBUM_MORPH_SEARCH_EXACT owner=%@ dispatched=%d",
+-            AWEInteractionObjectSummary(owner), forwarded);
+-    });
++    /* The UISearchTab delegate callback is NOT used as a synthetic business
++       trigger in v18. By the time UIKit reaches this callback, hit-testing has
++       already leased Douyin's real AWEAlphaTapGesture onto this search item,
++       so that recognizer receives the same physical touch and ends normally. */
++    UIGestureRecognizer *gesture = gAWESharedSearchGesture;
++    AWEInteractionDiagnosticWrite(
++        @"ALBUM_MORPH_SEARCH_REAL_TOUCH recognizer=%@ view=%@ state=%ld",
++        gesture ? NSStringFromClass(gesture.class) : @"nil",
++        AWEInteractionObjectSummary(gesture.view), (long)gesture.state);
+ }
+ 
+ @end
+@@ -14600,6 +14750,21 @@
+         !tabBar.userInteractionEnabled) return nil;
+     CGPoint inBar = [self convertPoint:point toView:tabBar];
+     if (![tabBar pointInside:inBar withEvent:event]) return nil;
++
++    if ([AWEAlbumMorphVisibleItemIdentifiers() containsObject:@"search"]) {
++        UIView *searchButton = AWEAlbumMorphRightmostTabButton(tabBar);
++        if (searchButton) {
++            CGRect searchFrame = [searchButton convertRect:searchButton.bounds
++                                                     toView:tabBar];
++            if (CGRectContainsPoint(CGRectInset(searchFrame, -2.0, -2.0), inBar)) {
++                UIWindow *sourceWindow = gAWEIOS27NativeHostWindow ?: AWEActiveMainWindow();
++                UIView *owner = gAWESharedSearchOwner;
++                if (!owner || !owner.window) owner = AWEAlbumMorphSearchOwner(sourceWindow);
++                AWELeaseSharedSearchGestureToView(
++                    searchButton, owner, @"bottom.ios27.hit-test");
++            }
++        }
++    }
+     return [tabBar hitTest:inBar withEvent:event] ?: tabBar;
+ }
+ 
+@@ -14661,6 +14826,22 @@
+     CGPoint pointInBar = [self convertPoint:point toView:tabBar];
+     if (![tabBar pointInside:pointInBar withEvent:event]) return nil;
+ 
++    if ([AWEAlbumMorphVisibleItemIdentifiers() containsObject:@"search"]) {
++        UIView *searchButton = AWEAlbumMorphRightmostTabButton(tabBar);
++        if (searchButton) {
++            CGRect searchFrame = [searchButton convertRect:searchButton.bounds
++                                                     toView:tabBar];
++            if (CGRectContainsPoint(CGRectInset(searchFrame, -2.0, -2.0),
++                                    pointInBar)) {
++                UIWindow *sourceWindow = AWEActiveMainWindow();
++                UIView *owner = gAWESharedSearchOwner;
++                if (!owner || !owner.window) owner = AWEAlbumMorphSearchOwner(sourceWindow);
++                AWELeaseSharedSearchGestureToView(
++                    searchButton, owner, @"bottom.overlay.hit-test");
++            }
++        }
++    }
++
+     UIView *hit = [tabBar hitTest:pointInBar withEvent:event];
+     UIView *resolved = hit ?: tabBar;
+     if (AWEInteractionDiagnosticsEnabled() && event.type == UIEventTypeTouches) {
+@@ -14828,6 +15009,92 @@
+     return fallback;
+ }
+ 
++static void AWEResetSharedSearchGestureBookkeeping(void) {
++    gAWESharedSearchGesture = nil;
++    gAWESharedSearchGestureOriginalView = nil;
++    gAWESharedSearchOwner = nil;
++    gAWESharedSearchOriginalCancelsTouches = YES;
++    gAWESharedSearchBottomLeaseUntil = 0.0;
++}
++
++static void AWERestoreSharedSearchGestureToOriginal(NSString *reason) {
++    UIGestureRecognizer *gesture = gAWESharedSearchGesture;
++    UIView *original = gAWESharedSearchGestureOriginalView;
++    if (!gesture) return;
++    UIView *from = gesture.view;
++    if (original && gesture.view != original) {
++        [original addGestureRecognizer:gesture];
++    }
++    gesture.cancelsTouchesInView = gAWESharedSearchOriginalCancelsTouches;
++    AWEInteractionDiagnosticWrite(
++        @"SEARCH_REAL_GESTURE_RESTORE reason=%@ recognizer=%@ from=%@ to=%@ state=%ld",
++        reason ?: @"unknown", NSStringFromClass(gesture.class),
++        AWEInteractionObjectSummary(from), AWEInteractionObjectSummary(original),
++        (long)gesture.state);
++    AWEResetSharedSearchGestureBookkeeping();
++}
++
++static BOOL AWELeaseSharedSearchGestureToView(UIView *destination,
++                                               UIView *owner,
++                                               NSString *reason) {
++    if (!destination || !owner || !owner.window) return NO;
++
++    NSString *leaseReason = reason ?: @"unknown";
++    CFTimeInterval now = CACurrentMediaTime();
++    if ([leaseReason hasPrefix:@"bottom."]) {
++        /* Protect the bottom control's real touch sequence from the very noisy
++           top-bar maintenance/layout passes seen in the v17 device log. */
++        gAWESharedSearchBottomLeaseUntil = now + 0.80;
++    } else if ([leaseReason isEqualToString:@"top.hit-test"]) {
++        gAWESharedSearchBottomLeaseUntil = 0.0;
++    } else if ([leaseReason isEqualToString:@"top.bind"] &&
++               now < gAWESharedSearchBottomLeaseUntil &&
++               gAWESharedSearchGesture &&
++               gAWESharedSearchGesture.view != destination) {
++        return NO;
++    }
++
++    if (gAWESharedSearchGesture && gAWESharedSearchOwner &&
++        gAWESharedSearchOwner != owner) {
++        AWERestoreSharedSearchGestureToOriginal(@"owner-changed");
++    }
++
++    UIGestureRecognizer *gesture = gAWESharedSearchGesture;
++    if (!gesture) {
++        gesture = AWEAlbumMorphFindSearchGesture(owner);
++        if (!gesture) {
++            AWEInteractionDiagnosticWrite(
++                @"SEARCH_REAL_GESTURE_LEASE reason=%@ result=no-source owner=%@ destination=%@",
++                reason ?: @"unknown", AWEInteractionObjectSummary(owner),
++                AWEInteractionObjectSummary(destination));
++            return NO;
++        }
++        gAWESharedSearchGesture = gesture;
++        gAWESharedSearchGestureOriginalView = gesture.view ?: owner;
++        gAWESharedSearchOwner = owner;
++        gAWESharedSearchOriginalCancelsTouches = gesture.cancelsTouchesInView;
++    }
++
++    if (!gesture.enabled) gesture.enabled = YES;
++    UIView *from = gesture.view;
++    if (from != destination) {
++        [destination addGestureRecognizer:gesture];
++    }
++    /* The destination UIButton/UITabBar item must keep its own native glass
++       press animation. The real search recognizer observes the same touch but
++       does not cancel the control's visual tracking. */
++    gesture.cancelsTouchesInView = NO;
++    BOOL bound = gesture.view == destination;
++    if (from != destination || !bound) {
++        AWEInteractionDiagnosticWrite(
++            @"SEARCH_REAL_GESTURE_LEASE reason=%@ result=%d recognizer=%@ from=%@ to=%@ state=%ld",
++            reason ?: @"unknown", bound, NSStringFromClass(gesture.class),
++            AWEInteractionObjectSummary(from), AWEInteractionObjectSummary(destination),
++            (long)gesture.state);
++    }
++    return bound;
++}
++
+ @interface AWESearchForwardProxyBinding : NSObject
+ @property (nonatomic, weak) UIGestureRecognizer *sourceRecognizer;
+ @property (nonatomic, strong) UIGestureRecognizer *proxyRecognizer;
+@@ -15047,6 +15314,7 @@
+ 
+ static void AWEUninstallAlbumMorphBar(void) {
+     AWEStopAlbumMorphTintDisplayLink();
++    AWERestoreSharedSearchGestureToOriginal(@"album-uninstall");
+     AWERestoreAlbumMorphSearchGesture();
+     if (AWEIsIOS27OrLater()) AWEIOS27DetachNativeSameWindowHost();
+     AWEApplyAlbumMorphOriginalSuppression(
+@@ -15424,7 +15692,6 @@
+     BOOL directSearchPassthrough = (kind == AWEHomeTopActionKindSearch);
+     if (directSearchPassthrough) {
+         if (slot.ownerView && slot.ownerView != owner) {
+-            AWERestoreTopSearchGestureForSlot(slot);
+             AWERestoreTopOwnerVisual(slot);
+         }
+         AWERestoreTopOwnerAppearanceOnly(owner);
+@@ -15499,11 +15766,12 @@
+             AWEHomeTintedGlassEnabled(),
+             YES);
+         if (directSearchPassthrough) {
+-            /* Keep Douyin's recognizer exactly where Douyin created it.
+-               The visible system-glass UIButton receives its own real UIKit
+-               touch/press sequence; TouchUpInside forwards only the business
+-               action to the original recognizer/target pair. */
+-            AWERestoreTopSearchGestureForSlot(slot);
++            /* v18 restores the successful v9 principle, but supports BOTH
++               Search entrances: the one real AWEAlphaTapGesture is leased to
++               the visible control that is about to receive the physical touch. */
++            [materialButton removeTarget:slot
++                                  action:@selector(alb_handleTopTap:)
++                        forControlEvents:UIControlEventTouchUpInside];
+             AWESearchForwardProxyBinding *binding = objc_getAssociatedObject(
+                 materialButton, &kAWESearchForwardProxyKey);
+             if (binding.proxyRecognizer.view) {
+@@ -15511,6 +15779,8 @@
+             }
+             objc_setAssociatedObject(materialButton, &kAWESearchForwardProxyKey, nil,
+                                      OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++            AWELeaseSharedSearchGestureToView(
++                materialButton, owner, @"top.bind");
+         }
+         slot.systemGlassButton.hidden = !directSearchPassthrough;
+     } else {
+@@ -15524,7 +15794,7 @@
+         slot.userInteractionEnabled = YES;
+         [slot bringSubviewToFront:slot.systemGlassButton];
+         AWEInteractionDiagnosticWrite(
+-            @"TOP_BIND kind=SEARCH mode=exact-original-action-v16 owner=%@ source=%@ slot=%@",
++            @"TOP_BIND kind=SEARCH mode=real-gesture-lease-v18 owner=%@ source=%@ slot=%@",
+             AWEInteractionObjectSummary(owner),
+             AWEInteractionObjectSummary(slot.sourceImageView),
+             AWEInteractionObjectSummary(slot));
+@@ -16482,7 +16752,10 @@
+         : &kAWETopMenuSlotKey;
+     AWEHomeTopSlotView *slot = objc_getAssociatedObject(container, key);
+     if (!slot) return;
+-    if (kind == AWEHomeTopActionKindSearch) AWERestoreTopSearchGestureForSlot(slot);
++    if (kind == AWEHomeTopActionKindSearch) {
++        AWERestoreTopSearchGestureForSlot(slot);
++        AWERestoreSharedSearchGestureToOriginal(@"top-hide");
++    }
+     AWERestoreTopSourceImage(slot);
+     AWERestoreTopOwnerVisual(slot);
+     if (kind == AWEHomeTopActionKindMenu) AWEClearTopMenuMorph(slot);
+@@ -19053,7 +19326,7 @@
+     preferHighestPlaybackRow.distribution = UIStackViewDistributionEqualSpacing;
+ 
+     UILabel *forceDarkBottomBarLabel = [UILabel new];
+-    forceDarkBottomBarLabel.text = @"iOS 27 清透底栏（首页 + 个人页）";
++    forceDarkBottomBarLabel.text = @"iOS 27 清透底栏（首页 + 朋友 + 个人页）";
+     forceDarkBottomBarLabel.font =
+         [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+     UISwitch *forceDarkBottomBarSwitch = [UISwitch new];
+@@ -19245,7 +19518,7 @@
+     messageBottomBlurDistanceRow.spacing = 5.0;
+ 
+     UILabel *adaptiveGlassHint = [UILabel new];
+-    adaptiveGlassHint.text = @"iOS 26/27：首页顶部与右侧按钮使用无固定色调的原生液态玻璃并跟随系统透明度；iOS 27 可单独开启首页/个人页清透底栏。";
++    adaptiveGlassHint.text = @"iOS 26/27：首页顶部与右侧按钮使用无固定色调的原生液态玻璃并跟随系统透明度；iOS 27 可单独开启首页/朋友/个人页清透底栏。";
+     adaptiveGlassHint.font =
+         [UIFont systemFontOfSize:11.5 weight:UIFontWeightRegular];
+     adaptiveGlassHint.textColor = UIColor.tertiaryLabelColor;
+@@ -20454,8 +20727,36 @@
+ 
+ - (void)layoutSubviews {
+     %orig;
+-    /* The parent AWEElementStackView owns slot geometry. Avoid enqueueing a
+-       multi-pass refresh for every child layout frame. */
++    AWEHomeActionSlotView *slot = objc_getAssociatedObject(
++        (UIView *)self, &kAWEHomeActionEmbeddedGlassSlotKey);
++    if (slot && slot.originalView == (UIView *)self) {
++        /* Keep pass-through invariant without scheduling a hot layout loop. */
++        slot.systemGlassButton.userInteractionEnabled = NO;
++    }
++}
++
++- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
++    AWEMirrorRealTouchToHomeActionGlass((UIView *)self, touches, event,
++                                        AWEGlassTouchMirrorPhaseBegan);
++    %orig(touches, event);
++}
++
++- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
++    AWEMirrorRealTouchToHomeActionGlass((UIView *)self, touches, event,
++                                        AWEGlassTouchMirrorPhaseMoved);
++    %orig(touches, event);
++}
++
++- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
++    %orig(touches, event);
++    AWEMirrorRealTouchToHomeActionGlass((UIView *)self, touches, event,
++                                        AWEGlassTouchMirrorPhaseEnded);
++}
++
++- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
++    %orig(touches, event);
++    AWEMirrorRealTouchToHomeActionGlass((UIView *)self, touches, event,
++                                        AWEGlassTouchMirrorPhaseCancelled);
+ }
+ 
+ - (void)setHidden:(BOOL)hidden {

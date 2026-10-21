@@ -1,0 +1,5 @@
+AwemeLiquidBar 1.0.58 auth46
+
+Restored 2 previously authorized members to the masked digest table.
+Authorization rows: 44 -> 46.
+No plaintext account identifiers are stored in this project.

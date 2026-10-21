@@ -1,0 +1,25 @@
+v9 log-targeted fixes
+
+1. COMMENT RESTORE
+- player frame rejection now requires gAWECommentVisible.
+- removes broad photo/live setFrame freezing.
+- preserves targeted image transform guard only while comments are visible.
+
+2. COMMENT TEXT
+- propagates adaptive light/dark to comment child controllers.
+- neutral/grayscale UILabel/UITextView text is forced to contrast with resolved glass; accent colors are preserved.
+- logs COMMENT_TEXT_FORCE.
+
+3. MESSAGE HEADER
+- smaller native-source glass plates.
+- clears message root/header carriers without moving table geometry.
+- broad header UIImageView from v8 probe is now cleared/hidden.
+
+4. SAME STYLE
+- restores direct AWEPlayInteractionSingleSongMusicStyleView lifecycle refresh as primary path.
+- keeps InteractionVC fallback, ignores hidden target labels, plate reduced to 46-50 pt.
+
+5. SHOP/FAVORITES BOTTOM
+- probes entire window, not just AWENormalModeTabBar subtree.
+- coalesced refresh during scroll clears only full-width 54-112 pt bottom strips on shop/profile tabs.
+- logs BOTTOM_WINDOW_CAND/BOTTOM_WINDOW_CLEAR.

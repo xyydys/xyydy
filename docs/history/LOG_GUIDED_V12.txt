@@ -1,0 +1,60 @@
+AwemeLiquidBar 1.0.56c16 auth44 — v12 log-guided build
+
+BASELINE
+- Built from auth44 log-targeted v9, not from the rollback/stability package.
+- Authorization data and unrelated feature code are unchanged.
+
+WHY THIS BUILD EXISTS
+The supplied v9 interaction/comment/message logs show that several failures are lifecycle/geometry failures rather than simple color failures. v12 therefore both improves diagnostics and changes only the paths that have concrete log evidence.
+
+1) COMMENT MEDIA GEOMETRY
+Observed: comment-open sessions can resize/move media through more than frame.origin.x; photo/live paths also use transform changes.
+Change:
+- Restore only v6's proven player horizontal-shift rejection even during the pre-visible transition, because the supplied log shows player-x firing while visible=0.
+- Snapshot visible player/photo/live geometry immediately before the comment controller appears.
+- While comments are visible, reject destructive frame/bounds/center/transform changes on only those snapshotted media views.
+- Clear the snapshot after comment dismissal so normal feed/fullscreen geometry remains native.
+- New logs: COMMENT_MEDIA_CAPTURE, COMMENT_MEDIA_GUARD, COMMENT_MEDIA_CAPTURE_DONE.
+
+2) COMMENT ADAPTIVE TEXT
+Observed: the first contrast pass can be overwritten during the panel opening/layout sequence.
+Change:
+- Keep v9 adaptive contrast logic.
+- Re-sync immediately, +120 ms and +360 ms after opening so post-layout native resets are caught.
+
+3) MESSAGE TOP BLACK AREA
+Observed: v9 cleared broad/root image carriers while the message list still began below the ~106 pt header, exposing the black underlying window/root.
+Change:
+- Never clear the message root or broad root UIImageView carriers blindly.
+- Extend the real message content host/table behind the header, preserve the list's native dynamic background, and compensate content/indicator insets.
+- Save and restore native host/table geometry to avoid cumulative shifts.
+- New logs: MESSAGE_TOP_IMAGE_KEEP, MESSAGE_SURFACE, MESSAGE_V12.
+
+4) SAME-STYLE GLASS
+Observed: SAMESTYLE_MISS is often transient and followed by SAMESTYLE_OK during feed reuse/rebinding; v9 hid the plate immediately.
+Change:
+- Keep the last valid plate for up to 2 seconds through transient misses.
+- Search frontmost/newest descendants first and use a window fallback.
+- Recognize accessibility label/value/identifier, UILabel text and UIButton title.
+- New logs: SAMESTYLE_HOLD, SAMESTYLE_RECOVER.
+
+5) FAVORITES/SHOP BOTTOM STRIP
+Observed: the same opaque bottom carrier is repeatedly reset during scrolling; v9 rescanned a large hierarchy on nearly every scroll callback.
+Change:
+- Learn/cache the actual bottom carrier and clear it synchronously when Douyin resets it.
+- Rate-limit full hierarchy scans to ~5 Hz instead of every scroll callback.
+- Log parent path and rebinding.
+- New logs: BOTTOM_CARRIER_BIND, BOTTOM_CACHED_RESET.
+
+6) ONE-FILE DIAGNOSTIC EXPORT
+Settings -> export diagnostic log now produces:
+AwemeLiquidBar_1.0.56c16_auth44_v12_diagnostic_export.txt
+It combines the existing probe log, interaction log, and the new comment/message log. The comment/message log is capped at 3 MB to avoid the multi-megabyte uncontrolled growth seen in the prior probe build.
+
+RECOMMENDED SINGLE TEST PASS
+A. Normal video: open/close comments twice.
+B. Photo and Live Photo: open/close comments once each.
+C. Swipe through several videos containing “拍同款”.
+D. Open Messages, scroll in both light and dark appearances.
+E. Scroll Favorites/Profile and Shop until the previous bottom strip location has been exercised.
+F. Export the single v12 diagnostic txt and send it with screenshots only for remaining visual failures.

@@ -1,0 +1,37 @@
+AwemeLiquidBar 1.0.58 auth47 — Page-Fixed Liquid Glass v9
+
+Policy
+- iOS 26/27 Home (root index 0): all plug-in Liquid Glass controls and the bottom bar use the DARK material branch permanently.
+- Other root pages: follow Douyin/app window Light/Dark appearance. No video/background luminance decision is used.
+- A material Light/Dark switch should therefore occur only when entering/leaving Home, or when the app appearance itself changes.
+
+Performance removals
+- No AlbumMorph luminance CADisplayLink on iOS 26/27.
+- No iOS 26/27 4x4 tint probe creation.
+- No feed-item luminance burst requests.
+- No iOS 26/27 per-button clear-glass backdrop screenshot used for black/white icon contrast.
+- Normal feed swipes do not change glass traits or rebuild the tab-bar appearance.
+
+Home interaction
+- Right-side Like/Comment/Favorite/Share glass controls are real interactive UIButtonConfiguration Liquid Glass buttons. Synthetic scale feedback is removed; completed taps are forwarded once to Douyin's original action owner.
+- Top Search moves Douyin's real search tap recognizer onto the actual system-glass button, so the visible button owns the native press/stretch sequence.
+- iOS 26 bottom Search now uses the same direct native UISearchTab path as iOS 27 instead of an external touch proxy.
+- Hidden native top category action owners are removed from user hit-testing while the custom category group is active, preventing invisible Douyin tabs from stealing touches.
+- Home category group itself is forced to the DARK trait so its material and labels match the fixed Home policy.
+
+Message page
+- Menu/Search/Add native controls are never moved.
+- Glass plates align to the exact native source frames.
+- Message glass follows the message window/controller Light/Dark appearance on iOS 26/27 and no longer consumes the Home/video adaptive style.
+
+System transparency/tint
+- Regular Home buttons remain built from UIButtonConfiguration.glassButtonConfiguration and Clear mode from clearGlassButtonConfiguration; UIKit owns system Liquid Glass transparency/tint behavior.
+- Rebuilt Home controls no longer use a fake visual-only touch layer for right actions/top Search, so native Liquid Glass interaction is available on iOS 26/27.
+
+Recommended device checks
+1. iOS 27: swipe repeatedly between dark/bright videos on Home; glass must remain DARK and should no longer hitch because of luminance sampling.
+2. App Light: Home -> Messages/Shop/Favorites: Home DARK, secondary pages LIGHT.
+3. App Dark: Home -> secondary pages: both DARK, without an unnecessary semantic flip.
+4. Message header: Menu/Search/Add stay in Douyin's native positions and remain tappable.
+5. Enable top category group + top Search + bottom Search: top Search must be tappable and hidden native category tabs must not react.
+6. iOS 26: right-side Home buttons, top-left Menu, top Search and bottom Search should use native glass press behavior; change system Liquid Glass transparency and re-enter the app to verify UIKit refreshes the material.

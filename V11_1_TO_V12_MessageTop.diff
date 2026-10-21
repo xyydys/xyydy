@@ -1,0 +1,231 @@
+--- /mnt/data/work_v12/current/AwemeLiquidBar_1.0.58_auth47_ClearGlassPolicy_v11_1_compilefix_project/MessageTopGlassV3.xm	2026-09-03 05:45:44.000000000 +0000
++++ /mnt/data/work_v12/AwemeLiquidBar_1.0.58_auth47_InteractionWarp_v12_project/MessageTopGlassV3.xm	2026-09-03 06:45:38.882404263 +0000
+@@ -91,9 +91,11 @@
+ static char kAWEMessageProxyForwarderKey;
+ static char kAWEMessagePressGestureKey;
+ static char kAWEMessagePressDriverKey;
++static char kAWEMessagePlateContentMirrorKey;
+ 
+-@interface AWEMessageGlassTouchDriver : NSObject
++@interface AWEMessageGlassTouchDriver : NSObject <UIGestureRecognizerDelegate>
+ @property (nonatomic, weak) UIButton *glassPlate;
++@property (nonatomic, assign) CGPoint startPoint;
+ - (void)handlePress:(UILongPressGestureRecognizer *)recognizer;
+ @end
+ 
+@@ -101,16 +103,49 @@
+ - (void)handlePress:(UILongPressGestureRecognizer *)recognizer {
+     UIButton *plate = self.glassPlate;
+     if (!plate) return;
+-    UIGestureRecognizerState state = recognizer.state;
+-    BOOL down = state == UIGestureRecognizerStateBegan ||
+-                state == UIGestureRecognizerStateChanged;
+-    plate.highlighted = down;
+-    if (!down) {
+-        dispatch_async(dispatch_get_main_queue(), ^{
++    CGPoint point = [recognizer locationInView:recognizer.view];
++    switch (recognizer.state) {
++        case UIGestureRecognizerStateBegan:
++            self.startPoint = point;
++            plate.highlighted = YES;
++            [plate setNeedsUpdateConfiguration];
++            [UIView animateWithDuration:0.10 delay:0
++                options:UIViewAnimationOptionBeginFromCurrentState |
++                        UIViewAnimationOptionAllowUserInteraction |
++                        UIViewAnimationOptionCurveEaseOut
++                animations:^{ plate.transform = CGAffineTransformMakeScale(1.08, 1.08); }
++                completion:nil];
++            break;
++        case UIGestureRecognizerStateChanged: {
++            CGFloat dx = point.x - self.startPoint.x;
++            CGFloat dy = point.y - self.startPoint.y;
++            CGFloat ax = MIN(fabs(dx), 30.0), ay = MIN(fabs(dy), 30.0);
++            CGFloat sx = 1.08 + ax / 250.0 - ay / 560.0;
++            CGFloat sy = 1.08 + ay / 250.0 - ax / 560.0;
++            CGAffineTransform t = CGAffineTransformMakeTranslation(dx * 0.05, dy * 0.05);
++            plate.transform = CGAffineTransformScale(t, sx, sy);
++            break;
++        }
++        case UIGestureRecognizerStateEnded:
++        case UIGestureRecognizerStateCancelled:
++        case UIGestureRecognizerStateFailed:
+             plate.highlighted = NO;
+-        });
++            [plate setNeedsUpdateConfiguration];
++            [UIView animateWithDuration:0.30 delay:0
++                usingSpringWithDamping:0.68 initialSpringVelocity:0.25
++                options:UIViewAnimationOptionBeginFromCurrentState |
++                        UIViewAnimationOptionAllowUserInteraction
++                animations:^{ plate.transform = CGAffineTransformIdentity; }
++                completion:nil];
++            break;
++        default: break;
+     }
+ }
++- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer
++        shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)other {
++    (void)gestureRecognizer; (void)other;
++    return YES;
++}
+ @end
+ 
+ static NSString *AWEMessageProbePath(void) {
+@@ -470,8 +505,10 @@
+ }
+ #ifdef __cplusplus
+ extern "C" UIUserInterfaceStyle AWEAppResolvedAppearanceStyle(UIWindow *window);
++extern "C" void AWERegisterNativeGlassTrackingMirror(UIView *touchOwner, UIButton *glassButton);
+ #else
+ extern UIUserInterfaceStyle AWEAppResolvedAppearanceStyle(UIWindow *window);
++extern void AWERegisterNativeGlassTrackingMirror(UIView *touchOwner, UIButton *glassButton);
+ #endif
+ static UIButtonConfiguration *AWEMessageClearGlassConfiguration(void);
+ static UIImage *AWEMessageSymbol(NSString *name, CGFloat size, UIImageSymbolWeight weight);
+@@ -506,6 +543,13 @@
+ static void AWEMessageInstallPressDriver(UIView *source, UIView *navBar, UIButton *plate) {
+     UIView *host = AWEMessagePressGestureHost(source, navBar);
+     if (!host || !plate) return;
++    if (@available(iOS 26.0, *)) {
++        /* No recognizer is added to Douyin's Menu/Search/Add at all. The same
++           real touch is observed in UIApplication.sendEvent and passed into
++           this glass plate's native UIButton tracking pipeline. */
++        AWERegisterNativeGlassTrackingMirror(host, plate);
++        return;
++    }
+     UILongPressGestureRecognizer *press =
+         objc_getAssociatedObject(host, &kAWEMessagePressGestureKey);
+     AWEMessageGlassTouchDriver *driver =
+@@ -520,10 +564,11 @@
+         press = [[UILongPressGestureRecognizer alloc] initWithTarget:driver
+                                                               action:@selector(handlePress:)];
+         press.minimumPressDuration = 0.0;
+-        press.allowableMovement = 18.0;
++        press.allowableMovement = 42.0;
+         press.cancelsTouchesInView = NO;
+         press.delaysTouchesBegan = NO;
+         press.delaysTouchesEnded = NO;
++        press.delegate = driver;
+         [host addGestureRecognizer:press];
+         objc_setAssociatedObject(host, &kAWEMessagePressGestureKey, press,
+                                  OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+@@ -731,6 +776,102 @@
+     }
+     return nil;
+ }
++
++/* Same verified rule as the supplied VVebo solution: anything expected to
++   stretch with native Liquid Glass must sit inside UIButtonConfiguration's
++   content hierarchy, not beside the glass as an ordinary sibling/subview. */
++static UIView *AWEMessageGlassNativeContentContainer(UIButton *button) {
++    if (!button) return nil;
++    [button layoutIfNeeded];
++    UIView *p = button.titleLabel.superview;
++    if (p && p != button) return p;
++    p = button.imageView.superview;
++    if (p && p != button) return p;
++    UIButtonConfiguration *cfg = button.configuration;
++    if (cfg) {
++        UIButtonConfiguration *copy = [cfg copy];
++        copy.title = @" ";
++        copy.baseForegroundColor = UIColor.clearColor;
++        button.configuration = copy;
++        [button layoutIfNeeded];
++        p = button.titleLabel.superview;
++        if (p && p != button) return p;
++        p = button.imageView.superview;
++        if (p && p != button) return p;
++    }
++    return button;
++}
++
++static UIImage *AWEMessageLiveOrSavedImage(UIImageView *imageView) {
++    if (!imageView) return nil;
++    if (imageView.image) return imageView.image;
++    id saved = objc_getAssociatedObject(imageView, &kAWEMessageSavedImageKey);
++    return [saved isKindOfClass:UIImage.class] ? (UIImage *)saved : nil;
++}
++
++static UIImageView *AWEMessageBestIconImageView(UIView *source) {
++    if (!source) return nil;
++    if ([source isKindOfClass:UIImageView.class] &&
++        AWEMessageLiveOrSavedImage((UIImageView *)source))
++        return (UIImageView *)source;
++    UIImageView *best = nil;
++    CGFloat bestScore = -CGFLOAT_MAX;
++    for (UIView *v in AWEMessageSubviews(source, 100)) {
++        if (![v isKindOfClass:UIImageView.class]) continue;
++        UIImageView *iv = (UIImageView *)v;
++        if (!AWEMessageLiveOrSavedImage(iv) || iv.hidden || iv.alpha <= 0.01) continue;
++        CGRect r = [iv convertRect:iv.bounds toView:source];
++        CGFloat w = CGRectGetWidth(r), h = CGRectGetHeight(r);
++        if (w < 10.0 || h < 10.0 || w > 42.0 || h > 42.0) continue;
++        CGFloat score = MIN(w,h) * 10.0 - fabs(w-h) * 4.0;
++        if (score > bestScore) { bestScore = score; best = iv; }
++    }
++    return best;
++}
++
++static void AWEMessageBindWarpedForeground(UIButton *plate, UIView *source, UIView *navBar) {
++    if (!plate || !source || !navBar) return;
++    UIImageView *icon = AWEMessageBestIconImageView(source);
++    UIImage *liveImage = AWEMessageLiveOrSavedImage(icon);
++    UIImageView *mirror = objc_getAssociatedObject(plate, &kAWEMessagePlateContentMirrorKey);
++    if (!icon || !liveImage) {
++        if (mirror) mirror.hidden = YES;
++        return;
++    }
++    if (!mirror) {
++        mirror = [UIImageView new];
++        mirror.userInteractionEnabled = NO;
++        mirror.backgroundColor = UIColor.clearColor;
++        mirror.contentMode = UIViewContentModeScaleAspectFit;
++        objc_setAssociatedObject(plate, &kAWEMessagePlateContentMirrorKey, mirror,
++                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++    }
++    mirror.image = liveImage;
++    mirror.tintColor = icon.tintColor ?: UIColor.labelColor;
++    mirror.contentMode = icon.contentMode == UIViewContentModeScaleAspectFill
++        ? UIViewContentModeScaleAspectFill : UIViewContentModeScaleAspectFit;
++
++    CGRect iconInNav = [icon convertRect:icon.bounds toView:navBar];
++    CGRect iconInPlate = [navBar convertRect:iconInNav toView:plate];
++    if (CGRectIsEmpty(iconInPlate) || CGRectIsNull(iconInPlate) ||
++        CGRectGetWidth(iconInPlate) > 38.0 || CGRectGetHeight(iconInPlate) > 38.0) {
++        CGFloat side = 22.0;
++        iconInPlate = CGRectMake((CGRectGetWidth(plate.bounds)-side)*0.5,
++                                 (CGRectGetHeight(plate.bounds)-side)*0.5, side, side);
++    }
++    UIView *content = AWEMessageGlassNativeContentContainer(plate) ?: plate;
++    if (mirror.superview != content) {
++        [mirror removeFromSuperview];
++        [content addSubview:mirror];
++    }
++    mirror.frame = content == plate ? iconInPlate : [plate convertRect:iconInPlate toView:content];
++    mirror.hidden = NO;
++    [content bringSubviewToFront:mirror];
++
++    /* Hide artwork only; the original UIControl/gesture owner stays where it
++       was and receives the real Douyin touch. */
++    AWEMessageHideSourceArtwork(source);
++}
+ static CGRect AWEMessagePlateFrame(UIView *navBar, NSInteger index) {
+     CGFloat width = CGRectGetWidth(navBar.bounds);
+     switch (index) {
+@@ -1196,10 +1337,13 @@
+     AWEMessagePositionBackgroundPlate(searchPlate, search, nav, NO);
+     AWEMessagePositionBackgroundPlate(addPlate, add, nav, NO);
+     AWEMessagePositionBackgroundPlate(titlePlate, title, nav, YES);
+-    /* The left menu is gesture-driven, not a normal UIControl.  A zero-duration
+-       long-press recognizer competes with Douyin's own tap recognizer and can
+-       make the menu visually press but never open.  Keep its native recognizer
+-       completely untouched; Search/Add are UIControls and retain press mirroring. */
++    AWEMessageBindWarpedForeground(menuPlate, menu, nav);
++    AWEMessageBindWarpedForeground(searchPlate, search, nav);
++    AWEMessageBindWarpedForeground(addPlate, add, nav);
++    /* All three source controls/recognizers remain untouched. On iOS 26/27
++       AWEMessageInstallPressDriver only registers a passive native-tracking
++       mirror; no recognizer is added to the Douyin navigation hierarchy. */
++    AWEMessageInstallPressDriver(menu, nav, menuPlate);
+     AWEMessageInstallPressDriver(search, nav, searchPlate);
+     AWEMessageInstallPressDriver(add, nav, addPlate);
+     if (doMaintenance) {

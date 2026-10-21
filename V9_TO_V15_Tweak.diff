@@ -1,0 +1,954 @@
+--- /mnt/data/work_v9_rebuild/AwemeLiquidBar_1.0.58_auth47_PageFixedGlass_v9_project/Tweak.x	2026-09-02 19:16:18.000000000 +0000
++++ /mnt/data/AwemeLiquidBar_1.0.58_auth47_V9SelectiveFix_v15_project/Tweak.x	2026-09-03 10:14:38.857158393 +0000
+@@ -158,6 +158,9 @@
+ */
+ static UIWindow *AWEActiveMainWindow(void);
+ UIUserInterfaceStyle AWEAppResolvedAppearanceStyle(UIWindow *window);
++static UIUserInterfaceStyle AWESystemInterfaceStyle(void);
++static UIView *AWEAlbumMorphSearchOwner(UIWindow *window);
++static BOOL AWESearchForwardProxyActiveForView(UIView *view);
+ static UIView *AWEFindViewByExactRuntimeClass(UIView *root,
+                                               NSString *className,
+                                               NSUInteger depth);
+@@ -311,6 +314,10 @@
+ static char kAWEProfileVisualMarkerKey;
+ static char kAWEAlbumMorphCollapseGestureKey;
+ static char kAWEFriendsOriginalAdditionalSafeAreaInsetsKey;
++static char kAWEIOS27PlatterOriginalGlassKey;
++static char kAWEIOS27PlatterInstalledGlassKey;
++static char kAWESettingsOriginalFontKey;
++static char kAWESearchForwardProxyKey;
+ 
+ typedef NS_ENUM(NSInteger, AWEHomeDiagnosticForegroundMode) {
+     AWEHomeDiagnosticForegroundModeAutomatic = 0,
+@@ -420,7 +427,11 @@
+ static NSString * const kAWEHideTopSearchButtonDefaultsKey =
+     @"AwemeLiquidBarHideTopSearchButtonV1";
+ static NSString * const kAWEMessageEdgeBlurDistanceDefaultsKey =
+-    @"AwemeLiquidBarMessageEdgeBlurDistanceV1";
++    @"AwemeLiquidBarMessageEdgeBlurDistanceV1"; /* legacy migration */
++static NSString * const kAWEMessageTopEdgeBlurDistanceDefaultsKey =
++    @"AwemeLiquidBarMessageTopEdgeBlurDistanceV2";
++static NSString * const kAWEMessageBottomEdgeBlurDistanceDefaultsKey =
++    @"AwemeLiquidBarMessageBottomEdgeBlurDistanceV2";
+ static NSString * const kAWEHomeTransparentGlassDefaultsKey =
+     @"AwemeLiquidBarHomeTransparentGlassV1";
+ static NSString * const kAWETopTelegramSwitcherEnabledDefaultsKey =
+@@ -441,6 +452,8 @@
+     @"AwemeLiquidBarInteractionDiagnosticEnabledV1";
+ static NSString * const kAWEHomeForceDarkGlassDefaultsKey =
+     @"AwemeLiquidBarHomeForceDarkGlassV1";
++static NSString * const kAWEIOS27ClearBottomGlassDefaultsKey =
++    @"AwemeLiquidBarIOS27ClearBottomGlassSelectiveV15";
+ static NSString * const kAWEHideBottomTitlesDefaultsKey =
+     @"AwemeLiquidBarHideBottomTitlesV1";
+ static NSString * const kAWEBottomBarDisplayEnabledDefaultsKey =
+@@ -568,6 +581,8 @@
+ static const CGFloat kAWEFSInvalidHeight = -1.0;
+ static CGFloat gAWEFSOriginalTabBarHeight = kAWEFSInvalidHeight;
+ static CGFloat gAWEFSCurrentTabBarHeight = kAWEFSInvalidHeight;
++static CFTimeInterval gAWECommerceFullscreenSuppressionUntil = 0.0;
++static CFTimeInterval gAWELastSearchForwardProxyFireTime = 0.0;
+ 
+ 
+ #pragma mark - iOS 26/27 global glass style and adaptive foreground
+@@ -593,6 +608,13 @@
+     return AWEIsIOS27OrLater();
+ }
+ 
++static BOOL AWEIOS27ClearBottomGlassEnabled(void) {
++    if (!AWEIsIOS27OrLater()) return NO;
++    id stored = [NSUserDefaults.standardUserDefaults
++        objectForKey:kAWEIOS27ClearBottomGlassDefaultsKey];
++    return [stored isKindOfClass:NSNumber.class] ? [(NSNumber *)stored boolValue] : NO;
++}
++
+ static BOOL AWEHideBottomTitlesEnabled(void) {
+     return [NSUserDefaults.standardUserDefaults
+         boolForKey:kAWEHideBottomTitlesDefaultsKey];
+@@ -867,6 +889,15 @@
+     return AWECurrentOriginalMainTabIndex();
+ }
+ 
++static BOOL AWEIOS27WantsClearBottomMaterial(void) {
++    if (!AWEIOS27ClearBottomGlassEnabled()) return NO;
++    NSInteger index = gAWEAlbumMorphController
++        ? [gAWEAlbumMorphController currentOriginalIndex]
++        : AWECurrentOriginalMainTabIndex();
++    if (index == NSNotFound) index = AWECurrentOriginalMainTabIndex();
++    return index == 0 || index == 4;
++}
++
+ static BOOL AWEHomeTabSelectedForNativeBar(UITabBar *nativeBar) {
+     if (nativeBar.selectedItem) return nativeBar.selectedItem.tag == 0;
+     return AWECurrentMainTabIndex() == 0;
+@@ -2662,6 +2693,11 @@
+         isEqualToString:@"AwemeLiquidBar.NativeUITabBar"];
+ }
+ 
++static BOOL AWEIsAlbumMorphSystemBar(UITabBar *bar) {
++    return [bar.accessibilityIdentifier
++        isEqualToString:@"AwemeLiquidBar.AlbumMorph.SystemTabBar"];
++}
++
+ #pragma mark - Helpers
+ 
+ static BOOL AWEIsApplying(UIView *view) {
+@@ -3198,7 +3234,7 @@
+         boolForKey:kAWEHideTopSearchButtonDefaultsKey];
+ }
+ 
+-static CGFloat AWEMessageEdgeBlurDistance(void) {
++static CGFloat AWEMessageLegacyEdgeBlurDistance(void) {
+     id stored = [NSUserDefaults.standardUserDefaults
+         objectForKey:kAWEMessageEdgeBlurDistanceDefaultsKey];
+     CGFloat value = [stored isKindOfClass:NSNumber.class]
+@@ -3206,6 +3242,23 @@
+     return MIN(180.0, MAX(60.0, value));
+ }
+ 
++static CGFloat AWEMessageTopEdgeBlurDistance(void) {
++    id stored = [NSUserDefaults.standardUserDefaults
++        objectForKey:kAWEMessageTopEdgeBlurDistanceDefaultsKey];
++    CGFloat value = [stored isKindOfClass:NSNumber.class]
++        ? [(NSNumber *)stored doubleValue] : AWEMessageLegacyEdgeBlurDistance();
++    return MIN(188.0, MAX(40.0, value));
++}
++
++static CGFloat AWEMessageBottomEdgeBlurDistance(void) {
++    id stored = [NSUserDefaults.standardUserDefaults
++        objectForKey:kAWEMessageBottomEdgeBlurDistanceDefaultsKey];
++    CGFloat fallback = MIN(188.0, AWEMessageLegacyEdgeBlurDistance() + 8.0);
++    CGFloat value = [stored isKindOfClass:NSNumber.class]
++        ? [(NSNumber *)stored doubleValue] : fallback;
++    return MIN(188.0, MAX(40.0, value));
++}
++
+ static BOOL AWEHomeTransparentGlassEnabled(void) {
+     /* This is a new independent opt-in.  Do not inherit the old tinted-glass
+        switch: upgrades as well as fresh installs must land on the verified
+@@ -3218,8 +3271,9 @@
+ }
+ 
+ static BOOL AWEHomeTintedGlassEnabled(void) {
+-    /* glassButtonConfiguration is the system-adaptive, lower-overhead default.
+-       clearGlassButtonConfiguration is now an explicit opt-in. */
++    /* iOS 26/27 Home buttons stay on UIKit's untinted glass branch. System
++       Liquid Glass transparency/contrast settings remain UIKit-owned. */
++    if (AWEOperatingSystemMajorVersion() >= 26) return NO;
+     return !AWEHomeTransparentGlassEnabled();
+ }
+ 
+@@ -3569,6 +3623,86 @@
+     return item;
+ }
+ 
++static id AWEIOS27MakeUntintedClearGlassEffect(BOOL interactive) {
++    if (!AWEIsIOS27OrLater()) return nil;
++    Class glassClass = NSClassFromString(@"UIGlassEffect");
++    SEL maker = NSSelectorFromString(@"effectWithStyle:");
++    if (!glassClass || ![glassClass respondsToSelector:maker]) return nil;
++    id effect = ((id (*)(id, SEL, NSInteger))objc_msgSend)(glassClass, maker, 1);
++    if (!effect) return nil;
++    SEL setInteractive = NSSelectorFromString(@"setInteractive:");
++    if ([effect respondsToSelector:setInteractive]) {
++        ((void (*)(id, SEL, BOOL))objc_msgSend)(effect, setInteractive, interactive);
++    }
++    SEL setTintColor = NSSelectorFromString(@"setTintColor:");
++    if ([effect respondsToSelector:setTintColor]) {
++        ((void (*)(id, SEL, id))objc_msgSend)(effect, setTintColor, nil);
++    }
++    return effect;
++}
++
++static void AWEApplyIOS27UntintedClearPlatter(UITabBar *nativeBar) {
++    if (!nativeBar || !nativeBar.window || !AWEIsIOS27OrLater() ||
++        (!AWEIsOurNativeBar(nativeBar) && !AWEIsAlbumMorphSystemBar(nativeBar))) return;
++    BOOL wantsClear = AWEIOS27WantsClearBottomMaterial();
++    UIView *root = nativeBar;
++    for (NSUInteger i = 0; i < 2 && root.superview; i++) root = root.superview;
++    NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:root];
++    NSUInteger index = 0;
++    CGRect barFrame = [nativeBar convertRect:nativeBar.bounds toView:nativeBar.window];
++    while (index < queue.count && index < 260) {
++        UIView *view = queue[index++];
++        for (UIView *child in view.subviews) [queue addObject:child];
++        NSString *name = NSStringFromClass(view.class);
++        BOOL candidate =
++            [name rangeOfString:@"Platter" options:NSCaseInsensitiveSearch].location != NSNotFound ||
++            [name rangeOfString:@"Search" options:NSCaseInsensitiveSearch].location != NSNotFound;
++        if (!candidate) continue;
++        CGRect wr = [view convertRect:view.bounds toView:nativeBar.window];
++        if (!CGRectIntersectsRect(wr, CGRectInset(barFrame, -36.0, -36.0))) continue;
++        SEL getter = NSSelectorFromString(@"glassEffect");
++        SEL setter = NSSelectorFromString(@"setGlassEffect:");
++        if (![view respondsToSelector:getter] && ![view respondsToSelector:setter]) continue;
++        id current = nil;
++        @try { current = [view valueForKey:@"glassEffect"]; }
++        @catch (__unused NSException *exception) { continue; }
++        id installed = objc_getAssociatedObject(view, &kAWEIOS27PlatterInstalledGlassKey);
++        id original = objc_getAssociatedObject(view, &kAWEIOS27PlatterOriginalGlassKey);
++        if (!wantsClear) {
++            if (installed && current == installed && original) {
++                id restore = original == NSNull.null ? nil : original;
++                @try { [view setValue:restore forKey:@"glassEffect"]; }
++                @catch (__unused NSException *exception) {}
++            }
++            objc_setAssociatedObject(view, &kAWEIOS27PlatterInstalledGlassKey,
++                                     nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++            continue;
++        }
++        if (current && installed && current == installed) continue;
++        if (!original) {
++            objc_setAssociatedObject(view, &kAWEIOS27PlatterOriginalGlassKey,
++                                     current ?: NSNull.null,
++                                     OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++        }
++        BOOL interactive = YES;
++        @try {
++            id value = current ? [current valueForKey:@"interactive"] : nil;
++            if ([value respondsToSelector:@selector(boolValue)]) interactive = [value boolValue];
++        } @catch (__unused NSException *exception) {}
++        id clear = AWEIOS27MakeUntintedClearGlassEffect(interactive);
++        if (!clear) continue;
++        @try {
++            [view setValue:clear forKey:@"glassEffect"];
++            id readback = [view valueForKey:@"glassEffect"];
++            objc_setAssociatedObject(view, &kAWEIOS27PlatterInstalledGlassKey,
++                                     readback, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++        } @catch (__unused NSException *exception) {
++            objc_setAssociatedObject(view, &kAWEIOS27PlatterInstalledGlassKey,
++                                     nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++        }
++    }
++}
++
+ static void AWEConfigureNativeBarAppearance(UITabBar *nativeBar,
+                                              UIColor *accentColor) {
+     if (!nativeBar) return;
+@@ -7045,6 +7179,13 @@
+     AWEHomeActionKindShare
+ };
+ 
++static NSArray<UIView *> *AWESortedVisibleHomeActionButtons(UIView *stack);
++static AWEHomeActionKind AWEHomeActionKindForButton(UIView *button,
++                                                     NSArray<UIView *> *ordered);
++static BOOL AWEForwardHomeActionKindFromStack(UIView *stack,
++                                               AWEHomeActionKind kind,
++                                               UIView **ownerInOut);
++
+ @interface AWEHomeActionSlotView : UIView
+ @property (nonatomic, weak) UIView *originalView;
+ @property (nonatomic, weak) UIImageView *sourceImageView;
+@@ -7058,8 +7199,9 @@
+ - (void)alb_nativeGlassTap:(UIButton *)sender {
+     (void)sender;
+     UIView *owner = self.originalView;
+-    if (!owner || !owner.window) return;
+-    BOOL sent = AWETriggerQuickMenuDestinationView(owner);
++    BOOL sent = AWEForwardHomeActionKindFromStack(
++        self.superview, self.actionKind, &owner);
++    if (owner && owner != self.originalView) self.originalView = owner;
+     AWEInteractionDiagnosticWrite(
+         @"HOME_NATIVE_GLASS_TAP kind=%ld result=%d owner=%@",
+         (long)self.actionKind, sent, AWEInteractionObjectSummary(owner));
+@@ -7977,7 +8119,10 @@
+ 
+ @implementation AWEHomeTopSlotView
+ - (void)alb_handleTopTap:(UIButton *)sender {
+-    (void)sender;
++    if (self.topKind == AWEHomeTopActionKindSearch &&
++        AWESearchForwardProxyActiveForView(sender)) {
++        return;
++    }
+     UIView *owner = self.ownerView;
+     UIView *container = self.superview;
+     if ((!owner || !owner.window) && container) {
+@@ -8185,6 +8330,25 @@
+     return kind;
+ }
+ 
++static BOOL AWEForwardHomeActionKindFromStack(UIView *stack,
++                                               AWEHomeActionKind kind,
++                                               UIView **ownerInOut) {
++    if (!stack || kind == AWEHomeActionKindUnknown) return NO;
++    NSArray<UIView *> *ordered = AWESortedVisibleHomeActionButtons(stack);
++    UIView *owner = ownerInOut ? *ownerInOut : nil;
++    if (owner && owner.window && AWEViewIsDescendantOfView(owner, stack) &&
++        AWEHomeActionKindForButton(owner, ordered) == kind) {
++        if (AWETriggerQuickMenuDestinationView(owner)) return YES;
++    }
++    for (UIView *candidate in ordered) {
++        if (candidate == owner) continue;
++        if (AWEHomeActionKindForButton(candidate, ordered) != kind) continue;
++        if (ownerInOut) *ownerInOut = candidate;
++        if (AWETriggerQuickMenuDestinationView(candidate)) return YES;
++    }
++    return NO;
++}
++
+ static void AWECollectImageViews(UIView *root,
+                                  NSMutableArray<UIImageView *> *result,
+                                  NSUInteger depth) {
+@@ -8879,10 +9043,8 @@
+     }
+     UIUserInterfaceStyle style = homeStyle;
+     if (AWEOperatingSystemMajorVersion() >= 26) {
+-        /* Home chrome is fixed DARK even in Clear glass mode. The configuration
+-           still owns Clear/Tinted/transparency; only the semantic Light/Dark
+-           material branch is pinned here. */
+-        style = UIUserInterfaceStyleDark;
++        /* Do not force a Light/Dark tint island on the Home action glass. */
++        style = UIUserInterfaceStyleUnspecified;
+     } else if (transparent) {
+         style = UIUserInterfaceStyleUnspecified;
+     }
+@@ -8957,9 +9119,8 @@
+     BOOL automaticContrast = transparent && !preserveOriginalImage &&
+                              foregroundColor == nil &&
+                              AWEOperatingSystemMajorVersion() < 26;
+-    /* v9 iOS 26/27 Home is a fixed DARK material island. Clear glass therefore
+-       no longer needs per-button backdrop screenshots just to choose black vs
+-       white artwork; UIKit resolves the foreground inside the dark trait. */
++    /* iOS 26/27 keeps foreground/material resolution inside UIKit; no full-
++       screen backdrop screenshot is required for these native glass buttons. */
+     objc_setAssociatedObject(button, &kAWEAdaptiveGlassTransparentKey,
+                              @(transparent), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+     objc_setAssociatedObject(button, &kAWEAdaptiveGlassStrongEdgeKey,
+@@ -9553,6 +9714,7 @@
+ 
+ static BOOL AWEBottomV15AdjustView(UIView *view, UIWindow *window,
+                                    AWEBottomRouteKind route, NSString *reason) {
++    if (route == AWEBottomRouteProfile) return NO;
+     if (!view || !window || !view.superview || view.hidden || view.alpha < 0.01) return NO;
+     NSString *name = NSStringFromClass(view.class);
+     if ([name containsString:@"TabBar"] || [name containsString:@"LiquidBar"] ||
+@@ -10411,6 +10573,9 @@
+         AWEBottomV21PrepareShop(window, reason);
+         return;
+     }
++    if (route == AWEBottomRouteProfile) {
++        return;
++    }
+ 
+     NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:window];
+     NSUInteger idx = 0, adjusted = 0, relevant = 0;
+@@ -11182,7 +11347,7 @@
+     slot.menuButton.center = center;
+     slot.menuButton.hidden = NO;
+     slot.menuButton.alpha = 1.0;
+-    slot.menuButton.showsMenuAsPrimaryAction = YES;
++    slot.menuButton.userInteractionEnabled = YES;
+ 
+     UIView *anchor = AWETopLevelDescendantOfStack(pictureHost, stack);
+     if (anchor && anchor != slot) {
+@@ -11198,13 +11363,20 @@
+     avatar.clipsToBounds = YES;
+     AWEConfigureAdaptiveSystemGlassPlateButton(
+         slot.glassButton, @"right.profile.avatar", AWEHomeTintedGlassEnabled());
++    /* Resolve the already-configured glass before constructing UIMenu so the
++       first presented frame starts in the correct material branch. */
++    [slot.glassButton setNeedsLayout];
++    [slot.glassButton layoutIfNeeded];
+     UIUserInterfaceStyle menuStyle = AWEAdaptiveButtonResolvedLocalStyle(slot.glassButton);
+     if (menuStyle != UIUserInterfaceStyleLight && menuStyle != UIUserInterfaceStyleDark) {
+         menuStyle = AWEAppResolvedAppearanceStyle(stack.window);
+     }
++    if (menuStyle != UIUserInterfaceStyleLight && menuStyle != UIUserInterfaceStyleDark) {
++        menuStyle = AWESystemInterfaceStyle();
++    }
+     slot.menuButton.overrideUserInterfaceStyle = menuStyle;
+     slot.menuButton.menu = AWEAvatarBaseMenuForStack(stack, pictureHost);
+-    AWEInstallGlassPressFeedback(slot.menuButton, slot.glassButton);
++    slot.menuButton.showsMenuAsPrimaryAction = YES;
+ }
+ 
+ static NSMutableDictionary<NSNumber *, AWEHomeActionSlotView *> *
+@@ -13951,6 +14123,10 @@
+         }
+     }
+ 
++    if (AWEIsIOS27OrLater() && gAWEAlbumMorphController.tabBar) {
++        AWEApplyIOS27UntintedClearPlatter(gAWEAlbumMorphController.tabBar);
++    }
++
+     BOOL fixedHomeDark = AWEOperatingSystemMajorVersion() >= 26 && originalIndex == 0;
+     NSString *mode = fixedHomeDark
+         ? @"PAGE_FIXED_HOME_DARK"
+@@ -14088,28 +14264,17 @@
+ }
+ 
+ - (void)albumMorphDidRequestSearch {
+-    UIWindow *window = AWEActiveMainWindow();
+-    UIView *topContainer = window
+-        ? AWEFindViewByExactRuntimeClass(
+-            window, @"AWEFeedTopBarContainer", 0)
+-        : nil;
+-    UIView *owner = topContainer
+-        ? AWEFindTopOwnerCandidate(topContainer, YES)
+-        : nil;
+-    if (!owner && window) {
+-        owner = AWEFindViewByExactRuntimeClass(
+-            window, @"AWEHPDiscoverFeedEntranceView", 0);
+-    }
+-    if (!owner && window) {
+-        owner = AWEFindViewByExactRuntimeClass(
+-            window, @"AWEHPSearchBubbleEntranceView", 0);
+-    }
+-
+-    BOOL forwarded = AWEForwardTopActionOwner(
+-        owner, AWEHomeTopActionKindSearch);
+-    AWEInteractionDiagnosticWrite(
+-        @"ALBUM_MORPH_SEARCH owner=%@ result=%d",
+-        AWEInteractionObjectSummary(owner), forwarded);
++    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.03 * NSEC_PER_SEC)),
++                   dispatch_get_main_queue(), ^{
++        if (CACurrentMediaTime() - gAWELastSearchForwardProxyFireTime < 0.20) return;
++        UIWindow *window = AWEActiveMainWindow();
++        UIView *owner = AWEAlbumMorphSearchOwner(window);
++        BOOL forwarded = AWEForwardTopActionOwner(
++            owner, AWEHomeTopActionKindSearch);
++        AWEInteractionDiagnosticWrite(
++            @"ALBUM_MORPH_SEARCH_FALLBACK owner=%@ result=%d",
++            AWEInteractionObjectSummary(owner), forwarded);
++    });
+ }
+ 
+ @end
+@@ -14353,6 +14518,87 @@
+     return fallback;
+ }
+ 
++@interface AWESearchForwardProxyBinding : NSObject
++@property (nonatomic, weak) UIGestureRecognizer *sourceRecognizer;
++@property (nonatomic, strong) UIGestureRecognizer *proxyRecognizer;
++- (void)handleProxyRecognizer:(UIGestureRecognizer *)recognizer;
++@end
++
++@implementation AWESearchForwardProxyBinding
++- (void)handleProxyRecognizer:(UIGestureRecognizer *)recognizer {
++    if (recognizer.state != UIGestureRecognizerStateEnded) return;
++    UIGestureRecognizer *source = self.sourceRecognizer;
++    if (!source || !source.view || !source.enabled) return;
++    id targetContainers = AWEObjectIvar(source, "_targets");
++    if (![targetContainers isKindOfClass:NSArray.class]) {
++        @try { targetContainers = [source valueForKey:@"_targets"]; }
++        @catch (__unused NSException *exception) { targetContainers = nil; }
++    }
++    if (![targetContainers isKindOfClass:NSArray.class]) return;
++    BOOL sentAny = NO;
++    for (id container in [(NSArray *)targetContainers copy]) {
++        id target = AWEObjectIvar(container, "_target");
++        SEL action = AWESelectorIvar(container, "_action");
++        if (!target || !action || ![target respondsToSelector:action]) continue;
++        BOOL sent = [[UIApplication sharedApplication] sendAction:action
++                                                               to:target
++                                                             from:recognizer
++                                                         forEvent:nil];
++        sentAny = sentAny || sent;
++    }
++    if (sentAny) gAWELastSearchForwardProxyFireTime = CACurrentMediaTime();
++    AWEInteractionDiagnosticWrite(@"SEARCH_REAL_TOUCH_PROXY source=%@ proxy=%@ sent=%d",
++        NSStringFromClass(source.class), NSStringFromClass(recognizer.class), sentAny);
++}
++@end
++
++static BOOL AWESearchForwardProxyActiveForView(UIView *view) {
++    AWESearchForwardProxyBinding *binding = view
++        ? objc_getAssociatedObject(view, &kAWESearchForwardProxyKey) : nil;
++    return binding && binding.sourceRecognizer &&
++           binding.sourceRecognizer.view && binding.sourceRecognizer.enabled &&
++           binding.proxyRecognizer.view == view;
++}
++
++static void AWEInstallSearchForwardProxy(UIView *destination, UIView *sourceOwner) {
++    if (!destination || !sourceOwner || !destination.window) return;
++    UIGestureRecognizer *source = AWEAlbumMorphFindSearchGesture(sourceOwner);
++    AWESearchForwardProxyBinding *existing = objc_getAssociatedObject(
++        destination, &kAWESearchForwardProxyKey);
++    if (!source) {
++        if (existing.proxyRecognizer.view) {
++            [existing.proxyRecognizer.view removeGestureRecognizer:existing.proxyRecognizer];
++        }
++        objc_setAssociatedObject(destination, &kAWESearchForwardProxyKey, nil,
++                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++        return;
++    }
++    if (existing && existing.sourceRecognizer == source &&
++        existing.proxyRecognizer.view == destination) return;
++    if (existing.proxyRecognizer.view) {
++        [existing.proxyRecognizer.view removeGestureRecognizer:existing.proxyRecognizer];
++    }
++
++    AWESearchForwardProxyBinding *binding = [AWESearchForwardProxyBinding new];
++    binding.sourceRecognizer = source;
++    UIGestureRecognizer *proxy = nil;
++    @try {
++        proxy = [[[source class] alloc] initWithTarget:binding
++                                              action:@selector(handleProxyRecognizer:)];
++    } @catch (__unused NSException *exception) { proxy = nil; }
++    if (!proxy) {
++        proxy = [[UITapGestureRecognizer alloc] initWithTarget:binding
++                                                       action:@selector(handleProxyRecognizer:)];
++    }
++    proxy.cancelsTouchesInView = NO;
++    proxy.delaysTouchesBegan = NO;
++    proxy.delaysTouchesEnded = NO;
++    binding.proxyRecognizer = proxy;
++    objc_setAssociatedObject(destination, &kAWESearchForwardProxyKey, binding,
++                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++    [destination addGestureRecognizer:proxy];
++}
++
+ static UIView *AWEAlbumMorphRightmostTabButton(UITabBar *tabBar) {
+     if (!tabBar) return nil;
+     NSMutableArray<UIView *> *queue =
+@@ -14766,10 +15012,12 @@
+ 
+         if (@available(iOS 26.0, *)) {
+             UIButton *glassButton = [UIButton buttonWithType:UIButtonTypeCustom];
+-            glassButton.userInteractionEnabled = NO;
++            glassButton.userInteractionEnabled = YES;
+             glassButton.backgroundColor = UIColor.clearColor;
+             glassButton.opaque = NO;
+             glassButton.clipsToBounds = NO;
++            [glassButton addTarget:slot action:@selector(alb_handleTopTap:)
++                   forControlEvents:UIControlEventTouchUpInside];
+             [slot addSubview:glassButton];
+             slot.systemGlassButton = glassButton;
+         }
+@@ -14936,19 +15184,11 @@
+             AWEHomeTintedGlassEnabled(),
+             YES);
+         if (directSearchPassthrough) {
+-            UIGestureRecognizer *gesture = AWEAlbumMorphFindSearchGesture(owner);
+-            UIGestureRecognizer *bound = objc_getAssociatedObject(
+-                slot, &kAWETopSearchTransferredGestureKey);
+-            if (bound && bound != gesture) AWERestoreTopSearchGestureForSlot(slot);
+-            if (gesture && gesture.view != materialButton) {
+-                UIView *originalGestureView = gesture.view;
+-                gesture.cancelsTouchesInView = NO;
+-                objc_setAssociatedObject(slot, &kAWETopSearchTransferredGestureKey,
+-                                         gesture, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-                objc_setAssociatedObject(slot, &kAWETopSearchTransferredGestureOriginalViewKey,
+-                                         originalGestureView, OBJC_ASSOCIATION_ASSIGN);
+-                [materialButton addGestureRecognizer:gesture];
+-            }
++            /* Never move Douyin's native search recognizer. Clone only its
++               target/action onto a real-touch proxy so Top and Bottom Search
++               can coexist while the visible UIKit glass keeps native press. */
++            AWERestoreTopSearchGestureForSlot(slot);
++            AWEInstallSearchForwardProxy(materialButton, owner);
+         }
+         slot.systemGlassButton.hidden = !directSearchPassthrough;
+     } else {
+@@ -15713,16 +15953,8 @@
+              available; dynamic colors continue to resolve in Douyin's own
+              trait environment.  labelColor is only a cold-start fallback.
+             */
+-            UIColor *titleColor = nil;
+-            if (AWEOperatingSystemMajorVersion() >= 26) {
+-                /* Home is deliberately a dark material island even when the
+-                   app itself is Light. Resolve category text inside that same
+-                   dark trait instead of reusing a Light-mode native snapshot. */
+-                titleColor = UIColor.labelColor;
+-            } else {
+-                titleColor = [definition[@"textColor"] isKindOfClass:UIColor.class]
+-                    ? definition[@"textColor"] : UIColor.labelColor;
+-            }
++            UIColor *titleColor = [definition[@"textColor"] isKindOfClass:UIColor.class]
++                ? definition[@"textColor"] : UIColor.labelColor;
+             [button setTitleColor:titleColor forState:UIControlStateNormal];
+             [button setTitleColor:titleColor forState:UIControlStateHighlighted];
+             [button setTitleColor:titleColor forState:UIControlStateSelected];
+@@ -15855,10 +16087,7 @@
+     group.hidden = NO;
+     group.userInteractionEnabled = YES;
+     group.alpha = 1.0;
+-    /* v9: the entire Home category group belongs to the fixed dark material
+-       island, including its labels and the system glass background. */
+-    group.overrideUserInterfaceStyle = AWEOperatingSystemMajorVersion() >= 26
+-        ? UIUserInterfaceStyleDark : UIUserInterfaceStyleUnspecified;
++    group.overrideUserInterfaceStyle = UIUserInterfaceStyleUnspecified;
+ 
+     NSString *signature = [[definitions valueForKey:@"route"]
+         componentsJoinedByString:@"|"];
+@@ -17750,6 +17979,56 @@
+ 
+ @end
+ 
++static CGFloat AWESettingsResponsiveScaleForWidth(CGFloat width) {
++    if (width <= 350.0) return 0.76;
++    if (width <= 360.0) return 0.78;
++    if (width <= 375.0) return 0.82;
++    if (width <= 390.0) return 0.86;
++    if (width <= 402.0) return 0.90;
++    if (width <= 414.0) return 0.94;
++    return 1.0;
++}
++
++static void AWEApplyResponsiveSettingsTypography(UIView *root, CGFloat scale) {
++    if (!root) return;
++    if ([root isKindOfClass:UILabel.class]) {
++        UILabel *label = (UILabel *)root;
++        UIFont *base = objc_getAssociatedObject(label, &kAWESettingsOriginalFontKey);
++        if (!base && label.font) {
++            base = label.font;
++            objc_setAssociatedObject(label, &kAWESettingsOriginalFontKey, base,
++                                     OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++        }
++        if (base) {
++            CGFloat point = MAX(9.0, base.pointSize * scale);
++            label.font = [base fontWithSize:point];
++        }
++        if (label.numberOfLines == 1) {
++            label.adjustsFontSizeToFitWidth = YES;
++            label.minimumScaleFactor = 0.68;
++            label.lineBreakMode = NSLineBreakByTruncatingTail;
++        }
++        [label setContentCompressionResistancePriority:UILayoutPriorityDefaultLow
++                                                   forAxis:UILayoutConstraintAxisHorizontal];
++        [label setContentHuggingPriority:UILayoutPriorityDefaultLow
++                                 forAxis:UILayoutConstraintAxisHorizontal];
++    } else if ([root isKindOfClass:UISwitch.class]) {
++        [root setContentCompressionResistancePriority:UILayoutPriorityRequired
++                                              forAxis:UILayoutConstraintAxisHorizontal];
++        [root setContentHuggingPriority:UILayoutPriorityRequired
++                                forAxis:UILayoutConstraintAxisHorizontal];
++    } else if ([root isKindOfClass:UIButton.class]) {
++        UIButton *button = (UIButton *)root;
++        if (button.titleLabel) {
++            button.titleLabel.adjustsFontSizeToFitWidth = YES;
++            button.titleLabel.minimumScaleFactor = 0.72;
++        }
++    }
++    for (UIView *child in root.subviews) {
++        AWEApplyResponsiveSettingsTypography(child, scale);
++    }
++}
++
+ @interface AWELiquidSettingsController : UIViewController <UIColorPickerViewControllerDelegate>
+ @property (nonatomic, retain) UIView *previewView;
+ @property (nonatomic, retain) UIButton *applyButton;
+@@ -17769,8 +18048,10 @@
+ @property (nonatomic, retain) UISwitch *topGlassSwitch;
+ @property (nonatomic, retain) UISwitch *hideTopLeftButtonSwitch;
+ @property (nonatomic, retain) UISwitch *hideTopSearchButtonSwitch;
+-@property (nonatomic, retain) UISlider *messageBlurDistanceSlider;
+-@property (nonatomic, retain) UILabel *messageBlurDistanceValueLabel;
++@property (nonatomic, retain) UISlider *messageTopBlurDistanceSlider;
++@property (nonatomic, retain) UILabel *messageTopBlurDistanceValueLabel;
++@property (nonatomic, retain) UISlider *messageBottomBlurDistanceSlider;
++@property (nonatomic, retain) UILabel *messageBottomBlurDistanceValueLabel;
+ @property (nonatomic, retain) UISwitch *topCategoryGroupSwitch;
+ @property (nonatomic, retain) UISegmentedControl *topCategoryVisibleCountControl;
+ @property (nonatomic, retain) UISwitch *topMenuMorphSwitch;
+@@ -17794,6 +18075,7 @@
+ @property (nonatomic, retain) UILabel *authorizationFooter;
+ @property (nonatomic, retain) NSTimer *systemThemeTimer;
+ @property (nonatomic, assign) UIUserInterfaceStyle lastAppliedSystemStyle;
++@property (nonatomic, assign) CGFloat lastResponsiveWidth;
+ - (void)applyCurrentTheme;
+ - (void)updateApplyButtonTint:(UIColor *)colour;
+ - (void)refreshAuthorizationUI;
+@@ -18429,12 +18711,12 @@
+     preferHighestPlaybackRow.distribution = UIStackViewDistributionEqualSpacing;
+ 
+     UILabel *forceDarkBottomBarLabel = [UILabel new];
+-    forceDarkBottomBarLabel.text = @"iOS 26/27 首页固定深色液态玻璃（性能模式）";
++    forceDarkBottomBarLabel.text = @"iOS 27 清透底栏（首页 + 个人页）";
+     forceDarkBottomBarLabel.font =
+         [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+     UISwitch *forceDarkBottomBarSwitch = [UISwitch new];
+-    forceDarkBottomBarSwitch.on = AWEOperatingSystemMajorVersion() >= 26;
+-    forceDarkBottomBarSwitch.enabled = NO;
++    forceDarkBottomBarSwitch.on = AWEIOS27ClearBottomGlassEnabled();
++    forceDarkBottomBarSwitch.enabled = AWEIsIOS27OrLater();
+     forceDarkBottomBarSwitch.onTintColor = AWEStoredAccentColor();
+     [forceDarkBottomBarSwitch addTarget:self
+         action:@selector(forceDarkBottomBarSwitchChanged:)
+@@ -18554,45 +18836,74 @@
+     topMenuMorphRow.alignment = UIStackViewAlignmentCenter;
+     topMenuMorphRow.distribution = UIStackViewDistributionEqualSpacing;
+ 
+-    UILabel *messageBlurDistanceLabel = [UILabel new];
+-    messageBlurDistanceLabel.text = @"消息页边缘模糊距离";
+-    messageBlurDistanceLabel.font =
++    UILabel *messageTopBlurDistanceLabel = [UILabel new];
++    messageTopBlurDistanceLabel.text = @"消息页顶部模糊距离";
++    messageTopBlurDistanceLabel.font =
+         [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-
+-    UILabel *messageBlurDistanceValueLabel = [UILabel new];
+-    messageBlurDistanceValueLabel.font =
++    UILabel *messageTopBlurDistanceValueLabel = [UILabel new];
++    messageTopBlurDistanceValueLabel.font =
+         [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
+-    messageBlurDistanceValueLabel.textColor = UIColor.secondaryLabelColor;
+-    messageBlurDistanceValueLabel.textAlignment = NSTextAlignmentRight;
+-    messageBlurDistanceValueLabel.text =
+-        [NSString stringWithFormat:@"%.0f pt", AWEMessageEdgeBlurDistance()];
+-    self.messageBlurDistanceValueLabel = messageBlurDistanceValueLabel;
+-
+-    UIStackView *messageBlurDistanceHeader = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[messageBlurDistanceLabel,
+-                                  messageBlurDistanceValueLabel]];
+-    messageBlurDistanceHeader.axis = UILayoutConstraintAxisHorizontal;
+-    messageBlurDistanceHeader.alignment = UIStackViewAlignmentCenter;
+-    messageBlurDistanceHeader.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UISlider *messageBlurDistanceSlider = [UISlider new];
+-    messageBlurDistanceSlider.minimumValue = 60.0;
+-    messageBlurDistanceSlider.maximumValue = 180.0;
+-    messageBlurDistanceSlider.value = AWEMessageEdgeBlurDistance();
+-    messageBlurDistanceSlider.minimumTrackTintColor = AWEStoredAccentColor();
+-    [messageBlurDistanceSlider addTarget:self
+-        action:@selector(messageBlurDistanceChanged:)
++    messageTopBlurDistanceValueLabel.textColor = UIColor.secondaryLabelColor;
++    messageTopBlurDistanceValueLabel.textAlignment = NSTextAlignmentRight;
++    messageTopBlurDistanceValueLabel.text =
++        [NSString stringWithFormat:@"%.0f pt", AWEMessageTopEdgeBlurDistance()];
++    self.messageTopBlurDistanceValueLabel = messageTopBlurDistanceValueLabel;
++    UIStackView *messageTopBlurDistanceHeader = [[UIStackView alloc]
++        initWithArrangedSubviews:@[messageTopBlurDistanceLabel,
++                                  messageTopBlurDistanceValueLabel]];
++    messageTopBlurDistanceHeader.axis = UILayoutConstraintAxisHorizontal;
++    messageTopBlurDistanceHeader.alignment = UIStackViewAlignmentCenter;
++    messageTopBlurDistanceHeader.distribution = UIStackViewDistributionEqualSpacing;
++    UISlider *messageTopBlurDistanceSlider = [UISlider new];
++    messageTopBlurDistanceSlider.minimumValue = 40.0;
++    messageTopBlurDistanceSlider.maximumValue = 188.0;
++    messageTopBlurDistanceSlider.value = AWEMessageTopEdgeBlurDistance();
++    messageTopBlurDistanceSlider.minimumTrackTintColor = AWEStoredAccentColor();
++    [messageTopBlurDistanceSlider addTarget:self
++        action:@selector(messageTopBlurDistanceChanged:)
+         forControlEvents:UIControlEventValueChanged];
+-    self.messageBlurDistanceSlider = messageBlurDistanceSlider;
+-
+-    UIStackView *messageBlurDistanceRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[messageBlurDistanceHeader,
+-                                  messageBlurDistanceSlider]];
+-    messageBlurDistanceRow.axis = UILayoutConstraintAxisVertical;
+-    messageBlurDistanceRow.spacing = 5.0;
++    self.messageTopBlurDistanceSlider = messageTopBlurDistanceSlider;
++    UIStackView *messageTopBlurDistanceRow = [[UIStackView alloc]
++        initWithArrangedSubviews:@[messageTopBlurDistanceHeader,
++                                  messageTopBlurDistanceSlider]];
++    messageTopBlurDistanceRow.axis = UILayoutConstraintAxisVertical;
++    messageTopBlurDistanceRow.spacing = 5.0;
++
++    UILabel *messageBottomBlurDistanceLabel = [UILabel new];
++    messageBottomBlurDistanceLabel.text = @"消息页底部模糊距离";
++    messageBottomBlurDistanceLabel.font =
++        [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
++    UILabel *messageBottomBlurDistanceValueLabel = [UILabel new];
++    messageBottomBlurDistanceValueLabel.font =
++        [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
++    messageBottomBlurDistanceValueLabel.textColor = UIColor.secondaryLabelColor;
++    messageBottomBlurDistanceValueLabel.textAlignment = NSTextAlignmentRight;
++    messageBottomBlurDistanceValueLabel.text =
++        [NSString stringWithFormat:@"%.0f pt", AWEMessageBottomEdgeBlurDistance()];
++    self.messageBottomBlurDistanceValueLabel = messageBottomBlurDistanceValueLabel;
++    UIStackView *messageBottomBlurDistanceHeader = [[UIStackView alloc]
++        initWithArrangedSubviews:@[messageBottomBlurDistanceLabel,
++                                  messageBottomBlurDistanceValueLabel]];
++    messageBottomBlurDistanceHeader.axis = UILayoutConstraintAxisHorizontal;
++    messageBottomBlurDistanceHeader.alignment = UIStackViewAlignmentCenter;
++    messageBottomBlurDistanceHeader.distribution = UIStackViewDistributionEqualSpacing;
++    UISlider *messageBottomBlurDistanceSlider = [UISlider new];
++    messageBottomBlurDistanceSlider.minimumValue = 40.0;
++    messageBottomBlurDistanceSlider.maximumValue = 188.0;
++    messageBottomBlurDistanceSlider.value = AWEMessageBottomEdgeBlurDistance();
++    messageBottomBlurDistanceSlider.minimumTrackTintColor = AWEStoredAccentColor();
++    [messageBottomBlurDistanceSlider addTarget:self
++        action:@selector(messageBottomBlurDistanceChanged:)
++        forControlEvents:UIControlEventValueChanged];
++    self.messageBottomBlurDistanceSlider = messageBottomBlurDistanceSlider;
++    UIStackView *messageBottomBlurDistanceRow = [[UIStackView alloc]
++        initWithArrangedSubviews:@[messageBottomBlurDistanceHeader,
++                                  messageBottomBlurDistanceSlider]];
++    messageBottomBlurDistanceRow.axis = UILayoutConstraintAxisVertical;
++    messageBottomBlurDistanceRow.spacing = 5.0;
+ 
+     UILabel *adaptiveGlassHint = [UILabel new];
+-    adaptiveGlassHint.text = @"iOS 26：系统原生自适应；iOS 27：首页可选背景亮度自适应或强制深色，其余页面只跟随系统深浅色。";
++    adaptiveGlassHint.text = @"iOS 26/27：首页顶部与右侧按钮使用无固定色调的原生液态玻璃并跟随系统透明度；iOS 27 可单独开启首页/个人页清透底栏。";
+     adaptiveGlassHint.font =
+         [UIFont systemFontOfSize:11.5 weight:UIFontWeightRegular];
+     adaptiveGlassHint.textColor = UIColor.tertiaryLabelColor;
+@@ -18686,7 +18997,7 @@
+         topRow, topCategoryGroupRow, topCategoryCountRow, topMenuMorphRow,
+         hideTopLeftButtonRow, hideTopSearchButtonRow,
+         /* Message page */
+-        messageBlurDistanceRow,
++        messageTopBlurDistanceRow, messageBottomBlurDistanceRow,
+         /* Global material / auxiliary behavior */
+         transparentGlassRow, avatarMenuDownloadRow, preferHighestPlaybackRow,
+         pngRow, reloadPNG, iconCenterButton,
+@@ -18762,11 +19073,14 @@
+         capsuleLabel, separateLabel, wanTitle, settingsGestureMineOnlyLabel,
+         commentGlassTitle, commentGlassModeLabel, commentGlassCornerLabel,
+         albumStyleLabel, hideTitlesLabel, messageBadgeLabel, preferHighestPlaybackLabel,
++        messageTopBlurDistanceLabel, messageBottomBlurDistanceLabel,
+         forceDarkBottomBarLabel, topLabel, topCategoryGroupLabel,
+         topMenuMorphLabel, pngLabel, diagnosticLabel
+     ];
+     self.themeSecondaryLabels = @[
+-        positionValue, splitValue, commentGlassCornerValueLabel, authorizationFooter
++        positionValue, splitValue, commentGlassCornerValueLabel,
++        messageTopBlurDistanceValueLabel, messageBottomBlurDistanceValueLabel,
++        authorizationFooter
+     ];
+ 
+     [[NSNotificationCenter defaultCenter] addObserver:self
+@@ -18778,6 +19092,16 @@
+     [self applyCurrentTheme];
+ }
+ 
++- (void)viewDidLayoutSubviews {
++    [super viewDidLayoutSubviews];
++    CGFloat width = CGRectGetWidth(self.view.safeAreaLayoutGuide.layoutFrame);
++    if (width <= 1.0) width = CGRectGetWidth(self.view.bounds);
++    if (fabs(width - self.lastResponsiveWidth) <= 0.5) return;
++    self.lastResponsiveWidth = width;
++    AWEApplyResponsiveSettingsTypography(
++        self.view, AWESettingsResponsiveScaleForWidth(width));
++}
++
+ - (void)viewWillAppear:(BOOL)animated {
+     [super viewWillAppear:animated];
+     gAWESettingsVisible = YES;
+@@ -18885,7 +19209,8 @@
+     self.hideTopSearchButtonSwitch.onTintColor = accent;
+     self.topCategoryGroupSwitch.onTintColor = accent;
+     self.topMenuMorphSwitch.onTintColor = accent;
+-    self.messageBlurDistanceSlider.minimumTrackTintColor = accent;
++    self.messageTopBlurDistanceSlider.minimumTrackTintColor = accent;
++    self.messageBottomBlurDistanceSlider.minimumTrackTintColor = accent;
+     self.commentGlassCornerSlider.minimumTrackTintColor = accent;
+     self.transparentGlassSwitch.onTintColor = accent;
+     self.hideBottomTitlesSwitch.onTintColor = accent;
+@@ -19142,9 +19467,21 @@
+ 
+ 
+ - (void)forceDarkBottomBarSwitchChanged:(UISwitch *)sender {
+-    /* v9: retained only for old settings-controller instances. The policy is
+-       fixed by page, so this control is intentionally locked ON on iOS 26/27. */
+-    sender.on = AWEOperatingSystemMajorVersion() >= 26;
++    if (!AWEIsIOS27OrLater()) { sender.on = NO; return; }
++    [NSUserDefaults.standardUserDefaults setBool:sender.isOn
++        forKey:kAWEIOS27ClearBottomGlassDefaultsKey];
++    [NSUserDefaults.standardUserDefaults synchronize];
++    if (gAWEAlbumMorphController.tabBar) {
++        AWEApplyIOS27UntintedClearPlatter(gAWEAlbumMorphController.tabBar);
++        [gAWEAlbumMorphController.tabBar setNeedsLayout];
++    }
++    if (gAWELastTabBar) {
++        UITabBar *native = objc_getAssociatedObject((UIView *)gAWELastTabBar, &kAWENativeBarKey);
++        if (native) {
++            AWEApplyIOS27UntintedClearPlatter(native);
++            [native setNeedsLayout];
++        }
++    }
+     [[[UISelectionFeedbackGenerator alloc] init] selectionChanged];
+ }
+ 
+@@ -19291,13 +19628,23 @@
+     [[[UISelectionFeedbackGenerator alloc] init] selectionChanged];
+ }
+ 
+-- (void)messageBlurDistanceChanged:(UISlider *)sender {
+-    CGFloat value = round(MIN(180.0, MAX(60.0, sender.value)));
++- (void)messageTopBlurDistanceChanged:(UISlider *)sender {
++    CGFloat value = round(MIN(188.0, MAX(40.0, sender.value)));
++    sender.value = value;
++    self.messageTopBlurDistanceValueLabel.text =
++        [NSString stringWithFormat:@"%.0f pt", value];
++    [NSUserDefaults.standardUserDefaults setDouble:value
++        forKey:kAWEMessageTopEdgeBlurDistanceDefaultsKey];
++    [NSUserDefaults.standardUserDefaults synchronize];
++}
++
++- (void)messageBottomBlurDistanceChanged:(UISlider *)sender {
++    CGFloat value = round(MIN(188.0, MAX(40.0, sender.value)));
+     sender.value = value;
+-    self.messageBlurDistanceValueLabel.text =
++    self.messageBottomBlurDistanceValueLabel.text =
+         [NSString stringWithFormat:@"%.0f pt", value];
+     [NSUserDefaults.standardUserDefaults setDouble:value
+-        forKey:kAWEMessageEdgeBlurDistanceDefaultsKey];
++        forKey:kAWEMessageBottomEdgeBlurDistanceDefaultsKey];
+     [NSUserDefaults.standardUserDefaults synchronize];
+ }
+ 
+@@ -19825,6 +20172,7 @@
+ }
+ 
+ static BOOL AWEInternalFullscreenActive(void) {
++    if (CACurrentMediaTime() < gAWECommerceFullscreenSuppressionUntil) return NO;
+     if (!AWEPluginFeaturesEnabled() || !AWEInternalFullscreenEnabled()) return NO;
+ 
+     /* 1.0.56c16 route ownership: fullscreen geometry belongs to feed/detail
+@@ -21917,7 +22265,17 @@
+         } else {
+             AWEApplyHomeOnlyGlassStyleToNativeBar(self);
+         }
++        AWEApplyIOS27UntintedClearPlatter(self);
+         AWEClearDirectNativeBarBackground(self);
++    } else if (AWEIsAlbumMorphSystemBar(self)) {
++        AWEApplyIOS27UntintedClearPlatter(self);
++        if ([AWEAlbumMorphVisibleItemIdentifiers() containsObject:@"search"]) {
++            UIView *searchButton = AWEAlbumMorphRightmostTabButton(self);
++            UIView *searchOwner = AWEAlbumMorphSearchOwner(AWEActiveMainWindow());
++            if (searchButton && searchOwner) {
++                AWEInstallSearchForwardProxy(searchButton, searchOwner);
++            }
++        }
+     }
+     if (gAWEStableCleanScreenEnabled) AWEStableCleanSuppressView((UIView *)self, YES);
+ }
+@@ -21939,6 +22297,7 @@
+     [UIView performWithoutAnimation:^{
+         AWEConfigureNativeBarAppearance(self, AWEStoredAccentColor());
+         AWEApplyHomeOnlyGlassStyleToNativeBar(self);
++        AWEApplyIOS27UntintedClearPlatter(self);
+         [self setNeedsLayout];
+         [self layoutIfNeeded];
+         [self setNeedsDisplay];
+@@ -22060,7 +22419,7 @@
+     if (!AWEPluginFeaturesEnabled() || !window || route == AWEBottomRouteNone) return;
+     /* v21 shop is frame-stable: never re-scan/rewrite geometry from scroll
+        callbacks. This was the main source of the v20 jitter loop. */
+-    if (route == AWEBottomRouteShop) return;
++    if (route == AWEBottomRouteShop || route == AWEBottomRouteProfile) return;
+ 
+     CFTimeInterval now = CACurrentMediaTime();
+     if (now - gAWEBottomLastScanRequestTime >= 0.22) {
+@@ -22483,6 +22842,13 @@
+                       animated:(BOOL)animated
+                     completion:(void (^)(void))completion {
+     NSString *className = NSStringFromClass(controller.class);
++    BOOL transientCommercePresent =
++        AWEClassNameLooksLikeTransientCommerceDestination(className);
++    if (transientCommercePresent) {
++        gAWECommerceFullscreenSuppressionUntil = MAX(
++            gAWECommerceFullscreenSuppressionUntil,
++            CACurrentMediaTime() + 2.5);
++    }
+     BOOL sensitive = AWEClassNameIsSensitiveDestination(className);
+     BOOL hardSuspend = AWEClassNameRequiresHardOverlaySuppression(className);
+     AWEInteractionDiagnosticWrite(
+@@ -22503,6 +22869,13 @@
+ 
+ - (void)viewWillAppear:(BOOL)animated {
+     NSString *className = NSStringFromClass(self.class);
++    BOOL commerceWillAppear =
++        AWEClassNameLooksLikeTransientCommerceDestination(className);
++    if (commerceWillAppear) {
++        gAWECommerceFullscreenSuppressionUntil = MAX(
++            gAWECommerceFullscreenSuppressionUntil,
++            CACurrentMediaTime() + 2.5);
++    }
+     if (gAWEStableCleanScreenEnabled) {
+         AWEStableEnsureStatusBarHookForClass(self.class);
+         [self setNeedsStatusBarAppearanceUpdate];

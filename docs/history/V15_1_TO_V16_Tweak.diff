@@ -1,0 +1,509 @@
+--- /mnt/data/v15_1_work/AwemeLiquidBar_1.0.58_auth47_V9SelectiveFix_v15_1_compilefix_project/Tweak.x	2026-09-03 10:14:38.000000000 +0000
++++ Tweak.x	2026-09-03 11:29:25.891428219 +0000
+@@ -7185,6 +7185,8 @@
+ static BOOL AWEForwardHomeActionKindFromStack(UIView *stack,
+                                                AWEHomeActionKind kind,
+                                                UIView **ownerInOut);
++static BOOL AWEForwardExactNativeTapFromView(UIView *sourceView,
++                                              NSString *context);
+ 
+ @interface AWEHomeActionSlotView : UIView
+ @property (nonatomic, weak) UIView *originalView;
+@@ -7203,7 +7205,7 @@
+         self.superview, self.actionKind, &owner);
+     if (owner && owner != self.originalView) self.originalView = owner;
+     AWEInteractionDiagnosticWrite(
+-        @"HOME_NATIVE_GLASS_TAP kind=%ld result=%d owner=%@",
++        @"HOME_NATIVE_GLASS_TAP kind=%ld dispatched=%d owner=%@",
+         (long)self.actionKind, sent, AWEInteractionObjectSummary(owner));
+     if (sent) AWEScheduleHomeActionStackRefresh(self.superview);
+ }
+@@ -8119,10 +8121,7 @@
+ 
+ @implementation AWEHomeTopSlotView
+ - (void)alb_handleTopTap:(UIButton *)sender {
+-    if (self.topKind == AWEHomeTopActionKindSearch &&
+-        AWESearchForwardProxyActiveForView(sender)) {
+-        return;
+-    }
++    (void)sender;
+     UIView *owner = self.ownerView;
+     UIView *container = self.superview;
+     if ((!owner || !owner.window) && container) {
+@@ -8330,21 +8329,225 @@
+     return kind;
+ }
+ 
++/*
++ Exact native-action forwarding for the visible Liquid Glass controls.
++
++ The glass UIButton stays the real touch owner, so UIKit keeps its genuine
++ Liquid Glass press/stretch behavior.  We do not clone/reparent Douyin's
++ recognizer and we do not synthesize a foreign UITouch.  On TouchUpInside we
++ locate the original tap recognizer on the original Douyin source hierarchy
++ and invoke its original target/action with THAT recognizer as sender.
++
++ This distinction matters for private recognizers such as AWEAlphaTapGesture:
++ handlers can inspect recognizer.view/state/private metadata, so a cloned
++ recognizer may make UIApplication report a successful send while the business
++ action itself silently ignores it.
++*/
++static NSInteger AWEExactTapRecognizerScore(UIGestureRecognizer *recognizer,
++                                             UIView *sourceView,
++                                             NSUInteger depth) {
++    if (!recognizer || !recognizer.enabled) return NSIntegerMin;
++    NSString *name = NSStringFromClass(recognizer.class).lowercaseString;
++    if ([name containsString:@"long"] || [name containsString:@"pan"] ||
++        [name containsString:@"swipe"] || [name containsString:@"pinch"] ||
++        [name containsString:@"rotation"]) return NSIntegerMin;
++    BOOL tapLike = [recognizer isKindOfClass:UITapGestureRecognizer.class] ||
++        [name containsString:@"tap"] || [name containsString:@"click"];
++    if (!tapLike) return NSIntegerMin;
++
++    NSInteger score = 100 - (NSInteger)MIN(depth, 12u) * 5;
++    if (recognizer.view == sourceView) score += 55;
++    if ([name containsString:@"alphatap"]) score += 120;
++    if ([name containsString:@"touchup"]) score += 75;
++    if ([name containsString:@"click"]) score += 45;
++
++    id containers = AWEObjectIvar(recognizer, "_targets");
++    if (![containers isKindOfClass:NSArray.class]) {
++        @try { containers = [recognizer valueForKey:@"_targets"]; }
++        @catch (__unused NSException *exception) { containers = nil; }
++    }
++    if ([containers isKindOfClass:NSArray.class]) {
++        for (id container in (NSArray *)containers) {
++            SEL action = AWESelectorIvar(container, "_action");
++            NSString *actionName = action ? NSStringFromSelector(action).lowercaseString : @"";
++            if ([actionName containsString:@"touchup"] ||
++                [actionName containsString:@"tap"] ||
++                [actionName containsString:@"click"]) score += 70;
++            if ([actionName containsString:@"long"] ||
++                [actionName containsString:@"double"]) score -= 120;
++        }
++    }
++    return score;
++}
++
++static BOOL AWEInvokeExactNativeRecognizer(UIGestureRecognizer *recognizer,
++                                           NSString *context) {
++    if (!recognizer || !recognizer.enabled || !recognizer.view) return NO;
++    id targetContainers = AWEObjectIvar(recognizer, "_targets");
++    if (![targetContainers isKindOfClass:NSArray.class]) {
++        @try { targetContainers = [recognizer valueForKey:@"_targets"]; }
++        @catch (__unused NSException *exception) { targetContainers = nil; }
++    }
++    if (![targetContainers isKindOfClass:NSArray.class] ||
++        [(NSArray *)targetContainers count] == 0) {
++        AWEInteractionDiagnosticWrite(
++            @"EXACT_NATIVE_FORWARD context=%@ stage=no-targets recognizer=%@ view=%@",
++            context ?: @"unknown", NSStringFromClass(recognizer.class),
++            AWEInteractionObjectSummary(recognizer.view));
++        return NO;
++    }
++
++    NSInteger oldState = recognizer.state;
++    BOOL changedState = AWESetIntegerIvar(
++        recognizer, "_state_DO_NOT_USE_DIRECTLY",
++        UIGestureRecognizerStateEnded, &oldState);
++    BOOL dispatched = NO;
++    NSUInteger validTargets = 0;
++    for (id container in [(NSArray *)targetContainers copy]) {
++        id target = AWEObjectIvar(container, "_target");
++        SEL action = AWESelectorIvar(container, "_action");
++        if (!target || !action || ![target respondsToSelector:action]) continue;
++        validTargets++;
++        BOOL sent = NO;
++        @try {
++            sent = [[UIApplication sharedApplication] sendAction:action
++                                                              to:target
++                                                            from:recognizer
++                                                        forEvent:nil];
++        } @catch (__unused NSException *exception) {
++            sent = NO;
++        }
++        dispatched = dispatched || sent;
++        AWEInteractionDiagnosticWrite(
++            @"EXACT_NATIVE_FORWARD context=%@ recognizer=%@ sourceView=%@ target=%@ action=%@ state=%ld dispatched=%d",
++            context ?: @"unknown", NSStringFromClass(recognizer.class),
++            AWEInteractionObjectSummary(recognizer.view),
++            NSStringFromClass([target class]), NSStringFromSelector(action),
++            (long)recognizer.state, sent);
++    }
++    if (changedState) {
++        AWESetIntegerIvar(recognizer, "_state_DO_NOT_USE_DIRECTLY", oldState, NULL);
++    }
++    if (validTargets == 0) {
++        AWEInteractionDiagnosticWrite(
++            @"EXACT_NATIVE_FORWARD context=%@ stage=no-valid-target recognizer=%@",
++            context ?: @"unknown", NSStringFromClass(recognizer.class));
++    }
++    return dispatched;
++}
++
++static BOOL AWEForwardExactNativeTapFromView(UIView *sourceView,
++                                              NSString *context) {
++    if (!sourceView || !sourceView.window) {
++        AWEInteractionDiagnosticWrite(
++            @"EXACT_NATIVE_FORWARD context=%@ stage=source-not-live source=%@",
++            context ?: @"unknown", AWEInteractionObjectSummary(sourceView));
++        return NO;
++    }
++
++    NSMutableArray<NSDictionary *> *candidates = [NSMutableArray array];
++    NSMutableArray<NSDictionary *> *queue = [NSMutableArray arrayWithObject:
++        @{@"view": sourceView, @"depth": @0}];
++    NSUInteger visited = 0;
++    while (queue.count > 0 && visited < 64) {
++        NSDictionary *entry = queue.firstObject;
++        [queue removeObjectAtIndex:0];
++        UIView *view = entry[@"view"];
++        NSUInteger depth = [entry[@"depth"] unsignedIntegerValue];
++        if (!view) continue;
++        visited++;
++        for (UIGestureRecognizer *recognizer in view.gestureRecognizers) {
++            NSInteger score = AWEExactTapRecognizerScore(recognizer, sourceView, depth);
++            if (score == NSIntegerMin) continue;
++            [candidates addObject:@{@"recognizer": recognizer, @"score": @(score)}];
++        }
++        if (depth < 7) {
++            for (UIView *child in view.subviews) {
++                [queue addObject:@{@"view": child, @"depth": @(depth + 1)}];
++            }
++        }
++    }
++    [candidates sortUsingComparator:^NSComparisonResult(NSDictionary *lhs,
++                                                         NSDictionary *rhs) {
++        NSInteger a = [lhs[@"score"] integerValue];
++        NSInteger b = [rhs[@"score"] integerValue];
++        if (a > b) return NSOrderedAscending;
++        if (a < b) return NSOrderedDescending;
++        return NSOrderedSame;
++    }];
++
++    for (NSDictionary *entry in candidates) {
++        UIGestureRecognizer *recognizer = entry[@"recognizer"];
++        AWEInteractionDiagnosticWrite(
++            @"EXACT_NATIVE_CANDIDATE context=%@ score=%ld recognizer=%@ recognizerView=%@ source=%@",
++            context ?: @"unknown", (long)[entry[@"score"] integerValue],
++            NSStringFromClass(recognizer.class),
++            AWEInteractionObjectSummary(recognizer.view),
++            AWEInteractionObjectSummary(sourceView));
++        if (AWEInvokeExactNativeRecognizer(recognizer, context)) return YES;
++    }
++
++    /* UIControl is a conservative fallback only after every real tap
++       recognizer has been tried.  This prevents a decorative internal control
++       from producing the false-positive result seen in the v15 log. */
++    NSMutableArray<UIView *> *controlQueue = [NSMutableArray arrayWithObject:sourceView];
++    visited = 0;
++    while (controlQueue.count > 0 && visited < 48) {
++        UIView *view = controlQueue.firstObject;
++        [controlQueue removeObjectAtIndex:0];
++        visited++;
++        if ([view isKindOfClass:UIControl.class]) {
++            UIControl *control = (UIControl *)view;
++            UIControlEvents chosen = 0;
++            for (id target in control.allTargets) {
++                if ([control actionsForTarget:target
++                              forControlEvent:UIControlEventTouchUpInside].count) {
++                    chosen = UIControlEventTouchUpInside;
++                    break;
++                }
++                if ([control actionsForTarget:target
++                              forControlEvent:UIControlEventPrimaryActionTriggered].count) {
++                    chosen = UIControlEventPrimaryActionTriggered;
++                }
++            }
++            if (chosen) {
++                [control sendActionsForControlEvents:chosen];
++                AWEInteractionDiagnosticWrite(
++                    @"EXACT_NATIVE_FORWARD context=%@ path=control-fallback control=%@ event=%llu",
++                    context ?: @"unknown", AWEInteractionObjectSummary(control),
++                    (unsigned long long)chosen);
++                return YES;
++            }
++        }
++        for (UIView *child in view.subviews) [controlQueue addObject:child];
++    }
++
++    BOOL activated = NO;
++    @try { activated = [sourceView accessibilityActivate]; }
++    @catch (__unused NSException *exception) { activated = NO; }
++    AWEInteractionDiagnosticWrite(
++        @"EXACT_NATIVE_FORWARD context=%@ path=accessibility result=%d source=%@ candidates=%lu",
++        context ?: @"unknown", activated, AWEInteractionObjectSummary(sourceView),
++        (unsigned long)candidates.count);
++    return activated;
++}
++
+ static BOOL AWEForwardHomeActionKindFromStack(UIView *stack,
+                                                AWEHomeActionKind kind,
+                                                UIView **ownerInOut) {
+     if (!stack || kind == AWEHomeActionKindUnknown) return NO;
+     NSArray<UIView *> *ordered = AWESortedVisibleHomeActionButtons(stack);
+     UIView *owner = ownerInOut ? *ownerInOut : nil;
++    NSString *context = [NSString stringWithFormat:@"RIGHT_KIND_%ld", (long)kind];
+     if (owner && owner.window && AWEViewIsDescendantOfView(owner, stack) &&
+         AWEHomeActionKindForButton(owner, ordered) == kind) {
+-        if (AWETriggerQuickMenuDestinationView(owner)) return YES;
++        if (AWEForwardExactNativeTapFromView(owner, context)) return YES;
+     }
+     for (UIView *candidate in ordered) {
+         if (candidate == owner) continue;
+         if (AWEHomeActionKindForButton(candidate, ordered) != kind) continue;
+         if (ownerInOut) *ownerInOut = candidate;
+-        if (AWETriggerQuickMenuDestinationView(candidate)) return YES;
++        if (AWEForwardExactNativeTapFromView(candidate, context)) return YES;
+     }
+     return NO;
+ }
+@@ -13146,6 +13349,9 @@
+ static BOOL AWEForwardTopActionOwner(UIView *owner,
+                                          AWEHomeTopActionKind kind) {
+     if (!owner) return NO;
++    if (kind == AWEHomeTopActionKindSearch) {
++        return AWEForwardExactNativeTapFromView(owner, @"SEARCH");
++    }
+     NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:owner];
+     NSUInteger visited = 0;
+     while (queue.count > 0 && visited < 48) {
+@@ -14264,15 +14470,13 @@
+ }
+ 
+ - (void)albumMorphDidRequestSearch {
+-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.03 * NSEC_PER_SEC)),
+-                   dispatch_get_main_queue(), ^{
+-        if (CACurrentMediaTime() - gAWELastSearchForwardProxyFireTime < 0.20) return;
++    dispatch_async(dispatch_get_main_queue(), ^{
+         UIWindow *window = AWEActiveMainWindow();
+         UIView *owner = AWEAlbumMorphSearchOwner(window);
+         BOOL forwarded = AWEForwardTopActionOwner(
+             owner, AWEHomeTopActionKindSearch);
+         AWEInteractionDiagnosticWrite(
+-            @"ALBUM_MORPH_SEARCH_FALLBACK owner=%@ result=%d",
++            @"ALBUM_MORPH_SEARCH_EXACT owner=%@ dispatched=%d",
+             AWEInteractionObjectSummary(owner), forwarded);
+     });
+ }
+@@ -15156,6 +15360,11 @@
+     UIImage *image = AWEConfiguredRoleImage(
+         symbolKey, fallbackNames, iconPointSize,
+         UIImageSymbolWeightMedium, &originalPNG);
++    if (!image && kind == AWEHomeTopActionKindSearch) {
++        image = [UIImage systemImageNamed:@"magnifyingglass"];
++        originalPNG = NO;
++        AWEInteractionDiagnosticWrite(@"TOP_SEARCH_IMAGE_RECOVERY fallback=magnifyingglass");
++    }
+     UIColor *foregroundColor = nil;
+     if (!originalPNG) {
+         AWEConfiguredIconColorMode colorMode = AWEStoredSymbolColorMode(symbolKey);
+@@ -15184,11 +15393,18 @@
+             AWEHomeTintedGlassEnabled(),
+             YES);
+         if (directSearchPassthrough) {
+-            /* Never move Douyin's native search recognizer. Clone only its
+-               target/action onto a real-touch proxy so Top and Bottom Search
+-               can coexist while the visible UIKit glass keeps native press. */
++            /* Keep Douyin's recognizer exactly where Douyin created it.
++               The visible system-glass UIButton receives its own real UIKit
++               touch/press sequence; TouchUpInside forwards only the business
++               action to the original recognizer/target pair. */
+             AWERestoreTopSearchGestureForSlot(slot);
+-            AWEInstallSearchForwardProxy(materialButton, owner);
++            AWESearchForwardProxyBinding *binding = objc_getAssociatedObject(
++                materialButton, &kAWESearchForwardProxyKey);
++            if (binding.proxyRecognizer.view) {
++                [binding.proxyRecognizer.view removeGestureRecognizer:binding.proxyRecognizer];
++            }
++            objc_setAssociatedObject(materialButton, &kAWESearchForwardProxyKey, nil,
++                                     OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+         }
+         slot.systemGlassButton.hidden = !directSearchPassthrough;
+     } else {
+@@ -15202,7 +15418,7 @@
+         slot.userInteractionEnabled = YES;
+         [slot bringSubviewToFront:slot.systemGlassButton];
+         AWEInteractionDiagnosticWrite(
+-            @"TOP_BIND kind=SEARCH mode=native-glass-real-gesture-v9 owner=%@ source=%@ slot=%@",
++            @"TOP_BIND kind=SEARCH mode=exact-original-action-v16 owner=%@ source=%@ slot=%@",
+             AWEInteractionObjectSummary(owner),
+             AWEInteractionObjectSummary(slot.sourceImageView),
+             AWEInteractionObjectSummary(slot));
+@@ -16034,6 +16250,24 @@
+         }
+         searchSlot.hitButton.frame = searchSlot.bounds;
+         searchSlot.systemGlassButton.frame = searchSlot.bounds;
++        /* Private top-bar rebuilds can clear UIButtonConfiguration artwork
++           without removing the slot.  Recover only a genuinely missing icon;
++           never rebuild material/geometry or touch tracking. */
++        if (@available(iOS 26.0, *)) {
++            UIButton *button = searchSlot.systemGlassButton;
++            UIImage *visibleImage = button.configuration.image ?: button.currentImage;
++            if (!visibleImage) {
++                UIButtonConfiguration *configuration = button.configuration;
++                if (configuration) {
++                    configuration.image = [UIImage systemImageNamed:@"magnifyingglass"];
++                    button.configuration = configuration;
++                    AWEInteractionDiagnosticWrite(
++                        @"TOP_SEARCH_VISUAL_REPAIR slot=%@ button=%@",
++                        AWEInteractionObjectSummary(searchSlot),
++                        AWEInteractionObjectSummary(button));
++                }
++            }
++        }
+     }
+     AWETopLiquidGroupView *group = objc_getAssociatedObject(
+         container, &kAWETopLiquidGroupViewKey);
+@@ -21347,7 +21581,7 @@
+     if (container.window) gAWEHomeFeedTopContainer = container;
+     else if (gAWEHomeFeedTopContainer == container) gAWEHomeFeedTopContainer = nil;
+     AWEMarkTopCategorySuppressionCacheDirty(container);
+-    if (AWETopMenuMorphEnabled())
++    if (AWETopMenuMorphEnabled() || AWETopTelegramSwitcherEnabled())
+         AWEApplyTopCategoryVisualSuppression((UIView *)self, YES);
+     AWEHomeDiagnosticWrite(NO, @"HOOK AWEFeedTopBarContainer.didMoveToWindow self=%p window=%p", self, ((UIView *)self).window);
+     AWEScheduleTopActionContainerRefresh((UIView *)self);
+@@ -21358,14 +21592,14 @@
+     UIView *container = (UIView *)self;
+     if (container.window) gAWEHomeFeedTopContainer = container;
+     AWEMarkTopCategorySuppressionCacheDirty(container);
+-    if (AWETopMenuMorphEnabled())
++    if (AWETopMenuMorphEnabled() || AWETopTelegramSwitcherEnabled())
+         AWEApplyTopCategoryVisualSuppression((UIView *)self, YES);
+     AWEScheduleTopActionContainerRefresh((UIView *)self);
+ }
+ 
+ - (void)layoutSubviews {
+     %orig;
+-    if (AWETopMenuMorphEnabled())
++    if (AWETopMenuMorphEnabled() || AWETopTelegramSwitcherEnabled())
+         AWEApplyTopCategoryVisualSuppression((UIView *)self, YES);
+     AWELayoutExistingTopChrome((UIView *)self);
+     if (!objc_getAssociatedObject((UIView *)self, &kAWETopMenuSlotKey) &&
+@@ -22148,10 +22382,32 @@
+ 
+ %end
+ 
++static void AWEPreemptNativeTopCategoryLabelFlash(UILabel *label) {
++    if (!label || !label.window || !AWEPluginFeaturesEnabled() ||
++        !AWETopGlassEnabled()) return;
++    if (!(AWETopMenuMorphEnabled() || AWETopTelegramSwitcherEnabled())) return;
++    if (AWEViewIsInsidePluginTopLiquidGroup(label)) return;
++
++    UIView *container = nil;
++    for (UIView *cursor = label; cursor; cursor = cursor.superview) {
++        if ([NSStringFromClass(cursor.class).lowercaseString
++                containsString:@"feedtopbarcontainer"]) {
++            container = cursor;
++            break;
++        }
++    }
++    if (!container || !AWEViewIsQuickMenuCategoryTitle(label)) return;
++    AWEHideTopCategoryTitleView(label);
++    /* Keep the cache conservative: a newly attached title means the previous
++       descendant snapshot is no longer authoritative. */
++    AWEMarkTopCategorySuppressionCacheDirty(container);
++}
++
+ %hook UILabel
+ 
+ - (void)setFrame:(CGRect)frame {
+     %orig(frame);
++    AWEPreemptNativeTopCategoryLabelFlash((UILabel *)self);
+     /* UIMenu's parent row can rewrite the label frame after label layout.
+        Re-apply only for the exact titles in our generated top-left menu. */
+     AWELabelLooksLikeOurTopQuickMenuLabel((UILabel *)self);
+@@ -22159,11 +22415,13 @@
+ 
+ - (void)layoutSubviews {
+     %orig;
++    AWEPreemptNativeTopCategoryLabelFlash((UILabel *)self);
+     AWELabelLooksLikeOurTopQuickMenuLabel((UILabel *)self);
+ }
+ 
+ - (void)didMoveToWindow {
+     %orig;
++    AWEPreemptNativeTopCategoryLabelFlash((UILabel *)self);
+     AWELabelLooksLikeOurTopQuickMenuLabel((UILabel *)self);
+ }
+ 
+@@ -22171,12 +22429,14 @@
+     if (!AWEWanToWEnabled() ||
+         objc_getAssociatedObject(self, &kAWEWanStylingKey)) {
+         %orig(text);
++        AWEPreemptNativeTopCategoryLabelFlash((UILabel *)self);
+         return;
+     }
+ 
+     NSString *replacement = AWECountStringByReplacingWan(text);
+     if (replacement == text || [replacement isEqualToString:text]) {
+         %orig(text);
++        AWEPreemptNativeTopCategoryLabelFlash((UILabel *)self);
+         return;
+     }
+ 
+@@ -22185,6 +22445,7 @@
+     UIFont *compactFont = AWECompactWFont(self.font);
+     if (!compactFont || wRange.location == NSNotFound) {
+         %orig(replacement);
++        AWEPreemptNativeTopCategoryLabelFlash((UILabel *)self);
+         return;
+     }
+ 
+@@ -22202,12 +22463,14 @@
+     self.attributedText = styled;
+     objc_setAssociatedObject(self, &kAWEWanStylingKey, nil,
+                              OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++    AWEPreemptNativeTopCategoryLabelFlash((UILabel *)self);
+ }
+ 
+ - (void)setAttributedText:(NSAttributedString *)attributedText {
+     if (!AWEWanToWEnabled() || !attributedText ||
+         objc_getAssociatedObject(self, &kAWEWanStylingKey)) {
+         %orig(attributedText);
++        AWEPreemptNativeTopCategoryLabelFlash((UILabel *)self);
+         return;
+     }
+ 
+@@ -22216,6 +22479,7 @@
+     if (replacementString == originalString ||
+         [replacementString isEqualToString:originalString]) {
+         %orig(attributedText);
++        AWEPreemptNativeTopCategoryLabelFlash((UILabel *)self);
+         return;
+     }
+ 
+@@ -22223,6 +22487,7 @@
+         [originalString rangeOfString:@"万" options:NSBackwardsSearch];
+     if (wanRange.location == NSNotFound || wanRange.length != 1) {
+         %orig(attributedText);
++        AWEPreemptNativeTopCategoryLabelFlash((UILabel *)self);
+         return;
+     }
+ 
+@@ -22231,6 +22496,7 @@
+     [replacement replaceCharactersInRange:wanRange withString:@"W"];
+     AWEApplyCompactWStyle(replacement, wanRange, self);
+     %orig(replacement);
++    AWEPreemptNativeTopCategoryLabelFlash((UILabel *)self);
+ }
+ 
+ %end
+@@ -22269,13 +22535,9 @@
+         AWEClearDirectNativeBarBackground(self);
+     } else if (AWEIsAlbumMorphSystemBar(self)) {
+         AWEApplyIOS27UntintedClearPlatter(self);
+-        if ([AWEAlbumMorphVisibleItemIdentifiers() containsObject:@"search"]) {
+-            UIView *searchButton = AWEAlbumMorphRightmostTabButton(self);
+-            UIView *searchOwner = AWEAlbumMorphSearchOwner(AWEActiveMainWindow());
+-            if (searchButton && searchOwner) {
+-                AWEInstallSearchForwardProxy(searchButton, searchOwner);
+-            }
+-        }
++        /* UISearchTab keeps its native UIKit touch/Glass behavior.  Its
++           selection callback forwards directly to Douyin's original search
++           recognizer; never attach a cloned private recognizer to the tab. */
+     }
+     if (gAWEStableCleanScreenEnabled) AWEStableCleanSuppressView((UIView *)self, YES);
+ }

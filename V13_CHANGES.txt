@@ -1,0 +1,9 @@
+AwemeLiquidBar 1.0.58 auth47 — v13 TouchRollback
+
+- Avatar and same-style/music return to passive glass backplates; original Douyin images remain untouched.
+- Top Search is positioned on the actual working private search recognizer view.
+- Bottom UISearchTab forwards through that same exact recognizer before generic fallbacks; both entries can coexist.
+- Avatar save/menu interface style is resolved before UIMenu assignment, avoiding light-first/dark-second presentation flash.
+- Message page top and bottom edge-blur distances are independent (40–188 pt) and migrate from the old single value.
+- Commerce/group-buy presentation starts a 2.5 s internal-fullscreen suppression grace before the destination transition, preventing the underlying video from expanding fullscreen.
+- Existing Favorites scroll jump fix is unchanged.

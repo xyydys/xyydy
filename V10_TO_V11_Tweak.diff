@@ -1,0 +1,628 @@
+--- /mnt/data/v10pristine/AwemeLiquidBar_1.0.58_auth47_ClearGlassNative_v10_project/Tweak.x	2026-09-03 04:43:53.000000000 +0000
++++ /mnt/data/work_v11/AwemeLiquidBar_1.0.58_auth47_ClearGlassNative_v10_project/Tweak.x	2026-09-03 05:35:18.281593657 +0000
+@@ -157,6 +157,7 @@
+  static prototypes here so Clang never creates implicit int declarations.
+ */
+ static UIWindow *AWEActiveMainWindow(void);
++static NSInteger AWECurrentOriginalMainTabIndex(void);
+ UIUserInterfaceStyle AWEAppResolvedAppearanceStyle(UIWindow *window);
+ static UIView *AWEFindViewByExactRuntimeClass(UIView *root,
+                                               NSString *className,
+@@ -316,6 +317,9 @@
+ static char kAWEFriendsOriginalAdditionalSafeAreaInsetsKey;
+ static char kAWEIOS27PlatterOriginalGlassKey;
+ static char kAWEIOS27PlatterInstalledGlassKey;
++static char kAWEIOS27ContainerOriginalSpacingKey;
++static char kAWEProfileAvatarOriginalHiddenKey;
++static char kAWEProfileAvatarOriginalAlphaKey;
+ 
+ typedef NS_ENUM(NSInteger, AWEHomeDiagnosticForegroundMode) {
+     AWEHomeDiagnosticForegroundModeAutomatic = 0,
+@@ -446,6 +450,8 @@
+     @"AwemeLiquidBarInteractionDiagnosticEnabledV1";
+ static NSString * const kAWEHomeForceDarkGlassDefaultsKey =
+     @"AwemeLiquidBarHomeForceDarkGlassV1";
++static NSString * const kAWEIOS27ClearBottomGlassDefaultsKey =
++    @"AwemeLiquidBarIOS27ClearBottomGlassV11";
+ static NSString * const kAWEHideBottomTitlesDefaultsKey =
+     @"AwemeLiquidBarHideBottomTitlesV1";
+ static NSString * const kAWEBottomBarDisplayEnabledDefaultsKey =
+@@ -598,6 +604,29 @@
+     return AWEIsIOS27OrLater();
+ }
+ 
++static BOOL AWEIOS27ClearBottomGlassEnabled(void) {
++    if (!AWEIsIOS27OrLater()) return NO;
++    id stored = [NSUserDefaults.standardUserDefaults
++        objectForKey:kAWEIOS27ClearBottomGlassDefaultsKey];
++    /* v11 keeps the successful v10 Clear bottom bar as the upgrade default.
++       OFF is the conservative policy requested by the user: Home uses the
++       regular dark glass branch and every secondary page follows the app. */
++    return [stored isKindOfClass:NSNumber.class] ? [(NSNumber *)stored boolValue] : YES;
++}
++
++static BOOL AWEIOS27WantsClearBottomMaterial(void) {
++    if (!AWEIOS27ClearBottomGlassEnabled()) return NO;
++    NSInteger index = gAWEAlbumMorphController
++        ? [gAWEAlbumMorphController currentOriginalIndex]
++        : AWECurrentOriginalMainTabIndex();
++    if (index == NSNotFound) index = AWECurrentOriginalMainTabIndex();
++    if (index == 0) return YES;
++    /* Clear is also useful while a liked/favourites item is opened as a
++       full-screen playable feed from the user's Profile tab. Do not make the
++       profile grid/settings/messages/shop itself clear. */
++    return index == 4 && AWECurrentRouteHasPlayableFeedController();
++}
++
+ static BOOL AWEHideBottomTitlesEnabled(void) {
+     return [NSUserDefaults.standardUserDefaults
+         boolForKey:kAWEHideBottomTitlesDefaultsKey];
+@@ -3608,28 +3637,103 @@
+    our already-native UITabBar, preserving UIKit's current interactive flag so
+    press/lens/selection behavior stays native. Failure is silent and leaves the
+    system material intact. */
++static void AWETuneIOS27SharedGlassContainer(UITabBar *nativeBar, BOOL wantsClear) {
++    if (!nativeBar || !nativeBar.window || !AWEIsIOS27OrLater()) return;
++
++    /* UIKit's droplet/attraction behavior only exists when eligible glass
++       elements are rendered by a shared UIGlassContainerEffect. We never
++       reparent private UITabBar nodes (that broke touch ownership in v10).
++       Instead, locate UIKit's own nearby container and tune its merge spacing. */
++    UIView *root = nativeBar;
++    for (NSUInteger i = 0; i < 3 && root.superview; i++) root = root.superview;
++    NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:root];
++    NSUInteger index = 0;
++    CGRect barFrame = [nativeBar convertRect:nativeBar.bounds toView:nativeBar.window];
++    CGRect interest = CGRectInset(barFrame, -44.0, -44.0);
++    while (index < queue.count && index < 320) {
++        UIView *view = queue[index++];
++        for (UIView *child in view.subviews) [queue addObject:child];
++        if (![view isKindOfClass:UIVisualEffectView.class]) continue;
++        UIVisualEffectView *effectView = (UIVisualEffectView *)view;
++        id effect = effectView.effect;
++        NSString *effectName = effect ? NSStringFromClass([effect class]) : @"";
++        if ([effectName rangeOfString:@"GlassContainerEffect"
++                               options:NSCaseInsensitiveSearch].location == NSNotFound) continue;
++        CGRect wr = [view convertRect:view.bounds toView:nativeBar.window];
++        CGFloat requiredWidth = MAX(220.0, CGRectGetWidth(barFrame) * 0.62);
++        if (!CGRectIntersectsRect(wr, interest) || CGRectGetHeight(wr) > 190.0 ||
++            CGRectGetWidth(wr) < requiredWidth) continue;
++
++        NSNumber *saved = objc_getAssociatedObject(view, &kAWEIOS27ContainerOriginalSpacingKey);
++        if (!saved) {
++            @try {
++                id value = [effect valueForKey:@"spacing"];
++                if ([value respondsToSelector:@selector(doubleValue)]) {
++                    saved = @([value doubleValue]);
++                    objc_setAssociatedObject(view, &kAWEIOS27ContainerOriginalSpacingKey,
++                                             saved, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++                }
++            } @catch (__unused NSException *exception) {}
++        }
++        @try {
++            if (wantsClear) {
++                /* The main platter/search gap is ~16-20 pt in the current
++                   layout. 24 pt starts the native merge before they visually
++                   collide, close to Apple's WWDC example. */
++                [effect setValue:@24.0 forKey:@"spacing"];
++            } else if (saved) {
++                [effect setValue:saved forKey:@"spacing"];
++            }
++        } @catch (__unused NSException *exception) {}
++    }
++}
++
+ static void AWEApplyIOS27UntintedClearPlatter(UITabBar *nativeBar) {
+     if (!nativeBar || !AWEIsIOS27OrLater() ||
+         (!AWEIsOurNativeBar(nativeBar) && !AWEIsAlbumMorphSystemBar(nativeBar))) return;
+-    NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:nativeBar];
++
++    BOOL wantsClear = AWEIOS27WantsClearBottomMaterial();
++    /* Search and the main platter are private sibling implementations on newer
++       UIKit builds. Patch both glassEffect owners to the same Clear effect so
++       UIKit's pre-existing GlassContainer can treat them as one material set. */
++    UIView *root = nativeBar;
++    for (NSUInteger i = 0; i < 2 && root.superview; i++) root = root.superview;
++    NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:root];
+     NSUInteger index = 0;
+-    while (index < queue.count && index < 180) {
++    while (index < queue.count && index < 260) {
+         UIView *view = queue[index++];
+         for (UIView *child in view.subviews) [queue addObject:child];
+         NSString *name = NSStringFromClass(view.class);
+-        if ([name rangeOfString:@"UITabBarItemPlatterView"
+-                         options:NSCaseInsensitiveSearch].location == NSNotFound) {
+-            continue;
+-        }
++        BOOL candidate =
++            [name rangeOfString:@"Platter" options:NSCaseInsensitiveSearch].location != NSNotFound ||
++            [name rangeOfString:@"Search" options:NSCaseInsensitiveSearch].location != NSNotFound;
++        if (!candidate) continue;
++        CGRect wr = [view convertRect:view.bounds toView:nativeBar.window];
++        CGRect barFrame = [nativeBar convertRect:nativeBar.bounds toView:nativeBar.window];
++        if (!CGRectIntersectsRect(wr, CGRectInset(barFrame, -36.0, -36.0))) continue;
++        SEL getter = NSSelectorFromString(@"glassEffect");
++        SEL setter = NSSelectorFromString(@"setGlassEffect:");
++        if (![view respondsToSelector:getter] && ![view respondsToSelector:setter]) continue;
+ 
+         id current = nil;
+         @try { current = [view valueForKey:@"glassEffect"]; }
+         @catch (__unused NSException *exception) { continue; }
+-
+         id installed = objc_getAssociatedObject(view, &kAWEIOS27PlatterInstalledGlassKey);
+-        if (current && installed && current == installed) continue;
++        id original = objc_getAssociatedObject(view, &kAWEIOS27PlatterOriginalGlassKey);
++
++        if (!wantsClear) {
++            if (installed && current == installed && original) {
++                id restore = original == NSNull.null ? nil : original;
++                @try { [view setValue:restore forKey:@"glassEffect"]; }
++                @catch (__unused NSException *exception) {}
++            }
++            objc_setAssociatedObject(view, &kAWEIOS27PlatterInstalledGlassKey,
++                                     nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++            continue;
++        }
+ 
+-        if (!objc_getAssociatedObject(view, &kAWEIOS27PlatterOriginalGlassKey)) {
++        if (current && installed && current == installed) continue;
++        if (!original) {
+             objc_setAssociatedObject(view, &kAWEIOS27PlatterOriginalGlassKey,
+                                      current ?: NSNull.null,
+                                      OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+@@ -3640,7 +3744,6 @@
+             id value = current ? [current valueForKey:@"interactive"] : nil;
+             if ([value respondsToSelector:@selector(boolValue)]) interactive = [value boolValue];
+         } @catch (__unused NSException *exception) {}
+-
+         id clear = AWEIOS27MakeUntintedClearGlassEffect(interactive);
+         if (!clear) continue;
+         @try {
+@@ -3654,6 +3757,7 @@
+                                      nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+         }
+     }
++    AWETuneIOS27SharedGlassContainer(nativeBar, wantsClear);
+ }
+ 
+ static void AWEConfigureNativeBarAppearance(UITabBar *nativeBar,
+@@ -7147,7 +7251,8 @@
+     (void)sender;
+     UIView *owner = self.originalView;
+     if (!owner || !owner.window) return;
+-    BOOL sent = AWETriggerHomeActionOwner(owner);
++    BOOL sent = AWETriggerQuickMenuDestinationView(owner);
++    if (!sent) sent = AWETriggerHomeActionOwner(owner);
+     AWEInteractionDiagnosticWrite(
+         @"HOME_NATIVE_GLASS_TAP kind=%ld result=%d owner=%@",
+         (long)self.actionKind, sent, AWEInteractionObjectSummary(owner));
+@@ -7160,6 +7265,7 @@
+ @property (nonatomic, strong) UIButton *menuButton;
+ @property (nonatomic, weak) UIView *profileHost;
+ @property (nonatomic, weak) UIImageView *avatarImageView;
++@property (nonatomic, strong) UIImageView *contentImageView;
+ @end
+ @implementation AWEHomeProfileGlassView
+ @end
+@@ -7168,12 +7274,14 @@
+ @property (nonatomic, weak) UIView *owner;
+ @property (nonatomic, weak) UIView *stack;
+ @property (nonatomic, weak) UIImageView *iconSource;
++@property (nonatomic, strong) UIImageView *contentMirror;
+ - (void)alb_forwardSameStyleTap:(UIButton *)sender;
+ @end
+ @implementation AWESameStyleGlassForwarder
+ - (void)alb_forwardSameStyleTap:(UIButton *)sender {
+     (void)sender;
+-    BOOL sent = AWETriggerHomeActionOwner(self.owner);
++    BOOL sent = AWETriggerQuickMenuDestinationView(self.owner);
++    if (!sent) sent = AWETriggerHomeActionOwner(self.owner);
+     AWEInteractionDiagnosticWrite(@"SAMESTYLE_NATIVE_GLASS_TAP result=%d owner=%@",
+         sent, AWEInteractionObjectSummary(self.owner));
+     if (sent && self.stack) AWEScheduleHomeActionStackRefresh(self.stack);
+@@ -8060,6 +8168,7 @@
+ };
+ 
+ static BOOL AWEForwardTopActionOwner(UIView *owner, AWEHomeTopActionKind kind);
++static BOOL AWETriggerOriginalSearchAction(void);
+ static UIView *AWEFindTopOwnerCandidate(UIView *root, BOOL search);
+ 
+ @class AWETopLiquidGroupView;
+@@ -8089,7 +8198,9 @@
+             container, self.topKind == AWEHomeTopActionKindSearch);
+         self.ownerView = owner;
+     }
+-    BOOL result = AWEForwardTopActionOwner(owner, self.topKind);
++    BOOL result = self.topKind == AWEHomeTopActionKindSearch
++        ? AWETriggerOriginalSearchAction()
++        : AWEForwardTopActionOwner(owner, self.topKind);
+     AWEInteractionDiagnosticWrite(
+         @"TOP_TAP kind=%@ result=%d owner=%@ slot=%@",
+         self.topKind == AWEHomeTopActionKindSearch ? @"SEARCH" : @"MENU",
+@@ -9483,7 +9594,7 @@
+         plate.backgroundColor = UIColor.clearColor;
+         plate.opaque = NO;
+         plate.clipsToBounds = NO;
+-        plate.accessibilityIdentifier = @"AwemeLiquidBar.SameStyleGlass.V10.NativeInteractive";
++        plate.accessibilityIdentifier = @"AwemeLiquidBar.SameStyleGlass.V11.NativeInteractive";
+         AWESameStyleGlassForwarder *forwarder = [AWESameStyleGlassForwarder new];
+         [plate addTarget:forwarder action:@selector(alb_forwardSameStyleTap:)
+             forControlEvents:UIControlEventTouchUpInside];
+@@ -9531,17 +9642,37 @@
+         forwarder.iconSource = nil;
+         contentSource = AWESameStyleBestContentImageView(bottomSlot);
+     }
++    /* v11 keeps v9's proven 50.16-pt geometry. The album/music artwork is a
++       fixed circular child of the real interactive glass UIButton instead of
++       UIButtonConfiguration.image, which was re-laying it as a square and
++       changing the perceived plate size in v10. As a child, it still follows
++       the button's native press/stretch transform. */
++    AWEConfigureAdaptiveSystemGlassPlateButton(
++        plate, @"right.same-style.v11.fixed-content", AWEHomeTintedGlassEnabled());
++    if (!forwarder.contentMirror) {
++        UIImageView *mirror = [UIImageView new];
++        mirror.userInteractionEnabled = NO;
++        mirror.contentMode = UIViewContentModeScaleAspectFill;
++        mirror.clipsToBounds = YES;
++        [plate addSubview:mirror];
++        forwarder.contentMirror = mirror;
++    }
+     if (contentSource && contentSource.image) {
+         AWESameStyleBindIconSource(forwarder, contentSource);
+-        AWEConfigureAdaptiveSystemGlassIconButton(
+-            plate, contentSource.image, @"right.same-style.v10.content",
+-            38.0, nil, YES, AWEHomeTintedGlassEnabled(), NO);
+-        plate.imageView.contentMode = UIViewContentModeScaleAspectFit;
++        CGFloat sourceSide = MIN(CGRectGetWidth(contentSource.bounds),
++                                 CGRectGetHeight(contentSource.bounds));
++        CGFloat side = MIN(44.0, MAX(34.0, sourceSide));
++        forwarder.contentMirror.image = contentSource.image;
++        forwarder.contentMirror.frame = CGRectMake(
++            (diameter - side) * 0.5, (diameter - side) * 0.5, side, side);
++        forwarder.contentMirror.layer.cornerRadius = side * 0.5;
++        forwarder.contentMirror.layer.cornerCurve = kCACornerCurveContinuous;
++        forwarder.contentMirror.hidden = NO;
++        [plate bringSubviewToFront:forwarder.contentMirror];
+     } else {
+         if (forwarder.iconSource) AWESameStyleRestoreIconSource(forwarder.iconSource);
+         forwarder.iconSource = nil;
+-        AWEConfigureAdaptiveSystemGlassPlateButton(
+-            plate, @"right.same-style.v20.stack", AWEHomeTintedGlassEnabled());
++        forwarder.contentMirror.hidden = YES;
+     }
+ 
+     objc_setAssociatedObject(stack, &kAWESameStyleStackLastFrameKey,
+@@ -9757,6 +9888,10 @@
+ 
+ static BOOL AWEBottomV15AdjustView(UIView *view, UIWindow *window,
+                                    AWEBottomRouteKind route, NSString *reason) {
++    /* v11: never mutate Profile/Favourites collection frames or insets. The
++       remaining snap-to-top bug survived the v10 drag-state guard because the
++       delayed post-drag pass could still rewrite the nested pager geometry. */
++    if (route == AWEBottomRouteProfile) return NO;
+     if (!view || !window || !view.superview || view.hidden || view.alpha < 0.01) return NO;
+     NSString *name = NSStringFromClass(view.class);
+     if ([name containsString:@"TabBar"] || [name containsString:@"LiquidBar"] ||
+@@ -10625,6 +10760,11 @@
+     if (!window || !AWEPluginFeaturesEnabled()) return;
+     AWEBottomRouteKind route = AWEBottomRouteForWindow(window);
+     if (route == AWEBottomRouteNone) return;
++    if (route == AWEBottomRouteProfile) {
++        /* Profile/Favourites owns its own nested pager offsets. Do not scan or
++           extend that hierarchy at all; liked pages were already stable. */
++        return;
++    }
+     if (route == AWEBottomRouteShop) {
+         AWEBottomV21PrepareShop(window, reason);
+         return;
+@@ -11354,6 +11494,34 @@
+     return slot;
+ }
+ 
++static void AWERestoreProfileAvatarSource(UIImageView *avatar) {
++    if (!avatar) return;
++    NSNumber *hidden = objc_getAssociatedObject(avatar, &kAWEProfileAvatarOriginalHiddenKey);
++    NSNumber *alpha = objc_getAssociatedObject(avatar, &kAWEProfileAvatarOriginalAlphaKey);
++    if (hidden) avatar.hidden = hidden.boolValue;
++    if (alpha) {
++        avatar.alpha = alpha.doubleValue;
++        avatar.layer.opacity = (float)alpha.doubleValue;
++    }
++    objc_setAssociatedObject(avatar, &kAWEProfileAvatarOriginalHiddenKey, nil,
++                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++    objc_setAssociatedObject(avatar, &kAWEProfileAvatarOriginalAlphaKey, nil,
++                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++}
++
++static void AWEHideProfileAvatarSource(UIImageView *avatar) {
++    if (!avatar) return;
++    if (!objc_getAssociatedObject(avatar, &kAWEProfileAvatarOriginalHiddenKey)) {
++        objc_setAssociatedObject(avatar, &kAWEProfileAvatarOriginalHiddenKey,
++                                 @(avatar.hidden), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++        objc_setAssociatedObject(avatar, &kAWEProfileAvatarOriginalAlphaKey,
++                                 @(avatar.alpha), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++    }
++    avatar.hidden = YES;
++    avatar.alpha = 0.0;
++    avatar.layer.opacity = 0.0f;
++}
++
+ static UIImage *AWEProfileCircularAvatarImage(UIImage *source, CGFloat side) {
+     if (!source || side <= 1.0) return source;
+     CGSize size = CGSizeMake(side, side);
+@@ -11397,6 +11565,8 @@
+         AWEHomeProfileGlassView *existing = objc_getAssociatedObject(
+             stack, &kAWEProfileGlassSlotKey);
+         if (!existing.profileHost || !existing.profileHost.window) {
++            AWERestoreProfileAvatarSource(existing.avatarImageView);
++            existing.contentImageView.hidden = YES;
+             existing.hidden = YES;
+             existing.menuButton.hidden = YES;
+         }
+@@ -11413,7 +11583,6 @@
+     slot.center = center;
+     slot.glassButton.frame = slot.bounds;
+     slot.profileHost = pictureHost;
+-    slot.avatarImageView = avatar;
+     slot.hidden = NO;
+     slot.alpha = 1.0;
+ 
+@@ -11429,24 +11598,38 @@
+     AWEStoreAndClearProfileVisual(pictureHost);
+     AWEStoreAndClearProfileVisual(avatar.superview);
+     AWEStoreAndClearProfileVisual(avatar);
+-    avatar.layer.cornerRadius = MIN(CGRectGetWidth(avatar.bounds),
+-                                    CGRectGetHeight(avatar.bounds)) * 0.5;
+-    avatar.layer.cornerCurve = kCACornerCurveContinuous;
+-    avatar.clipsToBounds = YES;
+-
+-    UIImage *avatarContent = AWEProfileCircularAvatarImage(avatar.image, 40.0);
+-    AWEConfigureAdaptiveSystemGlassIconButton(
+-        slot.glassButton,
+-        avatarContent,
+-        @"right.profile.avatar",
+-        40.0,
+-        nil,
+-        YES,
+-        AWEHomeTintedGlassEnabled(),
+-        NO);
+-    slot.glassButton.imageView.contentMode = UIViewContentModeScaleAspectFill;
+-    slot.glassButton.imageView.clipsToBounds = YES;
+-    slot.glassButton.imageView.layer.cornerRadius = 20.0;
++
++    /* v11 restores the exact v9 plate geometry and stops asking
++       UIButtonConfiguration to lay out the avatar. v10 displayed both the
++       original avatar and a configuration image, producing the nested/offset
++       look. Keep one fixed circular mirror inside the interactive button. */
++    if (slot.avatarImageView && slot.avatarImageView != avatar) {
++        AWERestoreProfileAvatarSource(slot.avatarImageView);
++    }
++    UIImage *liveAvatarImage = avatar.image;
++    slot.avatarImageView = avatar;
++    AWEHideProfileAvatarSource(avatar);
++    AWEConfigureAdaptiveSystemGlassPlateButton(
++        slot.glassButton, @"right.profile.avatar.v11", AWEHomeTintedGlassEnabled());
++    if (!slot.contentImageView) {
++        UIImageView *mirror = [UIImageView new];
++        mirror.userInteractionEnabled = NO;
++        mirror.contentMode = UIViewContentModeScaleAspectFill;
++        mirror.clipsToBounds = YES;
++        [slot.glassButton addSubview:mirror];
++        slot.contentImageView = mirror;
++    }
++    CGRect sourceRect = [avatar convertRect:avatar.bounds toView:stack];
++    CGFloat sourceSide = MIN(CGRectGetWidth(sourceRect), CGRectGetHeight(sourceRect));
++    CGFloat contentSide = MIN(46.0, MAX(36.0, sourceSide));
++    slot.contentImageView.image = liveAvatarImage;
++    slot.contentImageView.frame = CGRectMake(
++        (diameter - contentSide) * 0.5, (diameter - contentSide) * 0.5,
++        contentSide, contentSide);
++    slot.contentImageView.layer.cornerRadius = contentSide * 0.5;
++    slot.contentImageView.layer.cornerCurve = kCACornerCurveContinuous;
++    slot.contentImageView.hidden = NO;
++    [slot.glassButton bringSubviewToFront:slot.contentImageView];
+     slot.glassButton.menu = AWEAvatarBaseMenuForStack(stack, pictureHost);
+ 
+     /* Menu presentation: iOS 27 stays unpinned/clear. iOS 26 deliberately
+@@ -13221,6 +13404,83 @@
+     [gAWEAlbumMorphController setCompactMode:NO animated:NO];
+ }
+ 
++static BOOL AWETriggerOriginalSearchAction(void) {
++    UIWindow *window = AWEActiveMainWindow();
++    if (!window) return NO;
++    /* Prefer the actual Douyin search entrance classes. The generic top-owner
++       scorer can resolve our replacement slot after the original artwork was
++       suppressed, which made both top Search and UISearchTab appear dead. */
++    UIView *top = AWEFindViewByExactRuntimeClass(
++        window, @"AWEFeedTopBarContainer", 0);
++    UIView *owner = top ? AWEFindViewByExactRuntimeClass(
++        top, @"AWEHPDiscoverFeedEntranceView", 0) : nil;
++    if (!owner && top) owner = AWEFindViewByExactRuntimeClass(
++        top, @"AWEHPSearchBubbleEntranceView", 0);
++    if (!owner) owner = AWEFindViewByExactRuntimeClass(
++        window, @"AWEHPDiscoverFeedEntranceView", 0);
++    if (!owner) owner = AWEFindViewByExactRuntimeClass(
++        window, @"AWEHPSearchBubbleEntranceView", 0);
++    if (!owner && top) owner = AWEFindTopOwnerCandidate(top, YES);
++    if (!owner) return NO;
++
++    NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:owner];
++    NSUInteger visited = 0;
++    while (queue.count > 0 && visited < 96) {
++        UIView *view = queue.firstObject;
++        [queue removeObjectAtIndex:0];
++        visited++;
++        if ([view isKindOfClass:UIControl.class]) {
++            UIControl *control = (UIControl *)view;
++            UIControlEvents event = 0;
++            for (id target in control.allTargets) {
++                if ([control actionsForTarget:target
++                    forControlEvent:UIControlEventTouchUpInside].count > 0) {
++                    event = UIControlEventTouchUpInside;
++                    break;
++                }
++                if ([control actionsForTarget:target
++                    forControlEvent:UIControlEventPrimaryActionTriggered].count > 0) {
++                    event = UIControlEventPrimaryActionTriggered;
++                }
++            }
++            if (event) {
++                [control sendActionsForControlEvents:event];
++                AWEInteractionDiagnosticWrite(@"SEARCH_NATIVE_FORWARD path=control owner=%@ control=%@ event=%lu",
++                    AWEInteractionObjectSummary(owner), AWEInteractionObjectSummary(control),
++                    (unsigned long)event);
++                return YES;
++            }
++        }
++        for (UIGestureRecognizer *recognizer in view.gestureRecognizers) {
++            NSString *name = NSStringFromClass(recognizer.class).lowercaseString;
++            if (![recognizer isKindOfClass:UITapGestureRecognizer.class] &&
++                ![name containsString:@"tap"] && ![name containsString:@"click"] &&
++                ![name containsString:@"search"] && ![name containsString:@"alpha"]) continue;
++            BOOL wasEnabled = recognizer.enabled;
++            if (!wasEnabled) recognizer.enabled = YES;
++            NSInteger oldState = 0;
++            BOOL changed = AWESetIntegerIvar(recognizer,
++                "_state_DO_NOT_USE_DIRECTLY", UIGestureRecognizerStateEnded, &oldState);
++            BOOL sent = AWEInvokeGestureRecognizer(recognizer);
++            if (changed) AWESetIntegerIvar(recognizer,
++                "_state_DO_NOT_USE_DIRECTLY", oldState, NULL);
++            if (!wasEnabled) recognizer.enabled = NO;
++            if (sent) {
++                AWEInteractionDiagnosticWrite(@"SEARCH_NATIVE_FORWARD path=gesture owner=%@ recognizer=%@",
++                    AWEInteractionObjectSummary(owner), NSStringFromClass(recognizer.class));
++                return YES;
++            }
++        }
++        for (UIView *child in view.subviews) [queue addObject:child];
++    }
++    BOOL activated = NO;
++    @try { activated = [owner accessibilityActivate]; }
++    @catch (__unused NSException *exception) { activated = NO; }
++    AWEInteractionDiagnosticWrite(@"SEARCH_NATIVE_FORWARD path=accessibility result=%d owner=%@",
++        activated, AWEInteractionObjectSummary(owner));
++    return activated;
++}
++
+ static BOOL AWEForwardTopActionOwner(UIView *owner,
+                                          AWEHomeTopActionKind kind) {
+     if (!owner) return NO;
+@@ -14182,7 +14442,13 @@
+         /* v10: iOS 27 keeps a dark CONTENT trait on Home so tab glyphs remain
+            readable over video, while the platter itself is independently
+            replaced with un-tinted Clear glass. iOS 26 follows app appearance. */
+-        if (AWEIsIOS27OrLater() && originalIndex == 0) return UIUserInterfaceStyleDark;
++        if (AWEIsIOS27OrLater()) {
++            if (originalIndex == 0) return UIUserInterfaceStyleDark;
++            if (AWEIOS27ClearBottomGlassEnabled() && originalIndex == 4 &&
++                AWECurrentRouteHasPlayableFeedController()) {
++                return UIUserInterfaceStyleDark;
++            }
++        }
+         return AWEAppResolvedAppearanceStyle(window);
+     }
+     return AWEAlbumMorphResolvedProbeStyle(window);
+@@ -14429,28 +14695,9 @@
+ }
+ 
+ - (void)albumMorphDidRequestSearch {
+-    UIWindow *window = AWEActiveMainWindow();
+-    UIView *topContainer = window
+-        ? AWEFindViewByExactRuntimeClass(
+-            window, @"AWEFeedTopBarContainer", 0)
+-        : nil;
+-    UIView *owner = topContainer
+-        ? AWEFindTopOwnerCandidate(topContainer, YES)
+-        : nil;
+-    if (!owner && window) {
+-        owner = AWEFindViewByExactRuntimeClass(
+-            window, @"AWEHPDiscoverFeedEntranceView", 0);
+-    }
+-    if (!owner && window) {
+-        owner = AWEFindViewByExactRuntimeClass(
+-            window, @"AWEHPSearchBubbleEntranceView", 0);
+-    }
+-
+-    BOOL forwarded = AWEForwardTopActionOwner(
+-        owner, AWEHomeTopActionKindSearch);
++    BOOL forwarded = AWETriggerOriginalSearchAction();
+     AWEInteractionDiagnosticWrite(
+-        @"ALBUM_MORPH_SEARCH owner=%@ result=%d",
+-        AWEInteractionObjectSummary(owner), forwarded);
++        @"ALBUM_MORPH_SEARCH directNative=1 result=%d", forwarded);
+ }
+ 
+ @end
+@@ -15225,7 +15472,13 @@
+         AWEHideTopSourceImage(slot, nil);
+         AWEHideTopOwnerVisual(slot, owner, container);
+     }
+-    AWEAlignTopOwnerWithSlot(slot, owner, container, kind);
++    if (kind == AWEHomeTopActionKindMenu) {
++        AWEAlignTopOwnerWithSlot(slot, owner, container, kind);
++    } else {
++        /* Search's private target keeps its original geometry/context. Only
++           the replacement glass slot is positioned at our desired point. */
++        slot.ownerView = owner;
++    }
+ 
+     slot.bounds = CGRectMake(0.0, 0.0, diameter, diameter);
+     slot.center = center;
+@@ -18762,12 +19015,12 @@
+     preferHighestPlaybackRow.distribution = UIStackViewDistributionEqualSpacing;
+ 
+     UILabel *forceDarkBottomBarLabel = [UILabel new];
+-    forceDarkBottomBarLabel.text = @"iOS 27 首页清透玻璃（固定启用）";
++    forceDarkBottomBarLabel.text = @"iOS 27 清透底栏（首页 + 点赞/收藏视频）";
+     forceDarkBottomBarLabel.font =
+         [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+     UISwitch *forceDarkBottomBarSwitch = [UISwitch new];
+-    forceDarkBottomBarSwitch.on = AWEIsIOS27OrLater();
+-    forceDarkBottomBarSwitch.enabled = NO;
++    forceDarkBottomBarSwitch.on = AWEIOS27ClearBottomGlassEnabled();
++    forceDarkBottomBarSwitch.enabled = AWEIsIOS27OrLater();
+     forceDarkBottomBarSwitch.onTintColor = AWEStoredAccentColor();
+     [forceDarkBottomBarSwitch addTarget:self
+         action:@selector(forceDarkBottomBarSwitchChanged:)
+@@ -18925,7 +19178,7 @@
+     messageBlurDistanceRow.spacing = 5.0;
+ 
+     UILabel *adaptiveGlassHint = [UILabel new];
+-    adaptiveGlassHint.text = @"v10：iOS 27 首页/消息按钮固定使用无额外色调的 Clear Liquid Glass，底栏直接改写系统浮动 platter 为 Clear；不再做背景亮度采样。iOS 26 继续走系统原生深浅色与透明度适配。";
++    adaptiveGlassHint.text = @"v11：iOS 27 清透底栏改为可选。开启时仅首页及从“我”进入的点赞/收藏全屏作品使用 Clear；关闭时首页固定深色，其余页面严格跟随 App 深浅色。消息页顶部始终使用标准 Regular Liquid Glass。";
+     adaptiveGlassHint.font =
+         [UIFont systemFontOfSize:11.5 weight:UIFontWeightRegular];
+     adaptiveGlassHint.textColor = UIColor.tertiaryLabelColor;
+@@ -19475,10 +19728,15 @@
+ 
+ 
+ - (void)forceDarkBottomBarSwitchChanged:(UISwitch *)sender {
+-    /* v10: compatibility row only. iOS 27 Clear glass is a fixed material
+-       choice, not a force-dark trait switch; iOS 26 uses the separate
+-       Regular/Clear preference below. */
+-    sender.on = AWEIsIOS27OrLater();
++    if (!AWEIsIOS27OrLater()) { sender.on = NO; return; }
++    [NSUserDefaults.standardUserDefaults setBool:sender.isOn
++        forKey:kAWEIOS27ClearBottomGlassDefaultsKey];
++    [NSUserDefaults.standardUserDefaults synchronize];
++    if (gAWEAlbumMorphController.tabBar) {
++        AWEApplyIOS27UntintedClearPlatter(gAWEAlbumMorphController.tabBar);
++        [gAWEAlbumMorphController.tabBar setNeedsLayout];
++    }
++    AWEApplyHomeOnlyGlassStyleToExistingSurfaces();
+     [[[UISelectionFeedbackGenerator alloc] init] selectionChanged];
+ }
+ 
+@@ -22254,9 +22512,8 @@
+         AWEApplyIOS27UntintedClearPlatter(self);
+         AWEClearDirectNativeBarBackground(self);
+     } else if (AWEIsAlbumMorphSystemBar(self)) {
+-        /* The production bar is the Swift AlbumMorph UITabBar. Do not run the
+-           legacy-native appearance mutators on it; patch only its real iOS 27
+-           floating platter material. */
++        /* Swift AlbumMorph remains UIKit-owned. v11 applies only the page
++           material policy plus the native shared-container merge spacing. */
+         AWEApplyIOS27UntintedClearPlatter(self);
+     }
+     if (gAWEStableCleanScreenEnabled) AWEStableCleanSuppressView((UIView *)self, YES);

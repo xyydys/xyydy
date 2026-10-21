@@ -1,0 +1,20 @@
+2.0 auth47 — zero-comment emoji-row transparency fix
+
+Scope is intentionally limited to CommentGlassDYKiller.xm.
+
+Problem:
+- Normal comment panels already clear the translucent backdrop beneath the mini emoji row.
+- A zero-comment panel can use an empty-state footer/composer carrier and an extra UITextEffectsWindow sibling backdrop, so the same area becomes opaque/translucent again after tapping into the comment composer.
+
+Fix:
+- Add a bottom-composer fallback resolver for zero-comment layouts where the usual CommentInputContainerView is absent/reparented.
+- Detect the zero-comment state using the empty-state labels and/or an empty large comment collection.
+- Clear only short, nearly full-width bottom backdrop carriers in the empty-state footer while preserving the actual rounded text-entry pill.
+- Clear short same-band sibling backdrop/effect views around AWECommentMiniEmoticonPanelView in UITextEffectsWindow; full keyboard/effects-window backgrounds are excluded by geometry.
+- Re-run the cleanup through the mini-emoticon panel's delayed materialization window (0, 50, 180, 450, 850, 1300 ms), because the zero-comment carrier can be recreated after the initial layout.
+
+Preserved:
+- RightNativeGestureLease right-button experiment unchanged.
+- Comment top-corner leak fix unchanged.
+- Comment glass material/corner settings unchanged.
+- Old opaque settings page unchanged.

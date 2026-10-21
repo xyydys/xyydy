@@ -1,0 +1,218 @@
+--- /mnt/data/aweme_v7_inspect/AwemeLiquidBar_1.0.58_auth47_iOS27LuminanceAdaptive_v7_project/Tweak.x	2026-09-02 17:57:38.000000000 +0000
++++ /mnt/data/AwemeLiquidBar_1.0.58_auth47_iOS27LuminanceAdaptive_v8_project/Tweak.x	2026-09-02 18:34:39.922455290 +0000
+@@ -12,7 +12,7 @@
+ #include <dlfcn.h>
+ 
+ /*
+- AwemeLiquidBar 1.0.58 — auth47 + iOS27 luminance-adaptive native tab bar v7 + release fixes
++ AwemeLiquidBar 1.0.58 — auth47 + iOS27 luminance-adaptive native tab bar v8 + release fixes
+ 
+  Fullscreen/clean consolidation release:
+  - starts from the verified 1.0.55a stable baseline; unrelated layout experiments remain excluded;
+@@ -489,6 +489,12 @@
+ static CFTimeInterval gAWEIOS27BackdropLastSampleTime = 0.0;
+ static UIUserInterfaceStyle gAWEIOS27BackdropPendingStyle = UIUserInterfaceStyleUnspecified;
+ static NSUInteger gAWEIOS27BackdropPendingCount = 0;
++/* v8: full-screen capture is the expensive part. Keep a slow idle cadence,
++   then temporarily enter a short burst after a feed item settles so a real
++   background change is still resolved promptly without paying for 3-4 full
++   screen captures every second for the lifetime of the Home feed. */
++static CFTimeInterval gAWEIOS27BackdropBurstUntil = 0.0;
++static BOOL gAWEIOS27BackdropForceNextSample = NO;
+ static BOOL gAWEIOS27BackdropCaptureAPILogged = NO;
+ 
+ /* iOS 27 same-window host is referenced by refresh/layout paths that appear
+@@ -12545,15 +12551,28 @@
+     return (values[count / 2 - 1] + values[count / 2]) * 0.5;
+ }
+ 
++static void AWEIOS27RequestBackdropBurstSample(void) {
++    if (!AWEIsIOS27OrLater() || AWEHomeForceDarkGlassEnabled()) return;
++    CFTimeInterval now = CACurrentMediaTime();
++    gAWEIOS27BackdropBurstUntil = now + 0.42;
++    gAWEIOS27BackdropForceNextSample = YES;
++    gAWEIOS27BackdropPendingStyle = UIUserInterfaceStyleUnspecified;
++    gAWEIOS27BackdropPendingCount = 0;
++}
++
+ static UIUserInterfaceStyle AWEIOS27ResolveBackdropLuminanceStyle(void) {
+     if (!AWEIsIOS27OrLater()) return UIUserInterfaceStyleUnspecified;
+     if (AWEHomeForceDarkGlassEnabled()) return UIUserInterfaceStyleDark;
+ 
+     CFTimeInterval now = CACurrentMediaTime();
+-    if (gAWEIOS27BackdropLastSampleTime > 0.0 &&
+-        now - gAWEIOS27BackdropLastSampleTime < 0.30) {
++    BOOL burst = now < gAWEIOS27BackdropBurstUntil;
++    CFTimeInterval minimumInterval = burst ? 0.10 : 0.85;
++    BOOL forceSample = gAWEIOS27BackdropForceNextSample;
++    if (!forceSample && gAWEIOS27BackdropLastSampleTime > 0.0 &&
++        now - gAWEIOS27BackdropLastSampleTime < minimumInterval) {
+         return gAWEIOS27BackdropResolvedStyle;
+     }
++    gAWEIOS27BackdropForceNextSample = NO;
+     gAWEIOS27BackdropLastSampleTime = now;
+ 
+     NSString *api = nil;
+@@ -12666,12 +12685,21 @@
+     return gAWEIOS27BackdropResolvedStyle;
+ }
+ 
+-/* Exported for MessageTopGlassV3.xm.  Keep the value semantic-only: the system
+-   Clear/Tinted/custom-transparency preference still belongs to UIGlassEffect. */
++/* Exported for MessageTopGlassV3.xm. v8 deliberately scopes luminance
++   adaptation to Home chrome only. Message/comment/secondary pages follow the
++   app/window appearance exactly, matching iOS 27's native fixed Light/Dark
++   material branch while still inheriting the user's Clear/Tinted preference. */
+ NSInteger AWEIOS27AdaptiveGlassStyle(void) {
+     if (!AWEIsIOS27OrLater()) return (NSInteger)UIUserInterfaceStyleUnspecified;
+-    if (AWEHomeForceDarkGlassEnabled()) return (NSInteger)UIUserInterfaceStyleDark;
+-    return (NSInteger)gAWEIOS27BackdropResolvedStyle;
++    UIWindow *window = AWEActiveMainWindow();
++    UIUserInterfaceStyle style = window.windowScene.traitCollection.userInterfaceStyle;
++    if (style != UIUserInterfaceStyleLight && style != UIUserInterfaceStyleDark) {
++        style = window.traitCollection.userInterfaceStyle;
++    }
++    if (style != UIUserInterfaceStyleLight && style != UIUserInterfaceStyleDark) {
++        style = UIScreen.mainScreen.traitCollection.userInterfaceStyle;
++    }
++    return (NSInteger)style;
+ }
+ 
+ static void AWERefreshAlbumMorphTintFromSystemProbe(void) {
+@@ -12688,7 +12716,7 @@
+     if (AWEIsIOS27OrLater()) {
+         /* Same-window hosting restores correct Clear/Tinted transparency, but
+            Light/Dark is a trait decision and UIKit does not infer that trait
+-           from backdrop luminance. v7 explicitly resolves that second axis. */
++           from backdrop luminance. v8 explicitly resolves that second axis. */
+         AWEIOS27EnsureNativeSameWindowHost(sourceWindow);
+         resolved = AWEIOS27ResolveBackdropLuminanceStyle();
+     } else {
+@@ -12770,6 +12798,8 @@
+     gAWEIOS27BackdropLastSampleTime = 0.0;
+     gAWEIOS27BackdropPendingStyle = UIUserInterfaceStyleUnspecified;
+     gAWEIOS27BackdropPendingCount = 0;
++    gAWEIOS27BackdropBurstUntil = 0.0;
++    gAWEIOS27BackdropForceNextSample = NO;
+     AWERefreshRegisteredAdaptiveGlassButtons();
+ }
+ 
+@@ -13773,6 +13803,21 @@
+     UIUserInterfaceStyle style) {
+     if (style != UIUserInterfaceStyleLight &&
+         style != UIUserInterfaceStyleDark) return;
++
++    /* v8: iOS 27 luminance resolution already has hysteresis plus a two-sample
++       commit gate. A second 0.20/0.52 s debounce made the tab bar switch first
++       and the surrounding Home glass switch later. Commit the Home controls
++       in the same transaction instead. Preserve the older delay on iOS 26. */
++    if (AWEIsIOS27OrLater()) {
++        gAWEHomeChromePendingStyle = UIUserInterfaceStyleUnspecified;
++        gAWEHomeChromeStyleGeneration++;
++        if (gAWEHomeChromeLastStableStyle != style) {
++            gAWEHomeChromeLastStableStyle = style;
++            AWERefreshRegisteredAdaptiveGlassButtons();
++        }
++        return;
++    }
++
+     if (gAWEHomeChromeLastStableStyle == UIUserInterfaceStyleUnspecified) {
+         gAWEHomeChromeLastStableStyle = style;
+         gAWEHomeChromePendingStyle = UIUserInterfaceStyleUnspecified;
+@@ -13836,25 +13881,29 @@
+     if (homeChromeActive) AWEScheduleStableHomeChromeStyle(style);
+     gAWEAlbumMorphLastAppliedStyle = style;
+ 
++    BOOL ios27 = AWEIsIOS27OrLater();
+     BOOL changed =
+-        gAWEAlbumMorphOverlayWindow.overrideUserInterfaceStyle != style ||
+         gAWEAlbumMorphController.overrideUserInterfaceStyle != style ||
+         gAWEAlbumMorphController.view.overrideUserInterfaceStyle != style ||
+-        gAWEAlbumMorphController.tabBar.overrideUserInterfaceStyle != style;
++        gAWEAlbumMorphController.tabBar.overrideUserInterfaceStyle != style ||
++        (!ios27 && gAWEAlbumMorphOverlayWindow &&
++         gAWEAlbumMorphOverlayWindow.overrideUserInterfaceStyle != style);
+ 
+     if (changed) {
+         [UIView performWithoutAnimation:^{
+-            if (gAWEAlbumMorphOverlayWindow) {
++            /* On iOS 27 the real native bar lives in Douyin's source UIWindow.
++               The old overlay window is hidden state-only storage, so writing
++               a trait to it just invalidates an unrelated hierarchy. */
++            if (!ios27 && gAWEAlbumMorphOverlayWindow) {
+                 gAWEAlbumMorphOverlayWindow.overrideUserInterfaceStyle = style;
+             }
++            /* Swift owns the controller/view/tabBar trait write and guards
++               no-op assignments. Do not immediately recreate UITabBarAppearance:
++               adaptive Light/Dark does not change that appearance object and
++               recreating it forces UIKit's private glass provider to rebuild. */
+             [gAWEAlbumMorphController setResolvedInterfaceStyleRaw:(NSInteger)style];
+-            gAWEAlbumMorphController.overrideUserInterfaceStyle = style;
+-            gAWEAlbumMorphController.view.overrideUserInterfaceStyle = style;
+-            gAWEAlbumMorphController.tabBar.overrideUserInterfaceStyle = style;
+-            AWEConfigureNativeBarAppearance(
+-                gAWEAlbumMorphController.tabBar, AWEStoredAccentColor());
+         }];
+-        if (AWEIsIOS27OrLater()) {
++        if (ios27) {
+             [NSNotificationCenter.defaultCenter
+                 postNotificationName:@"AwemeLiquidBar.iOS27AdaptiveGlassStyleDidChange"
+                               object:nil];
+@@ -18292,7 +18341,7 @@
+     preferHighestPlaybackRow.distribution = UIStackViewDistributionEqualSpacing;
+ 
+     UILabel *forceDarkBottomBarLabel = [UILabel new];
+-    forceDarkBottomBarLabel.text = @"iOS 27 底栏强制深色";
++    forceDarkBottomBarLabel.text = @"iOS 27 首页液态玻璃强制深色（关闭=背景自适应）";
+     forceDarkBottomBarLabel.font =
+         [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+     UISwitch *forceDarkBottomBarSwitch = [UISwitch new];
+@@ -18455,7 +18504,7 @@
+     messageBlurDistanceRow.spacing = 5.0;
+ 
+     UILabel *adaptiveGlassHint = [UILabel new];
+-    adaptiveGlassHint.text = @"iOS 26 默认：系统自适应材质（跟随系统透明度/色调，开销较低）";
++    adaptiveGlassHint.text = @"iOS 26：系统原生自适应；iOS 27：首页可选背景亮度自适应或强制深色，其余页面只跟随系统深浅色。";
+     adaptiveGlassHint.font =
+         [UIFont systemFontOfSize:11.5 weight:UIFontWeightRegular];
+     adaptiveGlassHint.textColor = UIColor.tertiaryLabelColor;
+@@ -19010,11 +19059,17 @@
+     [NSUserDefaults.standardUserDefaults synchronize];
+ 
+     BOOL forceDark = AWEIsIOS27OrLater() && sender.isOn;
++    if (!forceDark) AWEIOS27RequestBackdropBurstSample();
+     if (gAWEAlbumMorphController) {
+         [gAWEAlbumMorphController setForcedDark:forceDark];
+         AWEApplyAlbumMorphResolvedAppearance(
+             AWEActiveMainWindow(),
+             [gAWEAlbumMorphController currentOriginalIndex]);
++        /* Mode changes (adaptive <-> forced dark) do alter item foreground
++           ownership, so rebuild appearance once here — not on every luminance
++           Light/Dark commit. */
++        AWEConfigureNativeBarAppearance(
++            gAWEAlbumMorphController.tabBar, AWEStoredAccentColor());
+         [gAWEAlbumMorphController.tabBar setNeedsLayout];
+         [gAWEAlbumMorphController.tabBar layoutIfNeeded];
+         [gAWEAlbumMorphController.tabBar setNeedsDisplay];
+@@ -20537,10 +20592,17 @@
+     %orig(aweme, index);
+     if (gAWEStableCleanScreenEnabled) AWEScheduleCleanScreenReapply(@"index.didChange");
+     if (gAWEAlbumMorphVisible) {
+-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.06 * NSEC_PER_SEC)),
+-                       dispatch_get_main_queue(), ^{
+-            AWERefreshAlbumMorphTintFromSystemProbe();
+-        });
++        /* v8: a settled page change is the one moment where rapid sampling is
++           valuable. Two bounded probes satisfy the existing two-sample gate,
++           while idle video playback falls back to the much slower cadence. */
++        AWEIOS27RequestBackdropBurstSample();
++        for (NSNumber *delay in @[@0.05, @0.18]) {
++            dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
++                                         (int64_t)(delay.doubleValue * NSEC_PER_SEC)),
++                           dispatch_get_main_queue(), ^{
++                AWERefreshAlbumMorphTintFromSystemProbe();
++            });
++        }
+     }
+     /* A few Home article/feed models leave the native bar hidden after reuse.
+        Re-evaluate once after the item switch; the Home-feed visibility rule

@@ -1,0 +1,51 @@
+AwemeLiquidBar 1.0.58 auth47 - GlassPolish v19
+Baseline: RealTouchLease v18 (user-validated right actions, top/bottom Search and Home/Friends parity)
+
+Scope of v19
+============
+
+1. Avatar UIMenu interaction stability
+- Restores the old stable passive press-feedback path.
+- Stops rebuilding/reassigning UIMenu on every feed/layout refresh.
+- Menu is rebuilt only when semantic content changes (work/profile/album/download/clean-screen signature).
+- Resolves Light/Dark appearance before assigning a new menu.
+- Intended to fix first-item-tap misses and highlight/selection loss while dragging through an open menu.
+
+2. Pure-clear foreground contrast
+- Adds bounded event-driven low-resolution backdrop sampling for Home/Friends clear glass.
+- Two samples only after relevant feed/tab/settings events; no CADisplayLink and no repeating screenshot timer.
+- Uses median luminance + hysteresis to choose explicit black/white foreground.
+- Applies to registered Home glass glyphs, top category labels and clear bottom glyph/text foregrounds.
+
+3. Comment keyboard emoji-strip background stability
+- Re-clears recreated full-width visual-effect carriers when the emoji panel attaches/adds/layouts.
+- Uses bounded 0/.05/.18/.45 s passes only; no permanent timer.
+
+4. Settings typography + Liquid Glass background
+- Reduces base typography on all iPhone widths, including Pro Max.
+- Button/diagnostic labels are constrained to one line with tighter scaling/truncation.
+- New Settings Background Material control: System / Glass / Clear.
+
+5. Text-only bottom style
+- New Bottom Content Style: Icons / Native Text.
+- Native Text uses a centered template image of the native page title so the iOS 26/27 floating platter keeps correct alignment.
+- In text-only mode Publish and Search are omitted as requested.
+- The second slot is dynamic: Friends OR Shop depending on Douyin's current configuration, so visible labels are Home + Friends/Shop + Messages + Me.
+
+6. Share/forward sheet Liquid Glass
+- New Share Sheet Liquid Glass switch plus Regular / Clear material selector.
+- Adds a full-page glass background and passive glass plates behind likely action controls / circular avatars.
+- Uses conservative route/class and geometry matching; exact private share-sheet hierarchy remains device-dependent and may need one diagnostic iteration.
+
+7. Preserved v18 touch architecture
+- No changes to the user-validated right-side real-touch ownership.
+- No changes to the user-validated top/bottom Search real-recognizer lease.
+- Home/Friends visual parity and iOS 27 clear-bottom policy remain intact.
+
+Validation performed
+====================
+- scripts/preflight.sh: PASS
+- swiftc -frontend -parse AwemeAlbumMorphBar.swift: PASS
+- bash -n build_no_install.sh: PASS
+- Objective-C/Logos delimiter balance checks: PASS
+- Full Xcode27/Theos compilation remains GitHub Actions/device-side validation.

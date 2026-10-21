@@ -1,0 +1,171 @@
+name: Build AwemeLiquidBar 2.3 Xcode 27
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, original-fixes-test42-fix2, claude/test42-fix2-bugfixes]
+    paths-ignore:
+      - "README.md"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify Xcode 27 and iOS 27 SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          SDK_VERSION="$(xcrun --sdk iphoneos --show-sdk-version)"
+          echo "iPhoneOS SDK: $SDK_VERSION"
+          [[ "$SDK_VERSION" == 27.* ]]
+
+      - name: Fix executable permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod 755 layout/DEBIAN/postinst scripts/preflight.sh build_no_install.sh 2>/dev/null || true
+          ls -l layout/DEBIAN/postinst scripts/preflight.sh build_no_install.sh
+
+      - name: Static preflight before dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./scripts/preflight.sh
+          python3 scripts/check_runtime_guards.py
+          ALB_REQUIRE_IPHONEOS=1 python3 scripts/test_native_endpoint_syntax.py
+          ALB_REQUIRE_IPHONEOS=1 python3 scripts/test_logos_boundary.py
+          xcrun clang -std=c11 -Wall -Wextra -Werror Tests/scroll_intent_test.c -o /tmp/alb-scroll-test
+          /tmp/alb-scroll-test
+          xcrun clang -std=c11 -Wall -Wextra -Werror Tests/right_layout_test.c -o /tmp/alb-right-test
+          /tmp/alb-right-test
+          xcrun clang -std=c11 -Wall -Wextra -Werror Tests/right_music_anchor_test.c -o /tmp/alb-right-music42
+          /tmp/alb-right-music42
+          xcrun clang -std=c11 -Wall -Wextra -Werror Tests/right_tail_anchor_test.c -o /tmp/alb-right-tail29
+          /tmp/alb-right-tail29
+          xcrun clang -std=c11 -Wall -Wextra -Werror Tests/right_persistence_test.c -o /tmp/alb-right-persistence-test
+          /tmp/alb-right-persistence-test
+          xcrun clang -std=c11 -Wall -Wextra -Werror ALBTopNative/Tests/window_geometry_test.c -o /tmp/alb-top-test
+          /tmp/alb-top-test
+          xcrun clang -std=c11 -Wall -Wextra -Werror Tests/bottom_geometry_test.c -o /tmp/alb-bottom-test
+          /tmp/alb-bottom-test
+          xcrun clang -std=c11 -Wall -Wextra -Werror Tests/download_state_test.c -o /tmp/alb-download-test
+          /tmp/alb-download-test
+          xcrun clang -std=c11 -Wall -Wextra -Werror Tests/native_endpoint_policy_test.c -o /tmp/alb-endpoint-test
+          /tmp/alb-endpoint-test
+          xcrun clang -std=c11 -Wall -Wextra -Werror Tests/native_state_test.c -o /tmp/alb-native-test
+          /tmp/alb-native-test
+          xcrun clang -std=c11 -Wall -Wextra -Werror Tests/test23_regression_test.c -o /tmp/alb23-test
+          /tmp/alb23-test
+
+      - name: Check native carriers with iOS 15 deployment target
+        shell: bash
+        run: |
+          set -euo pipefail
+          ALB_REQUIRE_IPHONEOS=1 python3 scripts/check_primary_action_availability.py
+          SDK_PATH="$(xcrun --sdk iphoneos --show-sdk-path)"
+          for ARCH in arm64 arm64e; do
+            for SOURCE in ALBUnifiedMaterial.m ALBTopNative/ALBTopNativeGroup.m ALB5BottomGeometry.m ALBNativeCarrierState.m; do
+            xcrun --sdk iphoneos clang -target "${ARCH}-apple-ios15.0" \
+              -isysroot "$SDK_PATH" -fobjc-arc -fblocks -fsyntax-only \
+              -Werror=unguarded-availability-new -Werror=unguarded-availability \
+              -Werror=objc-missing-super-calls \
+              -Wno-deprecated-declarations -Wno-unused-function -Wno-unused-variable \
+              -Wno-nullability-completeness -I. "$SOURCE"
+            done
+          done
+
+      - name: Typecheck bottom Swift against iPhone SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_PATH="$(xcrun --sdk iphoneos --show-sdk-path)"
+          xcrun --sdk iphoneos swiftc -typecheck -swift-version 5 -parse-as-library \
+            -target arm64-apple-ios15.0 -sdk "$SDK_PATH" -I . \
+            -import-objc-header AwemeLiquidBar-Bridging-Header.h \
+            AwemeAlbumMorphBar.swift ALBBottomSupport.swift
+
+      - name: Typecheck capture collector against iPhone SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_PATH="$(xcrun --sdk iphoneos --show-sdk-path)"
+          for ARCH in arm64 arm64e; do
+            xcrun --sdk iphoneos clang++ -target "${ARCH}-apple-ios15.0" \
+              -isysroot "$SDK_PATH" -fobjc-arc -fblocks -fsyntax-only \
+              -Werror=unguarded-availability-new -Werror=unguarded-availability \
+              -Werror=objc-missing-super-calls -Wno-deprecated-declarations \
+              -Wno-unused-function -Wno-unused-variable -Wno-nullability-completeness \
+              -I. Tests/Support/repro_capture_compile.mm
+          done
+
+      - name: Install packaging dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          brew install ldid dpkg
+
+      - name: Install Theos
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --recursive https://github.com/theos/theos.git "$GITHUB_WORKSPACE/.theos"
+
+      - name: Preprocess Logos source and verify generated hook boundaries
+        shell: bash
+        env:
+          THEOS: ${{ github.workspace }}/.theos
+        run: |
+          set -euo pipefail
+          for SOURCE in Tweak.x CommentGlassDYKiller.xm MessageTopGlassV3.xm; do
+            GENERATED="/tmp/AwemeLiquidBar-${SOURCE}.mm"
+            perl "$THEOS/bin/logos.pl" "$SOURCE" > "$GENERATED"
+            test -s "$GENERATED"
+            python3 scripts/check_logos_boundaries.py --generated "$GENERATED"
+          done
+
+      - name: Build rootless package
+        shell: bash
+        env:
+          THEOS: ${{ github.workspace }}/.theos
+        run: |
+          set -euo pipefail
+          make clean
+          make package -j1
+          find packages -maxdepth 1 -type f -name '*.deb' -print
+          test -n "$(find packages -maxdepth 1 -type f -name '*.deb' -print -quit)"
+
+      - name: Collect package and dylib
+        run: python3 scripts/collect_build.py
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: AwemeLiquidBar-2.3-auth51-MATERIAL2-Xcode27-rootless
+          path: out/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish built deb to dist branch
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEB="$(find packages out -maxdepth 2 -type f -name '*.deb' | head -1)"
+          test -n "$DEB"
+          echo "Publishing $DEB"
+          mkdir -p dist
+          cp "$DEB" "dist/$(basename "$DEB")"
+          git config user.email "actions@github.com"
+          git config user.name "github-actions[bot]"
+          git add -f "dist/$(basename "$DEB")"
+          git commit -m "ci: publish built deb"
+          git push -f origin HEAD:refs/heads/dist

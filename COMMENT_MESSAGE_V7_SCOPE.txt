@@ -1,0 +1,13 @@
+V7 scope (1.0.56c16 release version retained)
+
+1. Comment adaptive mode now captures the existing 4x4 system-glass resolver used by the native bottom bar before the comment panel covers the video, then mirrors that resolved light/dark material into the rounded comment glass. Pure-clear mode is unchanged.
+2. Profile/avatar UIMenu source now inherits the locally resolved profile-glass style before the menu is built.
+3. Live Photo / multi-content anti-shrink expanded to frame + bounds + center + transform paths while comments are visible only.
+4. Message page v6 frame/inset mutation loop removed. Navigation glass treatment is now two bounded passes after appearance; no AWENavigationBar layout hook and no table/host geometry rewriting.
+5. Same-style (拍同款) glass plate recentered exactly on the native 44x44 target and reduced to 52pt.
+6. Top quick-menu items are text-only; all SF Symbol icons removed.
+7. Shop/Profile bottom cleanup strengthened: native Blur/Skin carriers and UIKit tab-bar container backgrounds are cleared, plus generic profile scroll extension behind the bottom bar.
+
+Diagnostics retained:
+Documents/AwemeLiquidBar_comment_message_probe_v6.log
+Documents/AwemeLiquidBar_1.0.56c16_interaction.log

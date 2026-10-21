@@ -1,0 +1,67 @@
+--- /mnt/data/work_v9_rebuild/AwemeLiquidBar_1.0.58_auth47_PageFixedGlass_v9_project/MessageTopGlassV3.xm	2026-09-02 19:15:07.000000000 +0000
++++ /mnt/data/AwemeLiquidBar_1.0.58_auth47_V9SelectiveFix_v15_project/MessageTopGlassV3.xm	2026-09-03 10:09:28.275336552 +0000
+@@ -8,15 +8,34 @@
+ 
+ static const NSInteger kAWEMessageGlassTagBase = 26082150;
+ static NSString * const kAWEMessageEdgeBlurDistanceDefaultsKey =
+-    @"AwemeLiquidBarMessageEdgeBlurDistanceV1";
++    @"AwemeLiquidBarMessageEdgeBlurDistanceV1"; /* legacy migration */
++static NSString * const kAWEMessageTopEdgeBlurDistanceDefaultsKey =
++    @"AwemeLiquidBarMessageTopEdgeBlurDistanceV2";
++static NSString * const kAWEMessageBottomEdgeBlurDistanceDefaultsKey =
++    @"AwemeLiquidBarMessageBottomEdgeBlurDistanceV2";
+ 
+-static CGFloat AWEMessageEdgeBlurDistance(void) {
++static CGFloat AWEMessageLegacyEdgeBlurDistance(void) {
+     id stored = [NSUserDefaults.standardUserDefaults
+         objectForKey:kAWEMessageEdgeBlurDistanceDefaultsKey];
+     CGFloat value = [stored isKindOfClass:NSNumber.class]
+         ? [(NSNumber *)stored doubleValue] : 118.0;
+     return MIN(180.0, MAX(60.0, value));
+ }
++static CGFloat AWEMessageTopEdgeBlurDistance(void) {
++    id stored = [NSUserDefaults.standardUserDefaults
++        objectForKey:kAWEMessageTopEdgeBlurDistanceDefaultsKey];
++    CGFloat value = [stored isKindOfClass:NSNumber.class]
++        ? [(NSNumber *)stored doubleValue] : AWEMessageLegacyEdgeBlurDistance();
++    return MIN(188.0, MAX(40.0, value));
++}
++static CGFloat AWEMessageBottomEdgeBlurDistance(void) {
++    id stored = [NSUserDefaults.standardUserDefaults
++        objectForKey:kAWEMessageBottomEdgeBlurDistanceDefaultsKey];
++    CGFloat fallback = MIN(188.0, AWEMessageLegacyEdgeBlurDistance() + 8.0);
++    CGFloat value = [stored isKindOfClass:NSNumber.class]
++        ? [(NSNumber *)stored doubleValue] : fallback;
++    return MIN(188.0, MAX(40.0, value));
++}
+ static __weak UIViewController *gAWEMessageActiveController = nil;
+ static NSHashTable<UIView *> *gAWEMessageClearedViews = nil;
+ static NSHashTable<UIView *> *gAWEMessageHiddenVisualViews = nil;
+@@ -1079,9 +1098,10 @@
+      opacity fade.  One user-facing distance parameter controls the visual
+      reach while the proven WCG variable-blur implementation stays passive.
+     */
+-    const CGFloat distance = AWEMessageEdgeBlurDistance();
+-    const CGFloat topHeight = distance;
+-    const CGFloat bottomHeight = MIN(188.0, distance + 8.0);
++    const CGFloat topDistance = AWEMessageTopEdgeBlurDistance();
++    const CGFloat bottomDistance = AWEMessageBottomEdgeBlurDistance();
++    const CGFloat topHeight = topDistance;
++    const CGFloat bottomHeight = bottomDistance;
+     const CGFloat topAlpha = 0.14;
+     const CGFloat bottomAlpha = 0.10;
+     const CGFloat blurRadius = 1.0;
+@@ -1098,11 +1118,11 @@
+                               width, MIN(bottomHeight, height));
+     [top updateWithContentColor:contentColor blur:YES alpha:topAlpha
+                            rect:top.bounds edge:WCLGEdgeEffectEdgeTop
+-                      edgeInset:0.0 transitionLength:MAX(44.0, distance * 0.78)
++                      edgeInset:0.0 transitionLength:MAX(44.0, topDistance * 0.78)
+                      blurRadius:blurRadius];
+     [bottom updateWithContentColor:contentColor blur:YES alpha:bottomAlpha
+                               rect:bottom.bounds edge:WCLGEdgeEffectEdgeBottom
+-                         edgeInset:0.0 transitionLength:MAX(48.0, distance * 0.92)
++                         edgeInset:0.0 transitionLength:MAX(48.0, bottomDistance * 0.92)
+                         blurRadius:blurRadius];
+ 
+     UIView *topNav = nav;

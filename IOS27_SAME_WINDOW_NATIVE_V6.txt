@@ -1,0 +1,37 @@
+AwemeLiquidBar 1.0.58 auth47 - iOS 27 Same-Window Native v6
+
+Reason for v6
+-------------
+v5 proved two independent failures:
+1. The v5 SOURCE resolver stayed LIGHT for both PAGE_TRAIT and SameStyleGlass.
+2. The source-window mirror rendered a second main/search glass layer while the
+   original UITabBar private material was still present, producing the visible
+   double-bar geometry.
+
+v6 architecture
+---------------
+- iOS 26: unchanged transparent overlay UIWindow architecture.
+- iOS 27+: the existing real UITabBarController is detached from the overlay
+  UIWindow and hosted as a child of Douyin's own root controller/view.
+- A full-screen pass-through host forwards touches only when the point lands in
+  the real UITabBar; all other touches pass to Douyin.
+- The historical overlay UIWindow remains hidden and is used only for existing
+  route/visibility bookkeeping.
+- The v5 source-window mirror plates are not created or displayed.
+- Automatic iOS 27 mode uses UIUserInterfaceStyleUnspecified. No probe or
+  PAGE_TRAIT/SameStyle LIGHT/DARK branch is forced onto the bar. UIKit owns the
+  actual Liquid Glass backdrop in the same UIWindow as the page/video.
+- Force-dark mode remains available and explicit.
+- UISearchTab continues to receive touches directly, preserving native press /
+  stretch behavior.
+
+Automatic log
+-------------
+AwemeLiquidBar_iOS27BottomProbe_v6.log
+Key marker:
+SAME_WINDOW_ATTACH ...
+
+Expected visual result
+----------------------
+Exactly one native bottom-bar material tree on iOS 27, with no v5 mirror layer.
+The bar now has access to the real page/video backdrop in its own UIWindow.

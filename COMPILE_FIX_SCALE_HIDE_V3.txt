@@ -1,0 +1,14 @@
+AwemeLiquidBar 2.0 auth47 Scale/Hide v3 compile fix
+
+Build errors fixed from v2:
+1. AWEViewIsDescendantOfView was referenced at three call sites but had no declaration/definition.
+   Added a small static helper backed by UIView -isDescendantOfView:.
+2. alb_installOrRefreshTripleTapMode / alb_handleTripleTapLike: are Logos %new methods on
+   AWEPlayInteractionViewController, but the Objective-C interface did not declare them.
+   Added declarations so Clang accepts calls from view lifecycle hooks.
+
+The six errors shown by the GitHub Actions build are therefore covered:
+- 3 x implicit function declaration for AWEViewIsDescendantOfView
+- 3 x no visible @interface selector for alb_installOrRefreshTripleTapMode
+
+No scale/hide layout behavior was changed in this fix.

@@ -1,0 +1,409 @@
+{
+  "revision": "2.0.10 TEST37 REPAIR",
+  "scope": "Local source checks, extracted production helper arithmetic and portable C tests. No iOS SDK or device execution.",
+  "tools": {
+    "cc": "/usr/bin/cc",
+    "clang": null,
+    "swiftc": null,
+    "xcrun": null
+  },
+  "checks": [
+    {
+      "command": [
+        "sh",
+        "scripts/preflight.sh"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "2.0.10 TEST37 REPAIR source/package preflight passed; compile and device testing still required.\nTEST37 native source contract passed (not an iOS compile/device test).\nTweak.x: boundary checks passed (244 original-call directives; not SDK compilation)\nCommentGlassDYKiller.xm: boundary checks passed (28 original-call directives; not SDK compilation)\nMessageTopGlassV3.xm: boundary checks passed (12 original-call directives; not SDK compilation)\n"
+    },
+    {
+      "command": [
+        "python",
+        "scripts/check_watchdog_guards.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "48 extracted frame-gate cases + no-shrink pass-through passed; no UIKit used.\nTEST18 source scope / scheduling / preservation checks passed. Not an iOS build or device test.\n"
+    },
+    {
+      "command": [
+        "python",
+        "scripts/check_right_persistence.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "TEST19 right persistence / material / touch-handler source checks passed; not an iOS build or device test.\n"
+    },
+    {
+      "command": [
+        "python",
+        "scripts/check_test24.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "TEST24 production-source invariants passed; not an iOS build, native-animation test, or device test.\n"
+    },
+    {
+      "command": [
+        "python",
+        "scripts/test_bottom_scale_feedback.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "Bottom scale: 6100 anchor/idempotence traces (610000 model passes); no UIKit/device test.\n"
+    },
+    {
+      "command": [
+        "python",
+        "scripts/check_test29.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "TEST29 native-material / foreground / search / sheet / background source contracts passed; no SDK/device rendering claim.\n"
+    },
+    {
+      "command": [
+        "python",
+        "scripts/check_test33.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "TEST33 retained action, route, scroll, scaling and material contracts passed; no SDK/device claim.\n"
+    },
+    {
+      "command": [
+        "python",
+        "scripts/check_test34.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "TEST34 retained avatar attachment, material ownership and layout-cost guards passed; no SDK/device claim.\n"
+    },
+    {
+      "command": [
+        "python",
+        "scripts/check_test35.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "TEST35: no lens snapshots; complete selection lease; native platter foreground attachment; historical profile exclusion; TEST9 native top button source. Source checks only.\n"
+    },
+    {
+      "command": [
+        "python",
+        "scripts/check_test36.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "TEST36 retained restore-before-reveal and native-state ownership guards passed; foreground masks superseded by TEST37. Source checks only.\n"
+    },
+    {
+      "command": [
+        "python",
+        "scripts/check_test37.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "TEST37: exact TEST9 button/gesture source, original bottom material ownership, full foreground lease, translation-only search, one compact glass, stationary badge fade and compensated inner Favorites contracts passed. Source checks only.\n"
+    },
+    {
+      "command": [
+        "python",
+        "scripts/test_profile_scroll_preservation.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "Profile: 3104 retained helper traces, 56 clip cases, 1302 compensated-inner-scroll cases passed; no UIKit/device test.\n"
+    },
+    {
+      "command": [
+        "python",
+        "scripts/check_repro_capture.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "TEST30 CAPTURE: 11 scenarios, passive hooks, bounded snapshots, write isolation, ABI and preservation source checks passed; no SDK/device claim.\n"
+    },
+    {
+      "command": [
+        "python",
+        "scripts/check_primary_action_availability.py"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "{\"test\": \"TEST9 direct UIButton menu source\", \"retired_manual_dispatch\": true, \"availability_sensitive_call_present\": false, \"apple_sdk_compile\": false, \"note\": \"Real carriers and Tweak are compiled separately by the iPhone SDK CI steps.\"}\n"
+    },
+    {
+      "command": [
+        "bash",
+        "-n",
+        "push_to_github.sh"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": ""
+    },
+    {
+      "command": [
+        "sh",
+        "-n",
+        "build_no_install.sh",
+        "scripts/preflight.sh"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": ""
+    },
+    {
+      "command": [
+        "cc",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "Tests/scroll_intent_test.c",
+        "-o",
+        "/tmp/alb37-c-7pig54yo/0",
+        "-lm"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "",
+      "execution": {
+        "command": [
+          "/tmp/alb37-c-7pig54yo/0"
+        ],
+        "exit_code": 0,
+        "passed": true,
+        "output": "scroll intent: directions, reversal, dedup and manual-vs-idle feed ownership passed\n"
+      }
+    },
+    {
+      "command": [
+        "cc",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "Tests/right_layout_test.c",
+        "-o",
+        "/tmp/alb37-c-7pig54yo/1",
+        "-lm"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "",
+      "execution": {
+        "command": [
+          "/tmp/alb37-c-7pig54yo/1"
+        ],
+        "exit_code": 0,
+        "passed": true,
+        "output": "right layout: coordinate transforms + icon-slot packing + repeated cycles passed\n"
+      }
+    },
+    {
+      "command": [
+        "cc",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "Tests/right_tail_anchor_test.c",
+        "-o",
+        "/tmp/alb37-c-7pig54yo/2",
+        "-lm"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "",
+      "execution": {
+        "command": [
+          "/tmp/alb37-c-7pig54yo/2"
+        ],
+        "exit_code": 0,
+        "passed": true,
+        "output": "hidden-share count anchoring: 420 visibility/scale cases passed\n"
+      }
+    },
+    {
+      "command": [
+        "cc",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "Tests/right_persistence_test.c",
+        "-o",
+        "/tmp/alb37-c-7pig54yo/3",
+        "-lm"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "",
+      "execution": {
+        "command": [
+          "/tmp/alb37-c-7pig54yo/3"
+        ],
+        "exit_code": 0,
+        "passed": true,
+        "output": "right persistence: 1.3M stable cycles, 64 hide masks, cross-root inverse maps passed; old restore/apply negative control stays dirty\n"
+      }
+    },
+    {
+      "command": [
+        "cc",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "ALBTopNative/Tests/window_geometry_test.c",
+        "-o",
+        "/tmp/alb37-c-7pig54yo/4",
+        "-lm"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "",
+      "execution": {
+        "command": [
+          "/tmp/alb37-c-7pig54yo/4"
+        ],
+        "exit_code": 0,
+        "passed": true,
+        "output": "top native window, platter and shared baseline geometry: PASS\n"
+      }
+    },
+    {
+      "command": [
+        "cc",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "Tests/bottom_geometry_test.c",
+        "-o",
+        "/tmp/alb37-c-7pig54yo/5",
+        "-lm"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "",
+      "execution": {
+        "command": [
+          "/tmp/alb37-c-7pig54yo/5"
+        ],
+        "exit_code": 0,
+        "passed": true,
+        "output": "bottom geometry: native pair, pivot, 256000 idempotent layouts, reverse trajectory and interrupted animation passed\n"
+      }
+    },
+    {
+      "command": [
+        "cc",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "Tests/download_state_test.c",
+        "-o",
+        "/tmp/alb37-c-7pig54yo/6",
+        "-lm"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "",
+      "execution": {
+        "command": [
+          "/tmp/alb37-c-7pig54yo/6"
+        ],
+        "exit_code": 0,
+        "passed": true,
+        "output": ""
+      }
+    },
+    {
+      "command": [
+        "cc",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "Tests/native_endpoint_policy_test.c",
+        "-o",
+        "/tmp/alb37-c-7pig54yo/7",
+        "-lm"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "",
+      "execution": {
+        "command": [
+          "/tmp/alb37-c-7pig54yo/7"
+        ],
+        "exit_code": 0,
+        "passed": true,
+        "output": "Native endpoint policy: 71 assertions passed (ABI/name filter only; not UIKit execution).\n"
+      }
+    },
+    {
+      "command": [
+        "cc",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "Tests/native_state_test.c",
+        "-o",
+        "/tmp/alb37-c-7pig54yo/8",
+        "-lm"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "",
+      "execution": {
+        "command": [
+          "/tmp/alb37-c-7pig54yo/8"
+        ],
+        "exit_code": 0,
+        "passed": true,
+        "output": "native-state predicates: BOOL ABI checks, unknown/single-item/transition/expanded/compact/invalid geometry passed\n"
+      }
+    },
+    {
+      "command": [
+        "cc",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "Tests/test23_regression_test.c",
+        "-o",
+        "/tmp/alb37-c-7pig54yo/9",
+        "-lm"
+      ],
+      "exit_code": 0,
+      "passed": true,
+      "output": "",
+      "execution": {
+        "command": [
+          "/tmp/alb37-c-7pig54yo/9"
+        ],
+        "exit_code": 0,
+        "passed": true,
+        "output": "TEST23: raw runtime ABI / portal-safe policy / row-spacing invariants passed (C only, no UIKit).\n"
+      }
+    }
+  ],
+  "not_run_locally": [
+    "iPhoneOS Objective-C/ObjC++ syntax checks",
+    "Swift UIKit typecheck",
+    "Swift request-queue extraction test",
+    "Swift center geometry tests",
+    "Theos arm64/arm64e package build",
+    "iOS menu morph, glass compositor, Favorites gesture or frame-rate validation"
+  ],
+  "ci_gates_retained": true,
+  "passed": true
+}

@@ -1,0 +1,23 @@
+{
+  "version": "2.3",
+  "source_preflight": "passed",
+  "material_policy_cases": 64,
+  "bottom_scale_traces": 6100,
+  "scale_model_passes": 610000,
+  "c_regressions": [
+    "native_endpoint_policy_test.c",
+    "native_state_test.c",
+    "bottom_geometry_test.c",
+    "scroll_intent_test.c",
+    "top/window_geometry_test.c"
+  ],
+  "authorization_sha256": "6e267d2878cea2fd84cf648d9194c30d4ec06bb3a2295355ba73bf9e7ecd53f3",
+  "portable_shell_checks": "passed",
+  "unexecuted": [
+    "iOS SDK typecheck",
+    "Swift extracted request scheduling harness (swiftc unavailable)",
+    "Theos build",
+    "device visuals, menus and collapse"
+  ],
+  "note": "Source integration and C-model checks are not UIKit execution or device acceptance."
+}

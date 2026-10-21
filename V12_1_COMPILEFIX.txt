@@ -1,0 +1,9 @@
+AwemeLiquidBar 1.0.58 auth47 InteractionWarp v12.1 compilefix
+
+Compile-only correction from v12:
+- UIButton/UIControl Objective-C tracking selectors corrected to:
+  beginTrackingWithTouch:withEvent:
+  continueTrackingWithTouch:withEvent:
+  endTrackingWithTouch:withEvent:
+- cancelTrackingWithEvent: was already correct and remains unchanged.
+- No runtime policy, layout, hit-testing, clear-glass, VVebo icon-warp, message-top, or Favorites scroll behavior was intentionally changed.

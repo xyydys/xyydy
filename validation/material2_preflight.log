@@ -1,0 +1,22 @@
+2.3 source/package preflight passed; compile and device testing still required.
+TEST42 native source contract passed (not an iOS compile/device test).
+TEST42 scoped integration guards passed; device rendering remains unverified.
+2.3 (TEST42 FIX3-FIX9) targeted repair guards passed (6 rejected mutations); no SDK/device claim.
+READBACK: read-only carrier state contract passed (8 rejected mutations); no SDK/device claim.
+Tweak.x: boundary checks passed (243 original-call directives; not SDK compilation)
+CommentGlassDYKiller.xm: boundary checks passed (28 original-call directives; not SDK compilation)
+MessageTopGlassV3.xm: boundary checks passed (12 original-call directives; not SDK compilation)
+48 extracted frame-gate cases + no-shrink pass-through passed; no UIKit used.
+TEST18 source scope / scheduling / preservation checks passed. Not an iOS build or device test.
+TEST42 right persistence / material / touch-handler source checks passed; not an iOS build or device test.
+TEST24 production-source invariants passed; not an iOS build, native-animation test, or device test.
+Bottom scale: 6100 anchor/idempotence traces (610000 model passes); no UIKit/device test.
+TEST29 native-material / foreground / search / sheet / background source contracts passed; no SDK/device rendering claim.
+TEST33 retained action, route, scroll, scaling and material contracts passed; no SDK/device claim.
+TEST34 retained avatar attachment, material ownership and layout-cost guards passed; no SDK/device claim.
+TEST35: no lens snapshots; complete selection lease; native platter foreground attachment; historical profile exclusion; TEST9 native top button source. Source checks only.
+TEST36 retained restore-before-reveal and native-state ownership guards passed; foreground masks superseded by TEST37. Source checks only.
+Profile: 3104 retained helper traces, 56 clip cases, 1302 compensated-inner-scroll cases passed; no UIKit/device test.
+2.3 CAPTURE: floating overlay removed, inert ABI, everyday diagnostics kept, preservation checks passed; no SDK/device claim.
+Material policy: 64 appearance combinations, preference migration and transition boundaries passed.
+Unified material ownership/coverage/transition guards passed; UIKit and device behavior unverified.

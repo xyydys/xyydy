@@ -1,0 +1,17 @@
+AwemeLiquidBar 1.0.57f — dual native UISearchTab avatar probe
+
+Changes from 1.0.57e
+- Restores the proven expanded geometry: regular native tab cluster | Search | avatar.
+- Removes the visible custom avatar UIButton entirely.
+- Adds the avatar as a second real UISearchTab in the same AWEAlbumMorphTabController as Search.
+- The avatar image replaces that second UISearchTab's image; automaticallyActivatesSearch stays disabled.
+- The transparent avatar chrome remains only as a hit target and renders no glass.
+- Collapsing does not rebuild tabs or hide the main UITabBar. The rightmost native avatar surface branch is translated to center while the controller-level mask closes around it.
+- Expanding reverses the same transform/mask with the existing spring animation.
+- Initial state is expanded; idle 5 s collapses, Home upward swipe collapses immediately, ordinary tab switches re-arm the timer.
+- Profile / “我” remains a real regular tab.
+
+Preserved
+- c16 fullscreen/comment/IM/clean-screen/native-badge behavior.
+- auth42 authorization table.
+- Xcode 27 GitHub Actions build path.

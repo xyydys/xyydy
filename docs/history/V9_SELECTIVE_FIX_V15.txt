@@ -1,0 +1,24 @@
+AwemeLiquidBar 1.0.58 auth47 — V9 Selective Fix v15
+
+BASELINE
+- Rebuilt directly from the user-provided PageFixedGlass v9 project.
+- v10-v14 touch mirroring, image warp, avatar/music reconstruction, and UIApplication sendEvent experiments are not inherited.
+
+ONLY REQUESTED DELTAS
+1. Profile/Favorites no-jump fix: Profile route is excluded from bottom-content frame/inset rewriting and scroll-triggered rescans.
+2. iOS 27 Clear bottom-bar switch: ON = Home + Profile/Me root bottom bar use untinted Clear UIGlassEffect; OFF keeps v9 page-fixed bottom policy.
+3. Home top/right glass: no forced Dark semantic trait on iOS 26/27; native untinted Clear UIButtonConfiguration remains UIKit-owned and follows system Liquid Glass transparency/contrast.
+4. Click repair only:
+   - Like/Comment/Favorite/Share keep the v9 UIKit glass button, geometry, and native press/stretch. TouchUp only re-acquires and forwards to the matching original Douyin action.
+   - Top/Bottom Search never move Douyin's original recognizer. Each visible Search entrance gets an independent real-touch forwarding proxy to the same original target/action, with synthetic forwarding only as fallback.
+5. Avatar menu: no extra zero-duration press recognizer on the transparent menu target; appearance is resolved before assigning UIMenu so the first frame uses the correct Light/Dark style.
+6. Commerce/group-buy: adds a short pre-presentation fullscreen-suppression grace before commerce controllers fully register.
+7. Message page edge blur: independent Top and Bottom distance settings (40–188 pt), with migration from the old single value.
+8. Settings UI: typography scales from safe-area width; labels can shrink/truncate and switches keep required horizontal priority on smaller iPhones.
+
+INTENTIONALLY UNCHANGED
+- Right/top Liquid Glass button size, frame, configuration, and native press/distortion behavior.
+- Avatar/music geometry and visual reconstruction.
+- Clean-screen implementation.
+- Internal fullscreen implementation except the commerce guard.
+- Authorization table (auth47), package version (1.0.58), and Swift bottom-tab construction.

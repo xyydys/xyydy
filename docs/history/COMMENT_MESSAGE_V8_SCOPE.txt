@@ -1,0 +1,41 @@
+V8 probe/stability scope — 1.0.56c16 auth44 retained
+
+1. Message page
+- Removed v7 replacement SF-symbol artwork. Douyin's original menu/search/add/title visuals remain visible so native black/white adaptation is preserved.
+- Custom controls are now background-only, non-interactive clear-glass plates positioned behind the native sources.
+- No message table/content geometry mutation is reintroduced (v6 freeze regression remains removed).
+- Added bounded top-region cleanup + MESSAGE_TOP_CAND diagnostics for real remaining top background carriers.
+
+2. Comment glass adaptive text
+- Keeps v7 4x4 system-glass probe resolver.
+- In adaptive mode, mirrors the resolved light/dark material into comment panel/input trait environment so semantic text follows the actual glass branch rather than the phone-wide fixed appearance.
+- Does not hard-recolor every UILabel; accent/status colors are left intact.
+- Adds COMMENT_TEXT_TRAIT diagnostics.
+
+3. Live Photo / image shrink regression
+- Removed v7's broad global UIView setBounds/setCenter/setTransform blocking.
+- Retains the narrower v6 frame guard and the targeted AWECommentImageContentView transform guard while comments are visible.
+- Geometry blocks continue to log class/controller/frame so a real Live Photo class can be targeted from evidence.
+
+4. Same-style / 拍同款 glass
+- A single plate is now refreshed from AWEPlayInteractionViewController root instead of relying only on AWEPlayInteractionSingleSongMusicStyleView (which is not present/stable on every feed item).
+- Finds a compact ~44pt native ancestor around the 拍同款 target, centers on it, and sizes the plate to about 1.3x native size (bounded 48–54pt).
+- Plate is inserted immediately behind the real target's top-level anchor, not sent blindly to the back of the whole host.
+- Adds SAMESTYLE_OK / SAMESTYLE_MISS diagnostics on every relevant layout/page transition.
+
+5. Shop/Profile bottom residual background
+- Existing Blur/Skin/tab-container clearing retained.
+- Added BOTTOM_CAND diagnostics for visible full-width bottom carriers (last ~130pt), recording runtime class/frame/background/effect/opacity. No new broad destructive hide is added until the actual second carrier is identified.
+
+6. Avatar UIMenu
+- v7 local glass-style mirroring is retained. The menu source button resolves from the local system glass style before building UIMenu.
+
+Primary logs (Douyin sandbox Documents):
+- AwemeLiquidBar_comment_message_probe_v6.log
+  Search: COMMENT_ADAPTIVE, COMMENT_TEXT_TRAIT, MESSAGE_V8, MESSAGE_TOP_CAND, COMMENT_GEOMETRY_BLOCK
+- AwemeLiquidBar_1.0.56c16_interaction.log
+  Search: SAMESTYLE_OK, SAMESTYLE_MISS, BOTTOM_CAND
+
+Compile-fix revision:
+- Restored AWEPlayInteractionSingleSongMusicStyleView Logos methods to standard multiline syntax.
+- No functional behavior changes from v8; fixes Logos preprocessing brace corruption seen in GitHub Actions.

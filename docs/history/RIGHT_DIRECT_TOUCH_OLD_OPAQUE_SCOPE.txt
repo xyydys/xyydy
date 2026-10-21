@@ -1,0 +1,16 @@
+AwemeLiquidBar 2.0 auth47 — right direct-touch + old opaque settings recovery
+
+1. Settings UI only:
+   - restores 1.0.56c16-style fixed alpha-1 RGB background/card colours;
+   - no Liquid Glass / blur / transparent sheet background is added;
+   - keeps the current 2.0 settings layout and controls.
+
+2. Right Like/Comment/Favorite/Share:
+   - real AWEFeedVideoButton remains the only business hit-test owner;
+   - visual glass slot and system glass button remain non-interactive;
+   - removes the v18 beginTracking/continueTracking/endTracking touch mirror hook;
+   - uses the same non-cancelling AWEInstallGlassPressFeedback path already used by top Search;
+   - late AWELayoutBoundHomeActionSlots is locked to NO/NO and cannot re-enable the overlay.
+
+Diagnosis:
+Top Search is not successfully "synthetically forwarded" on current builds; it works by direct touch passthrough to Douyin's real owner while the visual glass observes the touch. The right four buttons need the same ownership model. The regression was that the late layout pass re-enabled the 46pt visual glass overlay, so the icon area swallowed touches while the number below still worked.

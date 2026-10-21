@@ -1,0 +1,27 @@
+--- /mnt/data/aweme_orig_v2/AwemeLiquidBar_2.0_auth47_SettingsRefactor_project/Tweak.x	2026-09-06 06:26:23.000000000 +0000
++++ /mnt/data/aweme_fix/AwemeLiquidBar_2.0_auth47_SettingsRefactor_project/Tweak.x	2026-09-06 06:58:55.682958429 +0000
+@@ -152,6 +152,11 @@
+ - (void)performCommentAction;
+ - (void)performLikeAction;
+ - (void)onVideoPlayerViewDoubleClicked:(id)sender;
++/* Logos %new methods are invoked from methods compiled against this
++   interface. Declare them here so Clang does not reject the calls under
++   modern C99/Objective-C diagnostics. */
++- (void)alb_installOrRefreshTripleTapMode;
++- (void)alb_handleTripleTapLike:(UITapGestureRecognizer *)recognizer;
+ @end
+ 
+ /*
+@@ -159,6 +164,12 @@
+  before the main forward-declaration block later in the file. Keep their
+  static prototypes here so Clang never creates implicit int declarations.
+ */
++static BOOL AWEViewIsDescendantOfView(UIView *view, UIView *ancestor) {
++    if (!view || !ancestor) return NO;
++    if (view == ancestor) return YES;
++    return [view isDescendantOfView:ancestor];
++}
++
+ static UIWindow *AWEActiveMainWindow(void);
+ UIUserInterfaceStyle AWEAppResolvedAppearanceStyle(UIWindow *window);
+ static UIUserInterfaceStyle AWESystemInterfaceStyle(void);

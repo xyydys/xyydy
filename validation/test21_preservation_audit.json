@@ -1,0 +1,15 @@
+{
+  "base": "TEST20",
+  "current": "TEST21",
+  "runtime_source_files_compared": 36,
+  "changed_runtime_source_files": [
+    "Tweak.x"
+  ],
+  "tweak_functional_equivalence_after_version_normalization": true,
+  "test20_tweak_sha256": "2d01d05552c593edefe4927e24df3f380e15becf836eff15f262ab3787820bcf",
+  "test21_tweak_sha256": "743289b85fb0a42154243aa9a6d59e20e26d57741b821c4b40673cf3b369cbc4",
+  "test21_normalized_tweak_sha256": "2d01d05552c593edefe4927e24df3f380e15becf836eff15f262ab3787820bcf",
+  "test_logos_boundary_changed": true,
+  "materials_unchanged": true,
+  "bottom_driver_unchanged": true
+}

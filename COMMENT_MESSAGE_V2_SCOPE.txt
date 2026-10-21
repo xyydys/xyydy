@@ -1,0 +1,26 @@
+AwemeLiquidBar 1.0.56c16 auth44 — comment glass + Messages top experiment v2
+
+Baseline:
+- clean 1.0.56c16 auth44 project
+- no code copied from failed 57c1/57c2/commentglass_flex_v1 attempts
+
+Comment glass:
+- follows DYYY exact CommentContainerInnerViewController route for main panel
+- clear iOS 26 UIGlassEffect only; no manual tint, no border, no corner yet
+- clears known opaque comment structural backgrounds
+- CommentInputContainerView outer 83pt background is cleared
+- detected ~12/6/(width-24)/36 native input pill is preserved untouched
+- comment controllers no longer disable the validated internal fullscreen media geometry
+- AWEStoryContainerCollectionView ignores non-zero-y frame shifts only while the visible comment sheet is active
+- BDMultiContentContainer_ImageContentView transform is held only while comments are visible
+
+Messages top:
+- AWENavigationBar background is cleared only inside AWEIMMessageTabRoot/ViewController
+- secondary colored left icon is hidden
+- native menu/search/add controls stay in place; non-interactive native clear-glass plates are inserted behind them
+- native “消息” title stays; a 96x46 clear-glass plate is inserted behind it
+- attempts the validated Xiaohongshu-style path: expose real scroll content behind a transparent nav bar; only shifts a large scroll view when it demonstrably starts immediately below the 106pt nav bar
+- logs topEdgeEffect class when available; no hand-drawn gradient/variable blur
+
+Probe:
+Documents/AwemeLiquidBar_comment_message_probe.log

@@ -1,0 +1,36 @@
+AwemeLiquidBar 1.0.58 auth47 — V9ActionForward v17
+
+Base: v16, which itself stays on the user-requested PageFixedGlass v9 line.
+This revision is intentionally narrow and driven by the v16 device diagnostic.
+
+1. Native business forwarding
+- v16 proved sendAction=1 was a false positive: the right-side recognizer targets
+  were BSTUIGestureRecognizerObserver, _UISelectionInteraction and
+  awe_UITracker_gestureRecognizer:, while the recognizer remained state=Possible.
+- v17 filters telemetry/selection/tracker targets.
+- It finds the actual recognizer state ivar used by the current UIKit runtime,
+  temporarily exposes Ended to the original target/action, then restores it.
+- Search keeps the original AWEAlphaTapGesture and forwards
+  AWEHPTopBarSearchEntranceController/onDiscoverButtonClicked: with the original
+  recognizer as sender.
+- If a right-side recognizer has no business target, v17 continues to the real
+  UIControl/action or accessibility fallback instead of stopping on tracker logs.
+
+2. iOS 27 clear bottom glass
+- Restores the v10 on-device-verified narrow implementation: start at UITabBar,
+  locate only _UITabBarItemPlatterView descendants, replace glassEffect while
+  preserving interactive state, and restore the original effect when disabled.
+- Clear mode remains selective: Home + Profile only.
+
+3. iOS 27 vertical offset
+- The same-window host no longer repeatedly assigns frame to the transformed
+  AlbumMorph controller view. It sizes with bounds+center so Swift's vertical
+  transform is not cancelled by frame recomputation.
+
+4. Settings typography
+- The responsive scale is now compact on every iPhone, including Pro Max.
+- Long diagnostic labels use a smaller one-line baseline.
+
+Unchanged: favorites no-jump fix, avatar/music behavior, message top/bottom blur
+settings, commerce fullscreen suppression, native glass dimensions/press effects,
+auth47, bottom item layout/order.

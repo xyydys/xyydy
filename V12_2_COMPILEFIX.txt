@@ -1,0 +1,22 @@
+AwemeLiquidBar 1.0.58 auth47 InteractionWarp v12.2 compilefix
+
+Scope: compile-only fix. No runtime behavior or feature policy changes.
+
+GitHub/Xcode 27 error fixed:
+  MessageTopGlassV3.xm: cannot jump from switch statement to this case label
+
+Cause:
+  AWEMessageGlassTouchDriver -handlePress: used Objective-C object `plate` in
+  animation blocks while `switch (recognizer.state)` case labels shared one
+  lexical scope. Under Objective-C++/ARC, Clang treats the strongly captured
+  local as having a non-trivial lifetime and rejects case-label jumps across it.
+
+Fix:
+  Give Began, Changed, Ended/Cancelled/Failed, and default case bodies explicit
+  brace scopes. This matches the already compiling pattern used by
+  AWEGlassPressFeedbackTarget in Tweak.x and does not alter interaction logic.
+
+Validation:
+  scripts/preflight.sh passed.
+  Touch-driver case-scope audit passed.
+  MessageTopGlassV3.xm raw brace balance = 0.

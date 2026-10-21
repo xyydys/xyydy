@@ -1,0 +1,42 @@
+AwemeLiquidBar 1.0.56c16 auth44 — v13 log-guided
+
+Evidence used from the v12 runtime logs
+----------------------------------------
+1. Photo/live: v12 recorded shrunken transforms (0.342 / 0.557 / 0.572) as baselines, then rejected the later identity transform. It also rejected ImageContentAdapterCellView center moves used by normal paging.
+2. Same-style: AWEPlayInteractionSingleSongMusicStyleView is the stable 44x44 container while the "拍同款" label marker can temporarily disappear.
+3. Bottom strip: the old tab test treated tag 3 (Messages) as Profile; the scanner therefore bound to AWEIMChatListCommonCell instead of Profile tag 4.
+4. Message mask: the broad top scanner touched chat cells and private _UISystemBackgroundView descendants of our own UIButton glass. The log also exposed a moving 440x440 translucent UIImageView under AFDCloseFriendsPlaceHolderView.
+5. Comment text: controller trait updates were occurring, but Douyin later reassigned neutral label/text-view colors.
+
+v13 changes
+-----------
+- Media snapshots are video-player-only and must intersect the visible window.
+- BDMultiContentContainer.ImageContentView and AWEMultiContentImpl.LivePhotoContentAdapterView reject only characteristic panel-shrink transforms; identity restore and normal paging are always allowed.
+- Comment content style is resolved from the mounted glass material first. Controller overrideUserInterfaceStyle remains the primary route; neutral UILabel/UITextView assignments inside the comment hierarchy get a persistent contrast fallback.
+- Same-style glass can bind to the stable AWEPlayInteractionSingleSongMusicStyleView when its text marker is temporarily missing.
+- Bottom-strip scanner/scroll extension now runs only on Shop (tag 1 when second tab is Shop) and Profile (tag 4), never Messages (tag 3).
+- Message cleanup skips the complete plugin UIButton glass subtree and targets only the proven AFDCloseFriendsPlaceHolderView carrier. Message content geometry stays warm across tab switches to avoid restore/re-layout drift.
+- Message menu/search/add/title plates use UIButtonConfiguration.glassButtonConfiguration instead of clearGlassButtonConfiguration.
+- Native top-left quick-menu labels matching the current menu titles are centered without changing the menu width.
+
+New/important log markers
+-------------------------
+COMMENT_PHOTO_LIVE_BLOCK
+COMMENT_TEXT_TRAIT
+COMMENT_TEXT_PERSIST
+SAMESTYLE_OK / SAMESTYLE_RECOVER (fallback=1 means stable-class/window fallback)
+BOTTOM_WINDOW_CAND / BOTTOM_CARRIER_BIND (expected tab=1 Shop or tab=4 Profile; never tab=3)
+MESSAGE_PLACEHOLDER_CLEAR
+MESSAGE_KEEP_WARM
+MESSAGE_V13
+TOP_MENU_LABEL_CENTER
+
+One-pass test
+-------------
+- Open/close comments on a normal video, image post, and Live Photo; verify image/live return to native size after closing and horizontal image paging remains intact.
+- Swipe through several videos with "拍同款" and look for any base disappearance.
+- Scroll Profile Favorites and Shop and verify the bottom strip does not reappear.
+- Switch Home <-> Messages several times in both appearance modes; verify no moving mask and compare the four message header glass plates with the native bottom-bar glass.
+- In adaptive comment glass mode, test both light-background and dark-background content and verify neutral comment text flips with the glass.
+- Open the top-left native menu and verify all child labels are centered.
+- If anything remains, export all diagnostics once from Settings; the v13 export contains all three log streams.

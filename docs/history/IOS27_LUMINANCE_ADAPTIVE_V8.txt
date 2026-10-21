@@ -1,0 +1,18 @@
+iOS 27 luminance adaptive v8
+
+1. Home-only adaptive scope
+- Home Liquid Glass can remain luminance-adaptive when the force-dark switch is OFF.
+- Message/comment/secondary pages no longer consume Home luminance state; they follow app/system Light/Dark.
+- The existing iOS 27 force-dark preference remains available, so users can choose stability-first fixed dark at runtime.
+
+2. Performance changes
+- Full-screen luminance capture idle cadence: 0.30 s -> 0.85 s minimum.
+- Feed currentIndexDidChange opens a bounded 0.42 s burst and performs two probes at ~0.05/0.18 s, preserving responsive page-to-page switching.
+- Removed redundant UITabBarAppearance recreation from every adaptive Light/Dark commit. Appearance rebuild now happens only when the user changes adaptive <-> forced-dark mode.
+- iOS 27 no longer writes style into the hidden legacy overlay UIWindow.
+- Removed the second Home-chrome 0.20/0.52 s debounce on iOS 27; the existing luminance hysteresis/two-sample gate is the sole commit gate, so tab bar and surrounding Home glass switch together.
+
+3. Expected behavior
+- Adaptive OFF via force-dark switch ON: Home is fixed dark, system transparency/tint axis remains native.
+- Adaptive ON via force-dark switch OFF: Home switches Light/Dark from composited background luminance with lower steady-state capture cost.
+- Other pages: fixed to system/app Light/Dark, independent of Home video brightness.

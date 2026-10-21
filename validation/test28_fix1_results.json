@@ -1,0 +1,95 @@
+{
+  "version": "2.0.10 TEST28 FIX1",
+  "baseline": "delivered TEST28",
+  "apple_sdk_compile": false,
+  "swift_compiler_available": false,
+  "device_test": false,
+  "tests": [
+    {
+      "command": "sh scripts/preflight.sh",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "2.0.10 TEST28 FIX1 source/package preflight passed; compile and device testing still required.\nTEST28 FIX1 native source contract passed (not an iOS compile/device test).\nTweak.x: boundary checks passed (236 original-call directives; not SDK compilation)\nCommentGlassDYKiller.xm: boundary checks passed (26 original-call directives; not SDK compilation)\nMessageTopGlassV3.xm: boundary checks passed (12 original-call directives; not SDK compilation)\n"
+    },
+    {
+      "command": "python3 scripts/check_test24.py",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "TEST24 production-source invariants passed; not an iOS build, native-animation test, or device test.\n"
+    },
+    {
+      "command": "python3 scripts/check_right_persistence.py",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "TEST19 right persistence / material / touch-handler source checks passed; not an iOS build or device test.\n"
+    },
+    {
+      "command": "python3 scripts/check_watchdog_guards.py",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "48 extracted frame-gate cases + no-shrink pass-through passed; no UIKit used.\nTEST18 source scope / scheduling / preservation checks passed. Not an iOS build or device test.\n"
+    },
+    {
+      "command": "python3 scripts/test_bottom_scale_feedback.py",
+      "status": "passed",
+      "exit_code": 0,
+      "output": "Bottom scale: 6100 anchor/idempotence traces (610000 model passes); no UIKit/device test.\n"
+    },
+    {
+      "command": "bash -n push_to_github.sh",
+      "status": "passed",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "command": "bash -n on every GitHub Actions run body",
+      "status": "passed",
+      "steps": 9
+    }
+  ],
+  "not_run": [
+    {
+      "command": "swiftc ALBCenterMorphGeometry.swift Tests/center_morph_geometry_test.swift; execute",
+      "reason": "No local Swift compiler; retained in Xcode workflow"
+    },
+    {
+      "command": "Xcode SDK top carrier check and full Theos package build",
+      "reason": "No local Apple SDK; CI retains complete build, adds missing-super-calls warning gate"
+    }
+  ],
+  "fixes": [
+    "Direct superclass context menu willDisplay/willEnd calls instead of runtime IMP",
+    "One explicit untinted interactive Clear material from initialization",
+    "Hide absorbed search glass; only primary survives to the compact endpoint",
+    "Same geometry condition restores search on reverse",
+    "Avatar and final hit target always belong to surviving primary glass"
+  ],
+  "preserved": "All unrelated TEST28 runtime source; Tweak.x release labels only",
+  "remaining_device_checks": [
+    "Cloud compile of complete project",
+    "Native renderer continuity at initial handoff and absorption/reverse boundary",
+    "Final avatar press has exactly one deforming glass shell, no static underlay"
+  ],
+  "notes": [
+    "No actual UIKit compile, rendering, touch, or timing validation on this host.",
+    "The expanded native tree is hidden/restored intact; this does not reparent or claim pixel-identical reuse of its private effect.",
+    "TEST28 historical validation remains in test28_results.json; this report only lists checks executed for FIX1."
+  ],
+  "changed_files": [
+    ".github/workflows/build.yml",
+    "ALB5BottomGeometry.m",
+    "ALBCenterMorphSurface.swift",
+    "ALBTopNative/ALBTopNativeGroup.m",
+    "CHANGELOG_TEST28_FIX1.md",
+    "README.md",
+    "Tests/center_morph_geometry_test.swift",
+    "Tweak.x",
+    "VALIDATION.md",
+    "control",
+    "push_to_github.sh",
+    "scripts/check_native_contract.py",
+    "scripts/preflight.sh",
+    "validation/test28_fix1_results.json",
+    "validation/test28_preservation_audit.json"
+  ]
+}

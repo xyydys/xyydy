@@ -1,0 +1,11 @@
+AwemeLiquidBar 1.0.58 auth47 — iOS27 Same-Window Native v6.1 compile fix
+
+Fix only:
+- Add an explicit static forward declaration for
+  AWEIOS27EnsureNativeSameWindowHost(UIWindow *sourceWindow)
+  before its first call site.
+- This resolves the C99 implicit-function-declaration errors at the earlier
+  call sites and the later "static declaration follows non-static declaration"
+  error.
+
+No v6 runtime behavior was changed.

@@ -1,0 +1,978 @@
+--- Tweak.x.before_layoutcontrols	2026-09-06 06:23:22.691763989 +0000
++++ Tweak.x	2026-09-06 06:26:23.618496224 +0000
+@@ -138,6 +138,7 @@
+ - (void)setMorphBarVisible:(BOOL)visible animated:(BOOL)animated;
+ - (void)setVisibleFraction:(CGFloat)fraction animated:(BOOL)animated;
+ - (void)setVerticalOffset:(CGFloat)offset;
++- (void)setUserScale:(CGFloat)scale;
+ - (void)syncSelectedOriginalIndex:(NSInteger)index;
+ - (NSInteger)currentOriginalIndex;
+ - (void)mirrorSourceScrollOffset:(CGFloat)offset;
+@@ -236,6 +237,15 @@
+ static char kAWEHomeActionSourceHiddenKey;
+ static char kAWEHomeActionSourceAlphaKey;
+ static char kAWEHomeActionKindKey;
++static char kAWEHomeActionOwnerBaseCenterKey;
++static char kAWEHomeActionOwnerOriginalLayerOpacityKey;
++static char kAWEHomeActionOwnerOriginalInteractionKey;
++static char kAWEHomeActionLabelBaseTransformKey;
++static char kAWEAvatarBaseTransformKey;
++static char kAWESameStyleBaseTransformKey;
++static char kAWESameStyleBaseCenterKey;
++static char kAWESameStyleOriginalLayerOpacityKey;
++static char kAWESameStyleOriginalInteractionKey;
+ static char kAWEHomeActionRetryGenerationKey;
+ static char kAWEHomeActionStackSlotsKey;
+ static char kAWEHomeActionStackRetryGenerationKey;
+@@ -423,6 +433,40 @@
+     @"AwemeLiquidBarTapGestureModeV2"; /* 0 native, 1 split double, 2 double-comment/triple-like */
+ static NSString * const kAWEVerticalOffsetDefaultsKey =
+     @"AwemeLiquidBarVerticalOffset";
++static NSString * const kAWEBottomBarScaleDefaultsKey =
++    @"AwemeLiquidBarBottomBarScaleV1";
++static NSString * const kAWERightActionScaleDefaultsKey =
++    @"AwemeLiquidBarRightActionScaleV1";
++static NSString * const kAWEAvatarScaleDefaultsKey =
++    @"AwemeLiquidBarAvatarScaleV1";
++static NSString * const kAWESameStyleScaleDefaultsKey =
++    @"AwemeLiquidBarSameStyleScaleV1";
++static NSString * const kAWERightFontScaleDefaultsKey =
++    @"AwemeLiquidBarRightFontScaleV1";
++static NSString * const kAWERightSpacingScaleDefaultsKey =
++    @"AwemeLiquidBarRightSpacingScaleV1";
++static NSString * const kAWERightVerticalOffsetDefaultsKey =
++    @"AwemeLiquidBarRightVerticalOffsetV1";
++static NSString * const kAWEHideRightLikeDefaultsKey =
++    @"AwemeLiquidBarHideRightLikeV1";
++static NSString * const kAWEHideRightCommentDefaultsKey =
++    @"AwemeLiquidBarHideRightCommentV1";
++static NSString * const kAWEHideRightFavoriteDefaultsKey =
++    @"AwemeLiquidBarHideRightFavoriteV1";
++static NSString * const kAWEHideRightShareDefaultsKey =
++    @"AwemeLiquidBarHideRightShareV1";
++static NSString * const kAWEHideRightSameStyleDefaultsKey =
++    @"AwemeLiquidBarHideRightSameStyleV1";
++static NSString * const kAWETopLeftScaleDefaultsKey =
++    @"AwemeLiquidBarTopLeftScaleV1";
++static NSString * const kAWETopMiddleScaleDefaultsKey =
++    @"AwemeLiquidBarTopMiddleScaleV1";
++static NSString * const kAWETopRightScaleDefaultsKey =
++    @"AwemeLiquidBarTopRightScaleV1";
++static NSString * const kAWETopLeftMarginDefaultsKey =
++    @"AwemeLiquidBarTopLeftMarginV1";
++static NSString * const kAWETopRightMarginDefaultsKey =
++    @"AwemeLiquidBarTopRightMarginV1";
+ static NSString * const kAWEAlbumMorphCollapseEnabledDefaultsKey =
+     @"AwemeLiquidBarAlbumMorphCollapseEnabledV2";
+ static NSString * const kAWEDoubleTapLikeFractionDefaultsKey =
+@@ -2263,6 +2307,74 @@
+     return MIN(MAX(value, -24.0), 80.0);
+ }
+ 
++static CGFloat AWEStoredClampedCGFloat(NSString *key, CGFloat fallback,
++                                       CGFloat minimum, CGFloat maximum) {
++    id stored = [NSUserDefaults.standardUserDefaults objectForKey:key];
++    CGFloat value = [stored isKindOfClass:NSNumber.class]
++        ? [(NSNumber *)stored doubleValue] : fallback;
++    return MIN(maximum, MAX(minimum, value));
++}
++
++static CGFloat AWEBottomBarScale(void) {
++    return AWEStoredClampedCGFloat(kAWEBottomBarScaleDefaultsKey, 1.0, 0.70, 1.30);
++}
++
++static CGFloat AWERightActionScale(void) {
++    return AWEStoredClampedCGFloat(kAWERightActionScaleDefaultsKey, 1.0, 0.70, 1.30);
++}
++
++static CGFloat AWEAvatarScale(void) {
++    return AWEStoredClampedCGFloat(kAWEAvatarScaleDefaultsKey, 1.0, 0.70, 1.30);
++}
++
++static CGFloat AWESameStyleScale(void) {
++    return AWEStoredClampedCGFloat(kAWESameStyleScaleDefaultsKey, 1.0, 0.70, 1.30);
++}
++
++static CGFloat AWERightFontScale(void) {
++    return AWEStoredClampedCGFloat(kAWERightFontScaleDefaultsKey, 1.0, 0.70, 1.30);
++}
++
++static CGFloat AWERightSpacingScale(void) {
++    return AWEStoredClampedCGFloat(kAWERightSpacingScaleDefaultsKey, 1.0, 0.55, 1.25);
++}
++
++static CGFloat AWERightVerticalOffset(void) {
++    return AWEStoredClampedCGFloat(kAWERightVerticalOffsetDefaultsKey, 0.0, -80.0, 120.0);
++}
++
++static BOOL AWEHideRightLikeEnabled(void) {
++    return [NSUserDefaults.standardUserDefaults boolForKey:kAWEHideRightLikeDefaultsKey];
++}
++static BOOL AWEHideRightCommentEnabled(void) {
++    return [NSUserDefaults.standardUserDefaults boolForKey:kAWEHideRightCommentDefaultsKey];
++}
++static BOOL AWEHideRightFavoriteEnabled(void) {
++    return [NSUserDefaults.standardUserDefaults boolForKey:kAWEHideRightFavoriteDefaultsKey];
++}
++static BOOL AWEHideRightShareEnabled(void) {
++    return [NSUserDefaults.standardUserDefaults boolForKey:kAWEHideRightShareDefaultsKey];
++}
++static BOOL AWEHideRightSameStyleEnabled(void) {
++    return [NSUserDefaults.standardUserDefaults boolForKey:kAWEHideRightSameStyleDefaultsKey];
++}
++
++static CGFloat AWETopLeftScale(void) {
++    return AWEStoredClampedCGFloat(kAWETopLeftScaleDefaultsKey, 1.0, 0.70, 1.30);
++}
++static CGFloat AWETopMiddleScale(void) {
++    return AWEStoredClampedCGFloat(kAWETopMiddleScaleDefaultsKey, 1.0, 0.70, 1.30);
++}
++static CGFloat AWETopRightScale(void) {
++    return AWEStoredClampedCGFloat(kAWETopRightScaleDefaultsKey, 1.0, 0.70, 1.30);
++}
++static CGFloat AWETopLeftMargin(void) {
++    return AWEStoredClampedCGFloat(kAWETopLeftMarginDefaultsKey, 54.0, 24.0, 96.0);
++}
++static CGFloat AWETopRightMargin(void) {
++    return AWEStoredClampedCGFloat(kAWETopRightMarginDefaultsKey, 54.0, 24.0, 96.0);
++}
++
+ static CGFloat AWEStoredDoubleTapLikeFraction(void) {
+     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+     if (![defaults objectForKey:kAWEDoubleTapLikeFractionDefaultsKey]) {
+@@ -4493,6 +4605,16 @@
+                                  OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+     }
+ 
++    CGFloat bottomScale = AWEBottomBarScale();
++    CGFloat nativeHeight = MAX(CGRectGetHeight(nativeBar.bounds), CGRectGetHeight(carrierFrame));
++    CGFloat bottomKeep = (1.0 - bottomScale) * nativeHeight * 0.5;
++    CGAffineTransform bottomTransform =
++        CGAffineTransformScale(CGAffineTransformMakeTranslation(0.0, bottomKeep),
++                               bottomScale, bottomScale);
++    if (!CGAffineTransformEqualToTransform(nativeBar.transform, bottomTransform)) {
++        [UIView performWithoutAnimation:^{ nativeBar.transform = bottomTransform; }];
++    }
++
+     /*
+      0.0.20a:
+      geometry remains permanently warm and stable, but visibility now follows
+@@ -9250,6 +9372,44 @@
+     UIView *bottomSlot = AWESameStyleBottomSlotForStackV20(stack);
+     CGFloat sw = CGRectGetWidth(stack.bounds), sh = CGRectGetHeight(stack.bounds);
+ 
++    if (bottomSlot) {
++        if (!objc_getAssociatedObject(bottomSlot, &kAWESameStyleBaseTransformKey)) {
++            objc_setAssociatedObject(bottomSlot, &kAWESameStyleBaseTransformKey,
++                [NSValue valueWithCGAffineTransform:bottomSlot.transform],
++                OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++        }
++        if (!objc_getAssociatedObject(bottomSlot, &kAWESameStyleBaseCenterKey)) {
++            objc_setAssociatedObject(bottomSlot, &kAWESameStyleBaseCenterKey,
++                [NSValue valueWithCGPoint:bottomSlot.center],
++                OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++        }
++        if (!objc_getAssociatedObject(bottomSlot, &kAWESameStyleOriginalLayerOpacityKey)) {
++            objc_setAssociatedObject(bottomSlot, &kAWESameStyleOriginalLayerOpacityKey,
++                @(bottomSlot.layer.opacity), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++            objc_setAssociatedObject(bottomSlot, &kAWESameStyleOriginalInteractionKey,
++                @(bottomSlot.userInteractionEnabled), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++        }
++        NSValue *baseTransform = objc_getAssociatedObject(
++            bottomSlot, &kAWESameStyleBaseTransformKey);
++        bottomSlot.transform = CGAffineTransformScale(baseTransform.CGAffineTransformValue,
++                                                      AWESameStyleScale(), AWESameStyleScale());
++        NSNumber *baseOpacity = objc_getAssociatedObject(
++            bottomSlot, &kAWESameStyleOriginalLayerOpacityKey);
++        NSNumber *baseInteraction = objc_getAssociatedObject(
++            bottomSlot, &kAWESameStyleOriginalInteractionKey);
++        BOOL hideSameStyle = AWEHideRightSameStyleEnabled();
++        bottomSlot.layer.opacity = hideSameStyle ? 0.0f : (baseOpacity ? baseOpacity.floatValue : 1.0f);
++        bottomSlot.userInteractionEnabled = hideSameStyle ? NO :
++            (baseInteraction ? baseInteraction.boolValue : YES);
++        if (hideSameStyle) {
++            if (plate) plate.hidden = YES;
++            return;
++        }
++    } else if (AWEHideRightSameStyleEnabled()) {
++        if (plate) plate.hidden = YES;
++        return;
++    }
++
+     CGPoint center;
+     NSString *anchorName = @"stack-fallback";
+     if (bottomSlot) {
+@@ -9257,14 +9417,15 @@
+         /* FLEX: the native 44x44 music image is right aligned inside the
+            80x64 bottom slot (x≈29,y≈8).  Use the slot geometry itself rather
+            than waiting for that inner image to exist. */
+-        center = CGPointMake(CGRectGetMaxX(slotRect) - 29.0,
+-                             CGRectGetMidY(slotRect) - 2.0);
++        CGFloat sameScale = AWESameStyleScale();
++        center = CGPointMake(CGRectGetMaxX(slotRect) - 29.0 * sameScale,
++                             CGRectGetMidY(slotRect) - 2.0 * sameScale);
+         anchorName = NSStringFromClass(bottomSlot.class) ?: @"AWEBaseElementView";
+     } else {
+         center = CGPointMake(MAX(25.0, sw - 29.0), MAX(25.0, sh - 34.0));
+     }
+ 
+-    const CGFloat diameter = 50.16;
++    const CGFloat diameter = 50.16 * AWESameStyleScale();
+     CGRect desired = CGRectMake(center.x - diameter * 0.5,
+                                 center.y - diameter * 0.5,
+                                 diameter, diameter);
+@@ -11177,7 +11338,17 @@
+ 
+     AWEHomeProfileGlassView *slot = AWEEnsureProfileGlassSlot(stack);
+     if (!slot) return;
+-    const CGFloat diameter = 54.0;
++    const CGFloat avatarScale = AWEAvatarScale();
++    const CGFloat diameter = 54.0 * avatarScale;
++    if (!objc_getAssociatedObject(avatar, &kAWEAvatarBaseTransformKey)) {
++        objc_setAssociatedObject(avatar, &kAWEAvatarBaseTransformKey,
++            [NSValue valueWithCGAffineTransform:avatar.transform],
++            OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++    }
++    NSValue *avatarBaseTransform = objc_getAssociatedObject(
++        avatar, &kAWEAvatarBaseTransformKey);
++    avatar.transform = CGAffineTransformScale(avatarBaseTransform.CGAffineTransformValue,
++                                              avatarScale, avatarScale);
+     CGPoint center = [avatar convertPoint:
+         CGPointMake(CGRectGetMidX(avatar.bounds), CGRectGetMidY(avatar.bounds))
+         toView:stack];
+@@ -11191,6 +11362,7 @@
+ 
+     CGFloat avatarHitDiameter = MIN(50.0, MAX(40.0,
+         MIN(CGRectGetWidth(avatar.bounds), CGRectGetHeight(avatar.bounds))));
++    avatarHitDiameter = MIN(68.0, MAX(30.0, avatarHitDiameter * avatarScale));
+     slot.menuButton.bounds = CGRectMake(0.0, 0.0, avatarHitDiameter, avatarHitDiameter);
+     slot.menuButton.center = center;
+     slot.menuButton.hidden = NO;
+@@ -11275,8 +11447,9 @@
+                                         AWEHomeActionKind kind,
+                                         BOOL selected,
+                                         CGPoint center) {
+-    const CGFloat diameter = 46.0;
+-    const CGFloat symbolSize = (kind == AWEHomeActionKindShare) ? 20.0 : 21.0;
++    const CGFloat actionScale = AWERightActionScale();
++    const CGFloat diameter = 46.0 * actionScale;
++    const CGFloat symbolSize = ((kind == AWEHomeActionKindShare) ? 20.0 : 21.0) * actionScale;
+     NSString *symbolKey = AWEHomeActionSymbolKey(kind, selected);
+     BOOL originalPNG = NO;
+     UIImage *symbol = AWEConfiguredRoleImage(
+@@ -11363,6 +11536,171 @@
+     slot.hidden = YES;
+ }
+ 
++static BOOL AWEHomeActionKindHiddenByUser(AWEHomeActionKind kind) {
++    switch (kind) {
++        case AWEHomeActionKindLike: return AWEHideRightLikeEnabled();
++        case AWEHomeActionKindComment: return AWEHideRightCommentEnabled();
++        case AWEHomeActionKindFavorite: return AWEHideRightFavoriteEnabled();
++        case AWEHomeActionKindShare: return AWEHideRightShareEnabled();
++        default: return NO;
++    }
++}
++
++static void AWEApplyRightLabelScaleRecursive(UIView *root, CGFloat scale,
++                                              NSUInteger depth) {
++    if (!root || depth > 8) return;
++    if ([root isKindOfClass:UILabel.class]) {
++        NSValue *stored = objc_getAssociatedObject(root, &kAWEHomeActionLabelBaseTransformKey);
++        if (!stored) {
++            stored = [NSValue valueWithCGAffineTransform:root.transform];
++            objc_setAssociatedObject(root, &kAWEHomeActionLabelBaseTransformKey,
++                                     stored, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++        }
++        root.transform = CGAffineTransformScale(stored.CGAffineTransformValue,
++                                                scale, scale);
++    }
++    for (UIView *child in root.subviews) {
++        AWEApplyRightLabelScaleRecursive(child, scale, depth + 1);
++    }
++}
++
++static void AWEStoreAndRestoreRightOwnerBase(UIView *owner) {
++    if (!owner || !owner.superview) return;
++    NSValue *baseCenter = objc_getAssociatedObject(owner, &kAWEHomeActionOwnerBaseCenterKey);
++    if (!baseCenter) {
++        baseCenter = [NSValue valueWithCGPoint:owner.center];
++        objc_setAssociatedObject(owner, &kAWEHomeActionOwnerBaseCenterKey,
++                                 baseCenter, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++    } else {
++        owner.center = baseCenter.CGPointValue;
++    }
++    if (!objc_getAssociatedObject(owner, &kAWEHomeActionOwnerOriginalLayerOpacityKey)) {
++        objc_setAssociatedObject(owner, &kAWEHomeActionOwnerOriginalLayerOpacityKey,
++                                 @(owner.layer.opacity), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++        objc_setAssociatedObject(owner, &kAWEHomeActionOwnerOriginalInteractionKey,
++                                 @(owner.userInteractionEnabled), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++    }
++}
++
++static void AWEApplyRightOwnerHiddenState(UIView *owner, BOOL hidden) {
++    if (!owner) return;
++    NSNumber *opacity = objc_getAssociatedObject(owner,
++        &kAWEHomeActionOwnerOriginalLayerOpacityKey);
++    NSNumber *interaction = objc_getAssociatedObject(owner,
++        &kAWEHomeActionOwnerOriginalInteractionKey);
++    owner.layer.opacity = hidden ? 0.0f : (opacity ? opacity.floatValue : 1.0f);
++    owner.userInteractionEnabled = hidden ? NO :
++        (interaction ? interaction.boolValue : YES);
++}
++
++/* Packs the five configurable right-side roles into the original native slot
++   geometry. Hidden roles leave no visual/touch owner; roles above a removed
++   slot fall downward into the next available lower slot. The actual Douyin
++   buttons are moved, not replaced, so existing recognizers/routes remain real. */
++static void AWEApplyRightRailUserLayout(UIView *stack) {
++    if (!stack) return;
++    NSMutableArray<UIView *> *allButtons = [NSMutableArray array];
++    AWECollectFeedActionButtons(stack, allButtons, 0);
++    for (UIView *owner in allButtons) {
++        AWEStoreAndRestoreRightOwnerBase(owner);
++        AWEApplyRightOwnerHiddenState(owner, NO);
++        AWEApplyRightLabelScaleRecursive(owner, AWERightFontScale(), 0);
++    }
++
++    UIView *sameStyle = AWESameStyleBottomSlotForStackV20(stack);
++    if (sameStyle) {
++        NSValue *baseCenter = objc_getAssociatedObject(sameStyle, &kAWESameStyleBaseCenterKey);
++        if (!baseCenter) {
++            baseCenter = [NSValue valueWithCGPoint:sameStyle.center];
++            objc_setAssociatedObject(sameStyle, &kAWESameStyleBaseCenterKey,
++                                     baseCenter, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++        } else {
++            sameStyle.center = baseCenter.CGPointValue;
++        }
++    }
++
++    NSArray<UIView *> *ordered = AWESortedVisibleHomeActionButtons(stack);
++    NSMutableDictionary<NSNumber *, UIView *> *owners = [NSMutableDictionary dictionary];
++    for (UIView *owner in ordered) {
++        AWEHomeActionKind kind = AWEHomeActionKindForButton(owner, ordered);
++        if (kind >= AWEHomeActionKindLike && kind <= AWEHomeActionKindShare &&
++            !owners[@(kind)]) {
++            owners[@(kind)] = owner;
++        }
++    }
++
++    NSMutableArray<NSDictionary *> *roles = [NSMutableArray array];
++    for (NSInteger raw = AWEHomeActionKindLike; raw <= AWEHomeActionKindShare; raw++) {
++        UIView *owner = owners[@(raw)];
++        if (!owner) continue;
++        CGRect r = [owner convertRect:owner.bounds toView:stack];
++        [roles addObject:@{@"kind": @(raw), @"owner": owner,
++                           @"y": @(CGRectGetMidY(r)), @"same": @NO}];
++    }
++    if (sameStyle) {
++        CGRect r = [sameStyle convertRect:sameStyle.bounds toView:stack];
++        CGFloat visualY = CGRectGetMidY(r) - 2.0;
++        [roles addObject:@{@"kind": @0, @"owner": sameStyle,
++                           @"y": @(visualY), @"same": @YES}];
++    }
++    if (roles.count < 2) return;
++
++    [roles sortUsingComparator:^NSComparisonResult(NSDictionary *lhs, NSDictionary *rhs) {
++        return [lhs[@"y"] doubleValue] < [rhs[@"y"] doubleValue]
++            ? NSOrderedAscending : ([lhs[@"y"] doubleValue] > [rhs[@"y"] doubleValue]
++                ? NSOrderedDescending : NSOrderedSame);
++    }];
++
++    CGFloat bottomY = [roles.lastObject[@"y"] doubleValue];
++    CGFloat spacingScale = AWERightSpacingScale();
++    CGFloat verticalOffset = AWERightVerticalOffset();
++    NSMutableArray<NSNumber *> *targetYs = [NSMutableArray arrayWithCapacity:roles.count];
++    for (NSDictionary *role in roles) {
++        CGFloat baseY = [role[@"y"] doubleValue];
++        [targetYs addObject:@(bottomY - (bottomY - baseY) * spacingScale + verticalOffset)];
++    }
++
++    NSMutableArray<NSDictionary *> *visibleRoles = [NSMutableArray array];
++    for (NSDictionary *role in roles) {
++        BOOL same = [role[@"same"] boolValue];
++        NSInteger raw = [role[@"kind"] integerValue];
++        BOOL hidden = same ? AWEHideRightSameStyleEnabled()
++                           : AWEHomeActionKindHiddenByUser((AWEHomeActionKind)raw);
++        UIView *owner = role[@"owner"];
++        if (same) {
++            if (!objc_getAssociatedObject(owner, &kAWESameStyleOriginalLayerOpacityKey)) {
++                objc_setAssociatedObject(owner, &kAWESameStyleOriginalLayerOpacityKey,
++                                         @(owner.layer.opacity), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++                objc_setAssociatedObject(owner, &kAWESameStyleOriginalInteractionKey,
++                                         @(owner.userInteractionEnabled), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++            }
++            NSNumber *opacity = objc_getAssociatedObject(owner, &kAWESameStyleOriginalLayerOpacityKey);
++            NSNumber *interaction = objc_getAssociatedObject(owner, &kAWESameStyleOriginalInteractionKey);
++            owner.layer.opacity = hidden ? 0.0f : (opacity ? opacity.floatValue : 1.0f);
++            owner.userInteractionEnabled = hidden ? NO :
++                (interaction ? interaction.boolValue : YES);
++        } else {
++            AWEApplyRightOwnerHiddenState(owner, hidden);
++        }
++        if (!hidden) [visibleRoles addObject:role];
++    }
++
++    NSInteger start = MAX(0, (NSInteger)targetYs.count - (NSInteger)visibleRoles.count);
++    for (NSInteger index = 0; index < (NSInteger)visibleRoles.count; index++) {
++        NSDictionary *role = visibleRoles[(NSUInteger)index];
++        UIView *owner = role[@"owner"];
++        CGFloat baseY = [role[@"y"] doubleValue];
++        CGFloat targetY = [targetYs[(NSUInteger)(start + index)] doubleValue];
++        CGFloat deltaY = targetY - baseY;
++        if (fabs(deltaY) < 0.01 || !owner.superview) continue;
++        CGPoint baseCenter = owner.center;
++        CGPoint targetInStack = [owner.superview convertPoint:baseCenter toView:stack];
++        targetInStack.y += deltaY;
++        CGPoint moved = [stack convertPoint:targetInStack toView:owner.superview];
++        if (isfinite(moved.x) && isfinite(moved.y)) owner.center = moved;
++    }
++}
++
+ static void AWERefreshHomeActionStack(UIView *stack) {
+     if (!AWEPluginFeaturesEnabled() || gAWESettingsVisible) return;
+     if (!stack || objc_getAssociatedObject(stack, &kAWEHomeActionStackApplyingKey)) return;
+@@ -11407,6 +11745,7 @@
+         return;
+     }
+ 
++    AWEApplyRightRailUserLayout(stack);
+     NSArray<UIView *> *buttons = AWESortedVisibleHomeActionButtons(stack);
+     AWEHomeDiagnosticWrite(NO, @"STACK_BUTTONS stack=%p count=%lu",
+                            stack, (unsigned long)buttons.count);
+@@ -11416,6 +11755,12 @@
+         if (kind == AWEHomeActionKindUnknown || kind > AWEHomeActionKindShare) continue;
+         NSNumber *kindKey = @(kind);
+         if ([seen containsObject:kindKey]) continue;
++        if (AWEHomeActionKindHiddenByUser(kind)) {
++            AWEHomeActionSlotView *existing = slots[kindKey];
++            if (existing) AWEHideAndReleaseHomeActionSlot(existing);
++            [seen addObject:kindKey];
++            continue;
++        }
+ 
+         UIImageView *source = AWEBestHomeActionImageView(button);
+         if (!source || !source.image) continue;
+@@ -11456,6 +11801,7 @@
+         }
+     }
+     AWERefreshProfileAvatarGlass(stack);
++    AWERefreshSameStyleGlass(stack);
+     AWERefreshExternalBridgeMenu(stack);
+     objc_setAssociatedObject(stack, &kAWEHomeActionStackApplyingKey, nil,
+                              OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+@@ -11477,7 +11823,8 @@
+             CGPointMake(CGRectGetMidX(source.bounds), CGRectGetMidY(source.bounds))
+             toView:stack];
+         if (!isfinite(center.x) || !isfinite(center.y)) continue;
+-        slot.bounds = CGRectMake(0.0, 0.0, 46.0, 46.0);
++        CGFloat diameter = 46.0 * AWERightActionScale();
++        slot.bounds = CGRectMake(0.0, 0.0, diameter, diameter);
+         slot.center = CGPointMake(center.x, center.y - 4.0);
+         slot.hidden = NO;
+         slot.systemGlassButton.frame = slot.bounds;
+@@ -14966,6 +15313,7 @@
+     [gAWEAlbumMorphController configureSecondTabAsShop:AWESecondTabIsShop()];
+     [gAWEAlbumMorphController
+         configureVisibleItemIdentifiers:AWEAlbumMorphVisibleItemIdentifiers()];
++    [gAWEAlbumMorphController setUserScale:AWEBottomBarScale()];
+     [gAWEAlbumMorphController updateAccentColor:AWEStoredAccentColor()];
+     AWEUpdateAlbumMorphMessageBadge();
+ 
+@@ -15122,9 +15470,9 @@
+         CGPointMake(CGRectGetMidX(source.bounds), CGRectGetMidY(source.bounds))
+         toView:container];
+     CGPoint expected = kind == AWEHomeTopActionKindSearch
+-        ? CGPointMake(CGRectGetWidth(container.bounds) - 54.0,
++        ? CGPointMake(CGRectGetWidth(container.bounds) - AWETopRightMargin(),
+                       CGRectGetMidY(container.bounds))
+-        : CGPointMake(54.0, CGRectGetMidY(container.bounds));
++        : CGPointMake(AWETopLeftMargin(), CGRectGetMidY(container.bounds));
+     return isfinite(actual.x) && isfinite(actual.y) &&
+            hypot(actual.x - expected.x, actual.y - expected.y) <= 58.0;
+ }
+@@ -15132,8 +15480,8 @@
+ static CGPoint AWETopDesiredCenter(UIView *container,
+                                         AWEHomeTopActionKind kind) {
+     CGFloat x = kind == AWEHomeTopActionKindSearch
+-        ? CGRectGetWidth(container.bounds) - 54.0
+-        : 54.0;
++        ? CGRectGetWidth(container.bounds) - AWETopRightMargin()
++        : AWETopLeftMargin();
+     return CGPointMake(x, CGRectGetMidY(container.bounds));
+ }
+ 
+@@ -15162,6 +15510,10 @@
+     }
+ }
+ 
++static CGFloat AWETopScaleForKind(AWEHomeTopActionKind kind) {
++    return kind == AWEHomeTopActionKindSearch ? AWETopRightScale() : AWETopLeftScale();
++}
++
+ static void AWEConfigureTopSlot(UIView *container,
+                                 AWEHomeTopActionKind kind,
+                                 UIView *owner,
+@@ -15174,7 +15526,8 @@
+     AWEHomeTopSlotView *slot = AWEEnsureTopSlot(container, kind);
+     if (!slot) return;
+ 
+-    const CGFloat diameter = 46.0;
++    const CGFloat topScale = AWETopScaleForKind(kind);
++    const CGFloat diameter = 46.0 * topScale;
+     CGPoint center = AWETopDesiredCenter(container, kind);
+     if (!isfinite(center.x) || !isfinite(center.y)) return;
+ 
+@@ -15225,7 +15578,7 @@
+         : @[@"sidebar.left", @"line.3.horizontal"];
+     NSString *symbolKey = AWETopSymbolKey(kind);
+     BOOL originalPNG = NO;
+-    CGFloat iconPointSize = kind == AWEHomeTopActionKindSearch ? 22.5 : 20.0;
++    CGFloat iconPointSize = (kind == AWEHomeTopActionKindSearch ? 22.5 : 20.0) * topScale;
+     UIImage *image = AWEConfiguredRoleImage(
+         symbolKey, fallbackNames, iconPointSize,
+         UIImageSymbolWeightMedium, &originalPNG);
+@@ -15958,7 +16311,11 @@
+        opposite side instead of centering inside an asymmetric free region.
+        This also fixes the no-left/no-right case introduced by the old
+        hard-coded leftBoundary=82 / rightBoundary=14 calculation. */
+-    CGFloat sideReserve = (menuVisible || searchVisible) ? 82.0 : 14.0;
++    CGFloat leftReserve = menuVisible
++        ? AWETopLeftMargin() + 23.0 * AWETopLeftScale() + 5.0 : 14.0;
++    CGFloat rightReserve = searchVisible
++        ? AWETopRightMargin() + 23.0 * AWETopRightScale() + 5.0 : 14.0;
++    CGFloat sideReserve = MAX(leftReserve, rightReserve);
+     CGFloat availableWidth = MAX(120.0,
+         CGRectGetWidth(container.bounds) - sideReserve * 2.0);
+     CGFloat perItemWidth = visibleCount == 1 ? 96.0 : 74.0;
+@@ -16110,7 +16467,8 @@
+     [CATransaction begin];
+     [CATransaction setDisableActions:YES];
+     if (menuSlot && !menuSlot.hidden) {
+-        menuSlot.bounds = CGRectMake(0.0, 0.0, 46.0, 46.0);
++        CGFloat menuDiameter = 46.0 * AWETopLeftScale();
++        menuSlot.bounds = CGRectMake(0.0, 0.0, menuDiameter, menuDiameter);
+         menuSlot.center = AWETopDesiredCenter(container, AWEHomeTopActionKindMenu);
+         if (menuSlot.ownerView) {
+             AWEAlignTopOwnerWithSlot(menuSlot, menuSlot.ownerView, container,
+@@ -16120,7 +16478,8 @@
+         menuSlot.systemGlassButton.frame = menuSlot.bounds;
+     }
+     if (searchSlot && !searchSlot.hidden) {
+-        searchSlot.bounds = CGRectMake(0.0, 0.0, 46.0, 46.0);
++        CGFloat searchDiameter = 46.0 * AWETopRightScale();
++        searchSlot.bounds = CGRectMake(0.0, 0.0, searchDiameter, searchDiameter);
+         searchSlot.center = AWETopDesiredCenter(container, AWEHomeTopActionKindSearch);
+         if (searchSlot.ownerView) {
+             AWEAlignTopOwnerWithSlot(searchSlot, searchSlot.ownerView, container,
+@@ -16152,9 +16511,12 @@
+     if (group && !group.hidden && group.definitions.count > 0) {
+         NSInteger visibleCount = MIN([group alb_visibleCount],
+                                      (NSInteger)group.definitions.count);
++        group.transform = CGAffineTransformIdentity;
+         group.frame = AWEFrameForTopLiquidGroup(
+             container, group, visibleCount);
+         group.layer.cornerRadius = CGRectGetHeight(group.bounds) * 0.5;
++        group.transform = CGAffineTransformMakeScale(AWETopMiddleScale(),
++                                                     AWETopMiddleScale());
+         group.backgroundGlass.frame = group.bounds;
+         AWELayoutTopLiquidGroup(group, NO);
+     }
+@@ -16193,9 +16555,12 @@
+     if (!group) return;
+     NSInteger visibleCount = MIN(AWETopTelegramVisibleCount(),
+                                  (NSInteger)definitions.count);
++    group.transform = CGAffineTransformIdentity;
+     group.frame = AWEFrameForTopLiquidGroup(
+         container, group, visibleCount);
+     group.layer.cornerRadius = CGRectGetHeight(group.bounds) * 0.5;
++    group.transform = CGAffineTransformMakeScale(AWETopMiddleScale(),
++                                                 AWETopMiddleScale());
+     group.hidden = NO;
+     group.userInteractionEnabled = YES;
+     group.alpha = 1.0;
+@@ -18305,6 +18670,35 @@
+ @property (nonatomic, retain) UISwitch *settingsGestureMineOnlySwitch;
+ @property (nonatomic, retain) UISlider *verticalOffsetSlider;
+ @property (nonatomic, retain) UILabel *verticalOffsetValueLabel;
++@property (nonatomic, retain) UISlider *bottomScaleSlider;
++@property (nonatomic, retain) UILabel *bottomScaleValueLabel;
++@property (nonatomic, retain) UISlider *topLeftScaleSlider;
++@property (nonatomic, retain) UILabel *topLeftScaleValueLabel;
++@property (nonatomic, retain) UISlider *topMiddleScaleSlider;
++@property (nonatomic, retain) UILabel *topMiddleScaleValueLabel;
++@property (nonatomic, retain) UISlider *topRightScaleSlider;
++@property (nonatomic, retain) UILabel *topRightScaleValueLabel;
++@property (nonatomic, retain) UISlider *topLeftMarginSlider;
++@property (nonatomic, retain) UILabel *topLeftMarginValueLabel;
++@property (nonatomic, retain) UISlider *topRightMarginSlider;
++@property (nonatomic, retain) UILabel *topRightMarginValueLabel;
++@property (nonatomic, retain) UISlider *rightActionScaleSlider;
++@property (nonatomic, retain) UILabel *rightActionScaleValueLabel;
++@property (nonatomic, retain) UISlider *avatarScaleSlider;
++@property (nonatomic, retain) UILabel *avatarScaleValueLabel;
++@property (nonatomic, retain) UISlider *sameStyleScaleSlider;
++@property (nonatomic, retain) UILabel *sameStyleScaleValueLabel;
++@property (nonatomic, retain) UISlider *rightFontScaleSlider;
++@property (nonatomic, retain) UILabel *rightFontScaleValueLabel;
++@property (nonatomic, retain) UISlider *rightSpacingScaleSlider;
++@property (nonatomic, retain) UILabel *rightSpacingScaleValueLabel;
++@property (nonatomic, retain) UISlider *rightVerticalOffsetSlider;
++@property (nonatomic, retain) UILabel *rightVerticalOffsetValueLabel;
++@property (nonatomic, retain) UISwitch *hideRightLikeSwitch;
++@property (nonatomic, retain) UISwitch *hideRightCommentSwitch;
++@property (nonatomic, retain) UISwitch *hideRightFavoriteSwitch;
++@property (nonatomic, retain) UISwitch *hideRightShareSwitch;
++@property (nonatomic, retain) UISwitch *hideRightSameStyleSwitch;
+ @property (nonatomic, retain) UISlider *doubleTapSplitSlider;
+ @property (nonatomic, retain) UILabel *doubleTapSplitValueLabel;
+ @property (nonatomic, retain) UISwitch *wanToWSwitch;
+@@ -18406,7 +18800,18 @@
+     self.verticalOffsetSlider = positionSlider;
+     UIStackView *positionRow = AWESettingsSliderRow(@"底栏垂直位置", positionValue, positionSlider);
+ 
+-    NSMutableArray<UIView *> *bottomItems = [NSMutableArray arrayWithObject:positionRow];
++    UILabel *bottomScaleValue = [UILabel new];
++    bottomScaleValue.font = [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
++    self.bottomScaleValueLabel = bottomScaleValue;
++    UISlider *bottomScaleSlider = [UISlider new];
++    bottomScaleSlider.minimumValue = 0.70; bottomScaleSlider.maximumValue = 1.30;
++    bottomScaleSlider.value = AWEBottomBarScale();
++    bottomScaleSlider.minimumTrackTintColor = accent;
++    [bottomScaleSlider addTarget:self action:@selector(layoutControlSliderChanged:) forControlEvents:UIControlEventValueChanged];
++    self.bottomScaleSlider = bottomScaleSlider;
++    UIStackView *bottomScaleRow = AWESettingsSliderRow(@"底栏整体缩放", bottomScaleValue, bottomScaleSlider);
++
++    NSMutableArray<UIView *> *bottomItems = [NSMutableArray arrayWithObjects:positionRow, bottomScaleRow, nil];
+     if (AWECustomBottomBarReleaseAllowed()) {
+         UISwitch *displaySwitch = [UISwitch new];
+         displaySwitch.on = AWEBottomBarDisplayEnabled();
+@@ -18474,7 +18879,7 @@
+     UIStackView *mineOnlyRow = AWESettingsSwitchRow(@"双指长按仅在“我”页面触发", mineOnly);
+     UIView *gestureCard = AWESettingsCard(@"手势", @[tapModeRow, splitRow, mineOnlyRow]);
+ 
+-    /* 顶部与右侧 */
++    /* 顶部 */
+     UISwitch *topGlass = [UISwitch new];
+     topGlass.on = AWETopGlassEnabled();
+     topGlass.onTintColor = accent;
+@@ -18504,6 +18909,67 @@
+     hideSearch.onTintColor = accent;
+     [hideSearch addTarget:self action:@selector(hideTopSearchButtonSwitchChanged:) forControlEvents:UIControlEventValueChanged];
+     self.hideTopSearchButtonSwitch = hideSearch;
++
++    UILabel *topLeftScaleValue = [UILabel new];
++    topLeftScaleValue.font = [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
++    self.topLeftScaleValueLabel = topLeftScaleValue;
++    UISlider *topLeftScale = [UISlider new];
++    topLeftScale.minimumValue = 0.70; topLeftScale.maximumValue = 1.30;
++    topLeftScale.value = AWETopLeftScale(); topLeftScale.minimumTrackTintColor = accent;
++    [topLeftScale addTarget:self action:@selector(layoutControlSliderChanged:) forControlEvents:UIControlEventValueChanged];
++    self.topLeftScaleSlider = topLeftScale;
++
++    UILabel *topMiddleScaleValue = [UILabel new];
++    topMiddleScaleValue.font = [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
++    self.topMiddleScaleValueLabel = topMiddleScaleValue;
++    UISlider *topMiddleScale = [UISlider new];
++    topMiddleScale.minimumValue = 0.70; topMiddleScale.maximumValue = 1.30;
++    topMiddleScale.value = AWETopMiddleScale(); topMiddleScale.minimumTrackTintColor = accent;
++    [topMiddleScale addTarget:self action:@selector(layoutControlSliderChanged:) forControlEvents:UIControlEventValueChanged];
++    self.topMiddleScaleSlider = topMiddleScale;
++
++    UILabel *topRightScaleValue = [UILabel new];
++    topRightScaleValue.font = [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
++    self.topRightScaleValueLabel = topRightScaleValue;
++    UISlider *topRightScale = [UISlider new];
++    topRightScale.minimumValue = 0.70; topRightScale.maximumValue = 1.30;
++    topRightScale.value = AWETopRightScale(); topRightScale.minimumTrackTintColor = accent;
++    [topRightScale addTarget:self action:@selector(layoutControlSliderChanged:) forControlEvents:UIControlEventValueChanged];
++    self.topRightScaleSlider = topRightScale;
++
++    UILabel *topLeftMarginValue = [UILabel new];
++    topLeftMarginValue.font = [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
++    self.topLeftMarginValueLabel = topLeftMarginValue;
++    UISlider *topLeftMargin = [UISlider new];
++    topLeftMargin.minimumValue = 24.0; topLeftMargin.maximumValue = 96.0;
++    topLeftMargin.value = AWETopLeftMargin(); topLeftMargin.minimumTrackTintColor = accent;
++    [topLeftMargin addTarget:self action:@selector(layoutControlSliderChanged:) forControlEvents:UIControlEventValueChanged];
++    self.topLeftMarginSlider = topLeftMargin;
++
++    UILabel *topRightMarginValue = [UILabel new];
++    topRightMarginValue.font = [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
++    self.topRightMarginValueLabel = topRightMarginValue;
++    UISlider *topRightMargin = [UISlider new];
++    topRightMargin.minimumValue = 24.0; topRightMargin.maximumValue = 96.0;
++    topRightMargin.value = AWETopRightMargin(); topRightMargin.minimumTrackTintColor = accent;
++    [topRightMargin addTarget:self action:@selector(layoutControlSliderChanged:) forControlEvents:UIControlEventValueChanged];
++    self.topRightMarginSlider = topRightMargin;
++
++    UIView *topCard = AWESettingsCard(@"顶部", @[
++        AWESettingsSwitchRow(@"顶部菜单/分类液态玻璃", topGlass),
++        AWESettingsSwitchRow(@"顶部分类液态分组", categoryGroup),
++        AWESettingsSegmentedRow(@"同时显示分类数量", categoryCount),
++        AWESettingsSwitchRow(@"左上按钮展开分类菜单", menuMorph),
++        AWESettingsSliderRow(@"左侧按钮缩放", topLeftScaleValue, topLeftScale),
++        AWESettingsSliderRow(@"中间胶囊缩放", topMiddleScaleValue, topMiddleScale),
++        AWESettingsSliderRow(@"右侧按钮缩放", topRightScaleValue, topRightScale),
++        AWESettingsSliderRow(@"左侧按钮边距", topLeftMarginValue, topLeftMargin),
++        AWESettingsSliderRow(@"右侧按钮边距", topRightMarginValue, topRightMargin),
++        AWESettingsSwitchRow(@"隐藏左上角按钮", hideLeft),
++        AWESettingsSwitchRow(@"隐藏右上角搜索按钮", hideSearch)
++    ]);
++
++    /* 右侧 */
+     UISwitch *transparent = [UISwitch new];
+     transparent.on = AWEHomeTransparentGlassEnabled();
+     transparent.onTintColor = accent;
+@@ -18514,13 +18980,94 @@
+     download.onTintColor = accent;
+     [download addTarget:self action:@selector(avatarMenuDownloadSwitchChanged:) forControlEvents:UIControlEventValueChanged];
+     self.avatarMenuDownloadSwitch = download;
+-    UIView *topCard = AWESettingsCard(@"顶部与右侧", @[
+-        AWESettingsSwitchRow(@"顶部菜单/分类液态玻璃", topGlass),
+-        AWESettingsSwitchRow(@"顶部分类液态分组", categoryGroup),
+-        AWESettingsSegmentedRow(@"同时显示分类数量", categoryCount),
+-        AWESettingsSwitchRow(@"左上按钮展开分类菜单", menuMorph),
+-        AWESettingsSwitchRow(@"隐藏左上角按钮", hideLeft),
+-        AWESettingsSwitchRow(@"隐藏右上角搜索按钮", hideSearch),
++
++    UILabel *rightActionScaleValue = [UILabel new];
++    rightActionScaleValue.font = [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
++    self.rightActionScaleValueLabel = rightActionScaleValue;
++    UISlider *rightActionScale = [UISlider new];
++    rightActionScale.minimumValue = 0.70; rightActionScale.maximumValue = 1.30;
++    rightActionScale.value = AWERightActionScale(); rightActionScale.minimumTrackTintColor = accent;
++    [rightActionScale addTarget:self action:@selector(layoutControlSliderChanged:) forControlEvents:UIControlEventValueChanged];
++    self.rightActionScaleSlider = rightActionScale;
++
++    UILabel *avatarScaleValue = [UILabel new];
++    avatarScaleValue.font = [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
++    self.avatarScaleValueLabel = avatarScaleValue;
++    UISlider *avatarScale = [UISlider new];
++    avatarScale.minimumValue = 0.70; avatarScale.maximumValue = 1.30;
++    avatarScale.value = AWEAvatarScale(); avatarScale.minimumTrackTintColor = accent;
++    [avatarScale addTarget:self action:@selector(layoutControlSliderChanged:) forControlEvents:UIControlEventValueChanged];
++    self.avatarScaleSlider = avatarScale;
++
++    UILabel *sameStyleScaleValue = [UILabel new];
++    sameStyleScaleValue.font = [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
++    self.sameStyleScaleValueLabel = sameStyleScaleValue;
++    UISlider *sameStyleScale = [UISlider new];
++    sameStyleScale.minimumValue = 0.70; sameStyleScale.maximumValue = 1.30;
++    sameStyleScale.value = AWESameStyleScale(); sameStyleScale.minimumTrackTintColor = accent;
++    [sameStyleScale addTarget:self action:@selector(layoutControlSliderChanged:) forControlEvents:UIControlEventValueChanged];
++    self.sameStyleScaleSlider = sameStyleScale;
++
++    UILabel *rightFontScaleValue = [UILabel new];
++    rightFontScaleValue.font = [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
++    self.rightFontScaleValueLabel = rightFontScaleValue;
++    UISlider *rightFontScale = [UISlider new];
++    rightFontScale.minimumValue = 0.70; rightFontScale.maximumValue = 1.30;
++    rightFontScale.value = AWERightFontScale(); rightFontScale.minimumTrackTintColor = accent;
++    [rightFontScale addTarget:self action:@selector(layoutControlSliderChanged:) forControlEvents:UIControlEventValueChanged];
++    self.rightFontScaleSlider = rightFontScale;
++
++    UILabel *rightSpacingScaleValue = [UILabel new];
++    rightSpacingScaleValue.font = [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
++    self.rightSpacingScaleValueLabel = rightSpacingScaleValue;
++    UISlider *rightSpacingScale = [UISlider new];
++    rightSpacingScale.minimumValue = 0.55; rightSpacingScale.maximumValue = 1.25;
++    rightSpacingScale.value = AWERightSpacingScale(); rightSpacingScale.minimumTrackTintColor = accent;
++    [rightSpacingScale addTarget:self action:@selector(layoutControlSliderChanged:) forControlEvents:UIControlEventValueChanged];
++    self.rightSpacingScaleSlider = rightSpacingScale;
++
++    UILabel *rightVerticalValue = [UILabel new];
++    rightVerticalValue.font = [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
++    self.rightVerticalOffsetValueLabel = rightVerticalValue;
++    UISlider *rightVertical = [UISlider new];
++    rightVertical.minimumValue = -80.0; rightVertical.maximumValue = 120.0;
++    rightVertical.value = AWERightVerticalOffset(); rightVertical.minimumTrackTintColor = accent;
++    [rightVertical addTarget:self action:@selector(layoutControlSliderChanged:) forControlEvents:UIControlEventValueChanged];
++    self.rightVerticalOffsetSlider = rightVertical;
++
++    UISwitch *hideLike = [UISwitch new];
++    hideLike.on = AWEHideRightLikeEnabled(); hideLike.onTintColor = accent;
++    [hideLike addTarget:self action:@selector(rightHideSwitchChanged:) forControlEvents:UIControlEventValueChanged];
++    self.hideRightLikeSwitch = hideLike;
++    UISwitch *hideComment = [UISwitch new];
++    hideComment.on = AWEHideRightCommentEnabled(); hideComment.onTintColor = accent;
++    [hideComment addTarget:self action:@selector(rightHideSwitchChanged:) forControlEvents:UIControlEventValueChanged];
++    self.hideRightCommentSwitch = hideComment;
++    UISwitch *hideFavorite = [UISwitch new];
++    hideFavorite.on = AWEHideRightFavoriteEnabled(); hideFavorite.onTintColor = accent;
++    [hideFavorite addTarget:self action:@selector(rightHideSwitchChanged:) forControlEvents:UIControlEventValueChanged];
++    self.hideRightFavoriteSwitch = hideFavorite;
++    UISwitch *hideShare = [UISwitch new];
++    hideShare.on = AWEHideRightShareEnabled(); hideShare.onTintColor = accent;
++    [hideShare addTarget:self action:@selector(rightHideSwitchChanged:) forControlEvents:UIControlEventValueChanged];
++    self.hideRightShareSwitch = hideShare;
++    UISwitch *hideSameStyle = [UISwitch new];
++    hideSameStyle.on = AWEHideRightSameStyleEnabled(); hideSameStyle.onTintColor = accent;
++    [hideSameStyle addTarget:self action:@selector(rightHideSwitchChanged:) forControlEvents:UIControlEventValueChanged];
++    self.hideRightSameStyleSwitch = hideSameStyle;
++
++    UIView *rightCard = AWESettingsCard(@"右侧按钮", @[
++        AWESettingsSliderRow(@"点赞/评论/收藏/分享缩放", rightActionScaleValue, rightActionScale),
++        AWESettingsSliderRow(@"头像缩放", avatarScaleValue, avatarScale),
++        AWESettingsSliderRow(@"拍同款整体缩放", sameStyleScaleValue, sameStyleScale),
++        AWESettingsSliderRow(@"右侧数字/字号缩放", rightFontScaleValue, rightFontScale),
++        AWESettingsSliderRow(@"右侧按钮间距", rightSpacingScaleValue, rightSpacingScale),
++        AWESettingsSliderRow(@"右侧按钮垂直位置", rightVerticalValue, rightVertical),
++        AWESettingsSwitchRow(@"隐藏点赞", hideLike),
++        AWESettingsSwitchRow(@"隐藏评论", hideComment),
++        AWESettingsSwitchRow(@"隐藏收藏", hideFavorite),
++        AWESettingsSwitchRow(@"隐藏分享", hideShare),
++        AWESettingsSwitchRow(@"隐藏拍同款", hideSameStyle),
+         AWESettingsSwitchRow(@"首页/朋友按钮纯透明", transparent),
+         AWESettingsSwitchRow(@"头像菜单显示下载功能", download)
+     ]);
+@@ -18625,7 +19172,7 @@
+     self.authorizationFooter = authorizationFooter;
+ 
+     UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[
+-        basicCard, bottomCard, gestureCard, topCard, messageCard, iconCard,
++        basicCard, bottomCard, gestureCard, topCard, rightCard, messageCard, iconCard,
+         otherCard, diagCard, authorizationCheck, authorizationFooter
+     ]];
+     stack.translatesAutoresizingMaskIntoConstraints = NO;
+@@ -18656,6 +19203,7 @@
+         selector:@selector(authorizationStateChanged:)
+         name:AWEAuthorizationNotificationName() object:nil];
+     [self updateVerticalOffsetLabel];
++    [self updateLayoutControlLabels];
+     [self updateDoubleTapSplitLabel];
+     [self updateTapGestureModeUI];
+     self.messageTopBlurDistanceValueLabel.text = [NSString stringWithFormat:@"%.0f pt", AWEMessageTopEdgeBlurDistance()];
+@@ -18680,6 +19228,7 @@
+     AWETrySilentAuthorization(self);
+     [self refreshAuthorizationUI];
+     [self updateVerticalOffsetLabel];
++    [self updateLayoutControlLabels];
+     [self updateTapGestureModeUI];
+     [self applyCurrentTheme];
+ }
+@@ -18747,6 +19296,18 @@
+     self.previewView.backgroundColor = accent;
+     self.settingsGestureMineOnlySwitch.onTintColor = accent;
+     self.verticalOffsetSlider.minimumTrackTintColor = accent;
++    self.bottomScaleSlider.minimumTrackTintColor = accent;
++    self.topLeftScaleSlider.minimumTrackTintColor = accent;
++    self.topMiddleScaleSlider.minimumTrackTintColor = accent;
++    self.topRightScaleSlider.minimumTrackTintColor = accent;
++    self.topLeftMarginSlider.minimumTrackTintColor = accent;
++    self.topRightMarginSlider.minimumTrackTintColor = accent;
++    self.rightActionScaleSlider.minimumTrackTintColor = accent;
++    self.avatarScaleSlider.minimumTrackTintColor = accent;
++    self.sameStyleScaleSlider.minimumTrackTintColor = accent;
++    self.rightFontScaleSlider.minimumTrackTintColor = accent;
++    self.rightSpacingScaleSlider.minimumTrackTintColor = accent;
++    self.rightVerticalOffsetSlider.minimumTrackTintColor = accent;
+     self.doubleTapSplitSlider.minimumTrackTintColor = accent;
+     self.wanToWSwitch.onTintColor = accent;
+     self.customPNGModeSwitch.onTintColor = accent;
+@@ -18762,6 +19323,11 @@
+     self.hideBottomTitlesSwitch.onTintColor = accent;
+     self.messageBadgeSwitch.onTintColor = accent;
+     self.avatarMenuDownloadSwitch.onTintColor = accent;
++    self.hideRightLikeSwitch.onTintColor = accent;
++    self.hideRightCommentSwitch.onTintColor = accent;
++    self.hideRightFavoriteSwitch.onTintColor = accent;
++    self.hideRightShareSwitch.onTintColor = accent;
++    self.hideRightSameStyleSwitch.onTintColor = accent;
+     self.forceDarkBottomBarSwitch.onTintColor = accent;
+     self.bottomBarDisplaySwitch.onTintColor = accent;
+     self.internalFullscreenSwitch.onTintColor = accent;
+@@ -18887,6 +19453,34 @@
+     }
+ }
+ 
++- (void)updateLayoutControlLabels {
++    self.bottomScaleValueLabel.text = [NSString stringWithFormat:@"%ld%%",
++        (long)lround(self.bottomScaleSlider.value * 100.0)];
++    self.topLeftScaleValueLabel.text = [NSString stringWithFormat:@"%ld%%",
++        (long)lround(self.topLeftScaleSlider.value * 100.0)];
++    self.topMiddleScaleValueLabel.text = [NSString stringWithFormat:@"%ld%%",
++        (long)lround(self.topMiddleScaleSlider.value * 100.0)];
++    self.topRightScaleValueLabel.text = [NSString stringWithFormat:@"%ld%%",
++        (long)lround(self.topRightScaleSlider.value * 100.0)];
++    self.topLeftMarginValueLabel.text = [NSString stringWithFormat:@"%.1f pt",
++        self.topLeftMarginSlider.value];
++    self.topRightMarginValueLabel.text = [NSString stringWithFormat:@"%.1f pt",
++        self.topRightMarginSlider.value];
++    self.rightActionScaleValueLabel.text = [NSString stringWithFormat:@"%ld%%",
++        (long)lround(self.rightActionScaleSlider.value * 100.0)];
++    self.avatarScaleValueLabel.text = [NSString stringWithFormat:@"%ld%%",
++        (long)lround(self.avatarScaleSlider.value * 100.0)];
++    self.sameStyleScaleValueLabel.text = [NSString stringWithFormat:@"%ld%%",
++        (long)lround(self.sameStyleScaleSlider.value * 100.0)];
++    self.rightFontScaleValueLabel.text = [NSString stringWithFormat:@"%ld%%",
++        (long)lround(self.rightFontScaleSlider.value * 100.0)];
++    self.rightSpacingScaleValueLabel.text = [NSString stringWithFormat:@"%ld%%",
++        (long)lround(self.rightSpacingScaleSlider.value * 100.0)];
++    CGFloat y = self.rightVerticalOffsetSlider.value;
++    self.rightVerticalOffsetValueLabel.text = fabs(y) < 0.01 ? @"默认位置" :
++        [NSString stringWithFormat:(y < 0.0 ? @"向上 %.1f pt" : @"向下 %.1f pt"), fabs(y)];
++}
++
+ - (void)updateDoubleTapSplitLabel {
+     NSInteger likePercent =
+         (NSInteger)lround(self.doubleTapSplitSlider.value * 100.0);
+@@ -18939,6 +19533,58 @@
+     AWERefreshCurrentBarLayout();
+ }
+ 
++- (void)layoutControlSliderChanged:(UISlider *)sender {
++    NSString *key = nil;
++    BOOL bottom = NO, top = NO, right = NO;
++    CGFloat value = sender.value;
++    if (sender == self.bottomScaleSlider) { key = kAWEBottomBarScaleDefaultsKey; bottom = YES; value = round(value * 100.0) / 100.0; }
++    else if (sender == self.topLeftScaleSlider) { key = kAWETopLeftScaleDefaultsKey; top = YES; value = round(value * 100.0) / 100.0; }
++    else if (sender == self.topMiddleScaleSlider) { key = kAWETopMiddleScaleDefaultsKey; top = YES; value = round(value * 100.0) / 100.0; }
++    else if (sender == self.topRightScaleSlider) { key = kAWETopRightScaleDefaultsKey; top = YES; value = round(value * 100.0) / 100.0; }
++    else if (sender == self.topLeftMarginSlider) { key = kAWETopLeftMarginDefaultsKey; top = YES; value = round(value * 2.0) / 2.0; }
++    else if (sender == self.topRightMarginSlider) { key = kAWETopRightMarginDefaultsKey; top = YES; value = round(value * 2.0) / 2.0; }
++    else if (sender == self.rightActionScaleSlider) { key = kAWERightActionScaleDefaultsKey; right = YES; value = round(value * 100.0) / 100.0; }
++    else if (sender == self.avatarScaleSlider) { key = kAWEAvatarScaleDefaultsKey; right = YES; value = round(value * 100.0) / 100.0; }
++    else if (sender == self.sameStyleScaleSlider) { key = kAWESameStyleScaleDefaultsKey; right = YES; value = round(value * 100.0) / 100.0; }
++    else if (sender == self.rightFontScaleSlider) { key = kAWERightFontScaleDefaultsKey; right = YES; value = round(value * 100.0) / 100.0; }
++    else if (sender == self.rightSpacingScaleSlider) { key = kAWERightSpacingScaleDefaultsKey; right = YES; value = round(value * 100.0) / 100.0; }
++    else if (sender == self.rightVerticalOffsetSlider) { key = kAWERightVerticalOffsetDefaultsKey; right = YES; value = round(value * 2.0) / 2.0; }
++    if (!key) return;
++    sender.value = value;
++    [NSUserDefaults.standardUserDefaults setDouble:value forKey:key];
++    [NSUserDefaults.standardUserDefaults synchronize];
++    [self updateLayoutControlLabels];
++
++    if (bottom) {
++        if (gAWEAlbumMorphController) [gAWEAlbumMorphController setUserScale:value];
++        AWERefreshCurrentBarLayout();
++    }
++    UIWindow *window = AWEActiveMainWindow();
++    if (top) AWEScheduleHomeChromeRecovery(window);
++    if (right && window) {
++        AWEScheduleHomeActionStacksInView(window);
++        AWERefreshVisibleSameStyleAnchors(window);
++    }
++}
++
++- (void)rightHideSwitchChanged:(UISwitch *)sender {
++    NSString *key = nil;
++    if (sender == self.hideRightLikeSwitch) key = kAWEHideRightLikeDefaultsKey;
++    else if (sender == self.hideRightCommentSwitch) key = kAWEHideRightCommentDefaultsKey;
++    else if (sender == self.hideRightFavoriteSwitch) key = kAWEHideRightFavoriteDefaultsKey;
++    else if (sender == self.hideRightShareSwitch) key = kAWEHideRightShareDefaultsKey;
++    else if (sender == self.hideRightSameStyleSwitch) key = kAWEHideRightSameStyleDefaultsKey;
++    if (!key) return;
++    [NSUserDefaults.standardUserDefaults setBool:sender.isOn forKey:key];
++    [NSUserDefaults.standardUserDefaults synchronize];
++    UIWindow *window = AWEActiveMainWindow();
++    if (window) {
++        AWEScheduleHomeActionStacksInView(window);
++        AWERefreshVisibleSameStyleAnchors(window);
++    }
++    [[[UISelectionFeedbackGenerator alloc] init] selectionChanged];
++}
++
+ - (void)doubleTapSplitSliderChanged:(UISlider *)sender {
+     [[NSUserDefaults standardUserDefaults]
+         setDouble:sender.value

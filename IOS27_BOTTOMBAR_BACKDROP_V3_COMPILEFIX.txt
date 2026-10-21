@@ -1,0 +1,5 @@
+iOS27 BottomBar Backdrop v3 compile fix
+
+Fixed ARC write-back compilation errors at the three tint-probe creation calls.
+The probe helper now takes the current UIVisualEffectView object and returns the updated object; globals are assigned from the return value rather than passing addresses of global strong references.
+No backdrop voting, glass behavior, settings, or authorization entries changed.

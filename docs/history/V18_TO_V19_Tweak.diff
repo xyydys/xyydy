@@ -1,0 +1,838 @@
+--- /mnt/data/v18fresh/AwemeLiquidBar_1.0.58_auth47_RealTouchLease_v18_project/Tweak.x	2026-09-03 13:52:36.000000000 +0000
++++ /mnt/data/AwemeLiquidBar_1.0.58_auth47_GlassPolish_v19_project/Tweak.x	2026-09-05 21:17:56.211149142 +0000
+@@ -107,6 +107,7 @@
+ @end
+ 
+ @protocol AWEAlbumMorphActionSink;
++@class AWEHomeProfileGlassView;
+ 
+ extern void *AWEAlbumMorphCreateController(void);
+ void AWEAlbumMorphRegisterContentScrollView(UIViewController *controller,
+@@ -167,12 +168,15 @@
+                                                NSString *reason);
+ static void AWERestoreSharedSearchGestureToOriginal(NSString *reason);
+ static BOOL AWESearchForwardProxyActiveForView(UIView *view);
++static void AWEScheduleEventDrivenTransparentContrast(NSString *reason);
+ static UIView *AWEFindViewByExactRuntimeClass(UIView *root,
+                                               NSString *className,
+                                               NSUInteger depth);
+ static void AWEScheduleTopActionContainerRefresh(UIView *container);
+ static void AWEStartHomeChromeRecoverySampler(void);
+ static void AWESchedulePostCommentRightRebind(NSString *reason);
++static void AWEScheduleHomeChromeRecovery(UIWindow *window);
++static void AWERefreshAvatarMenuIfNeeded(AWEHomeProfileGlassView *slot, UIView *stack, UIView *profileHost);
+ static NSString *AWECurrentRightActionStackSummary(void);
+ static UIView *AWEFindCurrentRightActionStackAcrossWindows(void);
+ static BOOL AWEAnyVisibleCommentPanelForRightRecovery(void);
+@@ -324,6 +328,10 @@
+ static char kAWEIOS27PlatterOriginalGlassKey;
+ static char kAWEIOS27PlatterInstalledGlassKey;
+ static char kAWESettingsOriginalFontKey;
++static char kAWEAvatarMenuSignatureKey;
++static char kAWEAvatarMenuStyleKey;
++static char kAWEShareGlassBackgroundKey;
++static char kAWEShareGlassPlateKey;
+ static char kAWESearchForwardProxyKey;
+ 
+ typedef NS_ENUM(NSInteger, AWEHomeDiagnosticForegroundMode) {
+@@ -350,6 +358,13 @@
+ */
+ static BOOL gAWEHomeAdaptiveForegroundValid = NO;
+ static BOOL gAWEHomeAdaptiveForegroundIsLight = YES;
++/* v19 clear-glass contrast is event-driven only. It is sampled after feed/tab
++   changes, never by a display link or repeating screenshot timer. */
++static BOOL gAWETransparentBackdropContrastValid = NO;
++static BOOL gAWETransparentBackdropForegroundLight = YES;
++static CGFloat gAWETransparentBackdropLastLuma = -1.0;
++static CFTimeInterval gAWETransparentBackdropLastSampleTime = 0.0;
++static NSUInteger gAWETransparentBackdropSampleGeneration = 0;
+ 
+ static dispatch_queue_t AWEHomeDiagnosticLogQueue(void) {
+     static dispatch_queue_t queue;
+@@ -465,6 +480,14 @@
+     @"AwemeLiquidBarHideBottomTitlesV1";
+ static NSString * const kAWEBottomBarDisplayEnabledDefaultsKey =
+     @"AwemeLiquidBarBottomBarDisplayEnabledV1";
++static NSString * const kAWEBottomContentStyleDefaultsKey =
++    @"AwemeLiquidBarBottomContentStyleV19"; /* 0 icons, 1 native text */
++static NSString * const kAWESettingsGlassBackgroundModeDefaultsKey =
++    @"AwemeLiquidBarSettingsGlassBackgroundModeV19"; /* 0 system, 1 glass, 2 clear */
++static NSString * const kAWEShareGlassEnabledDefaultsKey =
++    @"AwemeLiquidBarShareGlassEnabledV19";
++static NSString * const kAWEShareGlassModeDefaultsKey =
++    @"AwemeLiquidBarShareGlassModeV19"; /* 0 regular, 1 clear */
+ static NSString * const kAWESettingsGestureMineOnlyDefaultsKey =
+     @"AwemeLiquidBarSettingsGestureMineOnlyV1";
+ static NSString * const kAWEMessageBadgeEnabledDefaultsKey =
+@@ -709,6 +732,42 @@
+     return AWEHideBottomTitlesEnabled() ? 1 : 0;
+ }
+ 
++static NSInteger AWEBottomContentStyle(void) {
++    id stored = [NSUserDefaults.standardUserDefaults
++        objectForKey:kAWEBottomContentStyleDefaultsKey];
++    NSInteger value = [stored isKindOfClass:NSNumber.class]
++        ? [(NSNumber *)stored integerValue] : 0;
++    return value == 1 ? 1 : 0;
++}
++
++/* Swift native-tab bridge. 1 means the DYKiller-style centered text-image
++   layout: Home / current second tab / Messages / Profile, no Publish/Search. */
++int32_t AWEAlbumMorphTextOnlyStyleEnabled(void) {
++    return AWEBottomContentStyle() == 1 ? 1 : 0;
++}
++
++static NSInteger AWESettingsGlassBackgroundMode(void) {
++    id stored = [NSUserDefaults.standardUserDefaults
++        objectForKey:kAWESettingsGlassBackgroundModeDefaultsKey];
++    NSInteger value = [stored isKindOfClass:NSNumber.class]
++        ? [(NSNumber *)stored integerValue] : 1;
++    return MIN(2, MAX(0, value));
++}
++
++static BOOL AWEShareGlassEnabled(void) {
++    id stored = [NSUserDefaults.standardUserDefaults
++        objectForKey:kAWEShareGlassEnabledDefaultsKey];
++    return [stored isKindOfClass:NSNumber.class]
++        ? [(NSNumber *)stored boolValue] : YES;
++}
++
++static NSInteger AWEShareGlassMode(void) {
++    id stored = [NSUserDefaults.standardUserDefaults
++        objectForKey:kAWEShareGlassModeDefaultsKey];
++    return ([stored isKindOfClass:NSNumber.class] &&
++            [(NSNumber *)stored integerValue] == 1) ? 1 : 0;
++}
++
+ static BOOL AWEAlbumMorphCollapseEnabled(void) {
+     /* 1.0.48a retires the experimental collapse path completely.  Keep the
+        historical preference key only so old installs do not crash while
+@@ -3760,6 +3819,20 @@
+     nativeBar.clipsToBounds = NO;
+     nativeBar.backgroundColor = UIColor.clearColor;
+     nativeBar.layer.backgroundColor = UIColor.clearColor.CGColor;
++
++    /* v19: in the user-selected pure-clear material, UIKit no longer provides
++       a tinted platter that guarantees foreground contrast. Reuse the bounded,
++       event-driven backdrop decision for the bottom glyph/text foreground so a
++       later appearance refresh cannot overwrite the sampled black/white choice.
++       This path is intentionally limited to Home/Friends visual-policy pages. */
++    if (AWEIOS27WantsClearBottomMaterial() &&
++        gAWETransparentBackdropContrastValid &&
++        AWEIndexUsesHomeVisualPolicy(AWECurrentMainTabIndex())) {
++        UIColor *contrast = gAWETransparentBackdropForegroundLight
++            ? UIColor.whiteColor : UIColor.blackColor;
++        accentColor = contrast;
++        normalColor = contrast;
++    }
+     nativeBar.tintColor = accentColor;
+     nativeBar.unselectedItemTintColor = normalColor;
+ 
+@@ -7206,6 +7279,7 @@
+         }
+     }
+     AWEApplyHomeOnlyGlassStyleToNativeBar(nativeBar);
++    AWEScheduleEventDrivenTransparentContrast(@"tab.didSelect");
+     self.forwarding = NO;
+ }
+ 
+@@ -9381,8 +9455,14 @@
+     if (!button || ![objc_getAssociatedObject(
+             button, &kAWEAdaptiveGlassAutomaticContrastKey) boolValue]) return;
+     UIUserInterfaceStyle localStyle = AWEAdaptiveButtonResolvedLocalStyle(button);
+-    /* Dark material needs a light glyph; light material needs a dark glyph. */
+-    BOOL foregroundLight = localStyle != UIUserInterfaceStyleLight;
++    /* In pure-clear mode the material itself is intentionally nearly neutral,
++       so its trait is not a reliable contrast signal. Prefer the latest bounded
++       video-backdrop sample when one exists. */
++    BOOL foregroundLight = (AWEOperatingSystemMajorVersion() >= 26 &&
++                            AWEHomeTransparentGlassEnabled() &&
++                            gAWETransparentBackdropContrastValid)
++        ? gAWETransparentBackdropForegroundLight
++        : (localStyle != UIUserInterfaceStyleLight);
+     AWEApplyAutomaticContrastForeground(button, foregroundLight);
+     objc_setAssociatedObject(button, &kAWEAdaptiveGlassLastSampleTimeKey,
+                              @(CACurrentMediaTime()),
+@@ -9553,9 +9633,10 @@
+     BOOL transparent = !tintedGlass;
+     BOOL automaticContrast = transparent && !preserveOriginalImage &&
+                              foregroundColor == nil &&
+-                             AWEOperatingSystemMajorVersion() < 26;
+-    /* iOS 26/27 keeps foreground/material resolution inside UIKit; no full-
+-       screen backdrop screenshot is required for these native glass buttons. */
++                             (AWEOperatingSystemMajorVersion() < 26 ||
++                              AWEHomeTransparentGlassEnabled());
++    /* v19: iOS26/27 pure-clear mode receives only event-driven, low-resolution
++       backdrop contrast updates; no continuous sampling is reintroduced. */
+     objc_setAssociatedObject(button, &kAWEAdaptiveGlassTransparentKey,
+                              @(transparent), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+     objc_setAssociatedObject(button, &kAWEAdaptiveGlassStrongEdgeKey,
+@@ -11393,8 +11474,9 @@
+         menuButton.userInteractionEnabled = YES;
+         menuButton.hidden = NO;
+         menuButton.alpha = 1.0;
+-        menuButton.menu = AWEAvatarBaseMenuForStack(stack, slot.profileHost);
+-        menuButton.showsMenuAsPrimaryAction = YES;
++        objc_setAssociatedObject(menuButton, &kAWEAvatarMenuSignatureKey,
++                                 nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++        AWERefreshAvatarMenuIfNeeded(slot, stack, slot.profileHost);
+         [stack bringSubviewToFront:menuButton];
+     }
+ }
+@@ -11599,8 +11681,9 @@
+     if (!stack) return;
+     AWEHomeProfileGlassView *slot = objc_getAssociatedObject(stack, &kAWEProfileGlassSlotKey);
+     if (!slot.menuButton) return;
+-    slot.menuButton.menu = AWEAvatarBaseMenuForStack(stack, slot.profileHost);
+-    slot.menuButton.showsMenuAsPrimaryAction = YES;
++    objc_setAssociatedObject(slot.menuButton, &kAWEAvatarMenuSignatureKey,
++                             nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++    AWERefreshAvatarMenuIfNeeded(slot, stack, slot.profileHost);
+ }
+ 
+ static void AWEStableEnterCleanScreenFromStack(UIView *stack) {
+@@ -11687,6 +11770,47 @@
+     return [UIMenu menuWithTitle:@"" children:children];
+ }
+ 
++static NSString *AWEAvatarMenuSignatureForStack(UIView *stack,
++                                                     UIView *profileHost) {
++    id model = AWECurrentAwemeModelForStack(stack);
++    NSUInteger albumCount = model ? AWEAlbumImagesForAweme(model).count : 0;
++    return [NSString stringWithFormat:@"%p|%p|%lu|%d|%d",
++        (__bridge void *)profileHost, (__bridge void *)model,
++        (unsigned long)albumCount, AWEAvatarMenuDownloadEnabled(),
++        gAWEStableCleanScreenEnabled];
++}
++
++static void AWERefreshAvatarMenuIfNeeded(AWEHomeProfileGlassView *slot,
++                                         UIView *stack,
++                                         UIView *profileHost) {
++    if (!slot.menuButton || !stack || !profileHost) return;
++    NSString *signature = AWEAvatarMenuSignatureForStack(stack, profileHost);
++    NSString *previous = objc_getAssociatedObject(
++        slot.menuButton, &kAWEAvatarMenuSignatureKey);
++    if (slot.menuButton.menu && [previous isEqualToString:signature]) return;
++
++    /* Resolve appearance once for this menu generation, before UIMenu is
++       assigned. Crucially, do not mutate style/menu on every feed layout pass:
++       UIKit's live context-menu selection tracking must remain uninterrupted. */
++    UIUserInterfaceStyle menuStyle = AWEAdaptiveButtonResolvedLocalStyle(slot.glassButton);
++    if (menuStyle != UIUserInterfaceStyleLight && menuStyle != UIUserInterfaceStyleDark) {
++        menuStyle = AWEAppResolvedAppearanceStyle(stack.window);
++    }
++    if (menuStyle != UIUserInterfaceStyleLight && menuStyle != UIUserInterfaceStyleDark) {
++        menuStyle = AWESystemInterfaceStyle();
++    }
++    NSNumber *oldStyle = objc_getAssociatedObject(slot.menuButton, &kAWEAvatarMenuStyleKey);
++    if (!oldStyle || oldStyle.integerValue != menuStyle) {
++        slot.menuButton.overrideUserInterfaceStyle = menuStyle;
++        objc_setAssociatedObject(slot.menuButton, &kAWEAvatarMenuStyleKey,
++                                 @(menuStyle), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++    }
++    slot.menuButton.menu = AWEAvatarBaseMenuForStack(stack, profileHost);
++    slot.menuButton.showsMenuAsPrimaryAction = YES;
++    objc_setAssociatedObject(slot.menuButton, &kAWEAvatarMenuSignatureKey,
++                             signature, OBJC_ASSOCIATION_COPY_NONATOMIC);
++}
++
+ static AWEHomeProfileGlassView *AWEEnsureProfileGlassSlot(UIView *stack) {
+     if (!stack) return nil;
+     AWEHomeProfileGlassView *slot = objc_getAssociatedObject(
+@@ -11798,20 +11922,11 @@
+     avatar.clipsToBounds = YES;
+     AWEConfigureAdaptiveSystemGlassPlateButton(
+         slot.glassButton, @"right.profile.avatar", AWEHomeTintedGlassEnabled());
+-    /* Resolve the already-configured glass before constructing UIMenu so the
+-       first presented frame starts in the correct material branch. */
+-    [slot.glassButton setNeedsLayout];
+-    [slot.glassButton layoutIfNeeded];
+-    UIUserInterfaceStyle menuStyle = AWEAdaptiveButtonResolvedLocalStyle(slot.glassButton);
+-    if (menuStyle != UIUserInterfaceStyleLight && menuStyle != UIUserInterfaceStyleDark) {
+-        menuStyle = AWEAppResolvedAppearanceStyle(stack.window);
+-    }
+-    if (menuStyle != UIUserInterfaceStyleLight && menuStyle != UIUserInterfaceStyleDark) {
+-        menuStyle = AWESystemInterfaceStyle();
+-    }
+-    slot.menuButton.overrideUserInterfaceStyle = menuStyle;
+-    slot.menuButton.menu = AWEAvatarBaseMenuForStack(stack, pictureHost);
+-    slot.menuButton.showsMenuAsPrimaryAction = YES;
++    /* Restore the old stable interaction owner: one zero-duration passive press
++       mirror drives only the glass highlight/stretch. The UIMenu itself is now
++       rebuilt only when its semantic contents actually change. */
++    AWEInstallGlassPressFeedback(slot.menuButton, slot.glassButton);
++    AWERefreshAvatarMenuIfNeeded(slot, stack, pictureHost);
+ }
+ 
+ static NSMutableDictionary<NSNumber *, AWEHomeActionSlotView *> *
+@@ -13215,6 +13330,98 @@
+     return (values[count / 2 - 1] + values[count / 2]) * 0.5;
+ }
+ 
++static UIImage *AWECreateLowResolutionBackdropSnapshot(void) {
++    UIWindow *window = AWEActiveMainWindow();
++    if (!window || !window.windowScene) return nil;
++    CGSize size = window.bounds.size;
++    if (size.width < 100.0 || size.height < 200.0) return nil;
++    UIGraphicsImageRendererFormat *format = [UIGraphicsImageRendererFormat defaultFormat];
++    format.opaque = YES;
++    /* ~0.16x keeps a 390x844 screen near 62x135 pixels. */
++    format.scale = 0.16;
++    UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc]
++        initWithSize:size format:format];
++    return [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
++        (void)context;
++        [window drawViewHierarchyInRect:window.bounds afterScreenUpdates:NO];
++    }];
++}
++
++static void AWEApplyEventDrivenTransparentContrast(CGFloat luma,
++                                                     NSString *reason) {
++    if (luma < 0.0) return;
++    BOOL previous = gAWETransparentBackdropForegroundLight;
++    BOOL next = previous;
++    if (!gAWETransparentBackdropContrastValid) {
++        next = luma < 0.50;
++    } else if (previous) {
++        if (luma > 0.60) next = NO;
++    } else if (luma < 0.40) {
++        next = YES;
++    }
++    gAWETransparentBackdropLastLuma = luma;
++    gAWETransparentBackdropContrastValid = YES;
++    gAWETransparentBackdropForegroundLight = next;
++
++    UIColor *foreground = next ? UIColor.whiteColor : UIColor.blackColor;
++    for (UIButton *button in AWEAdaptiveGlassButtonRegistry().allObjects) {
++        if ([objc_getAssociatedObject(button, &kAWEAdaptiveGlassAutomaticContrastKey) boolValue]) {
++            AWEApplyAutomaticContrastForeground(button, next);
++        }
++    }
++    if (AWEIOS27WantsClearBottomMaterial()) {
++        UITabBar *bar = gAWEAlbumMorphController.tabBar;
++        if (bar) {
++            bar.tintColor = foreground;
++            bar.unselectedItemTintColor = foreground;
++        }
++    }
++    AWEScheduleHomeChromeRecovery(AWEActiveMainWindow());
++    if (AWEInteractionDiagnosticsEnabled()) {
++        AWEInteractionDiagnosticWrite(@"CLEAR_CONTRAST_V19 reason=%@ luma=%.3f light=%d changed=%d",
++            reason ?: @"unknown", luma, next, next != previous);
++    }
++}
++
++static void AWEPerformEventDrivenTransparentContrastSample(NSString *reason) {
++    if (!(AWEHomeTransparentGlassEnabled() || AWEIOS27WantsClearBottomMaterial())) return;
++    if (!AWEIndexUsesHomeVisualPolicy(AWECurrentMainTabIndex())) return;
++    CFTimeInterval now = CACurrentMediaTime();
++    if (now - gAWETransparentBackdropLastSampleTime < 0.16) return;
++    gAWETransparentBackdropLastSampleTime = now;
++    UIImage *image = AWECreateLowResolutionBackdropSnapshot();
++    if (!image) return;
++    CGSize screen = UIScreen.mainScreen.bounds.size;
++    const CGPoint points[] = {
++        {screen.width * 0.20, screen.height * 0.18},
++        {screen.width * 0.50, screen.height * 0.18},
++        {screen.width * 0.78, screen.height * 0.32},
++        {screen.width * 0.78, screen.height * 0.52},
++        {screen.width * 0.22, screen.height * 0.78},
++        {screen.width * 0.52, screen.height * 0.78}
++    };
++    CGFloat values[6]; NSUInteger count = 0;
++    for (NSUInteger i = 0; i < 6; i++) {
++        CGFloat value = AWEIOS27AverageLumaInPatch(image, points[i], 34.0);
++        if (value >= 0.0) values[count++] = value;
++    }
++    if (count < 3) return;
++    CGFloat sorted[6]; memcpy(sorted, values, sizeof(CGFloat) * count);
++    AWEApplyEventDrivenTransparentContrast(AWEIOS27MedianLuma(sorted, count), reason);
++}
++
++static void AWEScheduleEventDrivenTransparentContrast(NSString *reason) {
++    if (!(AWEHomeTransparentGlassEnabled() || AWEIOS27WantsClearBottomMaterial())) return;
++    NSUInteger generation = ++gAWETransparentBackdropSampleGeneration;
++    for (NSNumber *delay in @[@0.10, @0.34]) {
++        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
++            (int64_t)(delay.doubleValue * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
++            if (generation != gAWETransparentBackdropSampleGeneration) return;
++            AWEPerformEventDrivenTransparentContrastSample(reason);
++        });
++    }
++}
++
+ static void AWEIOS27RequestBackdropBurstSample(void) {
+     if (!AWEIsIOS27OrLater() || AWEHomeForceDarkGlassEnabled()) return;
+     CFTimeInterval now = CACurrentMediaTime();
+@@ -16547,6 +16754,12 @@
+             */
+             UIColor *titleColor = [definition[@"textColor"] isKindOfClass:UIColor.class]
+                 ? definition[@"textColor"] : UIColor.labelColor;
++            if (AWEHomeTransparentGlassEnabled() &&
++                gAWETransparentBackdropContrastValid &&
++                AWEIndexUsesHomeVisualPolicy(AWECurrentMainTabIndex())) {
++                titleColor = gAWETransparentBackdropForegroundLight
++                    ? UIColor.whiteColor : UIColor.blackColor;
++            }
+             [button setTitleColor:titleColor forState:UIControlStateNormal];
+             [button setTitleColor:titleColor forState:UIControlStateHighlighted];
+             [button setTitleColor:titleColor forState:UIControlStateSelected];
+@@ -18595,13 +18808,13 @@
+ static CGFloat AWESettingsResponsiveScaleForWidth(CGFloat width) {
+     /* v17: compact by default on every iPhone. The old curve reached 1.0 on
+        large screens, leaving long diagnostic/settings labels visibly oversized. */
+-    if (width <= 350.0) return 0.74;
+-    if (width <= 360.0) return 0.77;
+-    if (width <= 375.0) return 0.80;
+-    if (width <= 390.0) return 0.84;
+-    if (width <= 402.0) return 0.87;
+-    if (width <= 414.0) return 0.90;
+-    return 0.92;
++    if (width <= 350.0) return 0.70;
++    if (width <= 360.0) return 0.72;
++    if (width <= 375.0) return 0.75;
++    if (width <= 390.0) return 0.78;
++    if (width <= 402.0) return 0.81;
++    if (width <= 414.0) return 0.84;
++    return 0.86;
+ }
+ 
+ static void AWEApplyResponsiveSettingsTypography(UIView *root, CGFloat scale) {
+@@ -18635,8 +18848,20 @@
+     } else if ([root isKindOfClass:UIButton.class]) {
+         UIButton *button = (UIButton *)root;
+         if (button.titleLabel) {
++            UIFont *base = objc_getAssociatedObject(button.titleLabel,
++                &kAWESettingsOriginalFontKey);
++            if (!base && button.titleLabel.font) {
++                base = button.titleLabel.font;
++                objc_setAssociatedObject(button.titleLabel,
++                    &kAWESettingsOriginalFontKey, base,
++                    OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++            }
++            if (base) button.titleLabel.font = [base fontWithSize:
++                MAX(9.0, base.pointSize * scale)];
+             button.titleLabel.adjustsFontSizeToFitWidth = YES;
+-            button.titleLabel.minimumScaleFactor = 0.72;
++            button.titleLabel.minimumScaleFactor = 0.64;
++            button.titleLabel.numberOfLines = 1;
++            button.titleLabel.lineBreakMode = NSLineBreakByTruncatingTail;
+         }
+     }
+     for (UIView *child in root.subviews) {
+@@ -18679,6 +18904,11 @@
+ @property (nonatomic, retain) UISwitch *avatarMenuDownloadSwitch;
+ @property (nonatomic, retain) UISwitch *preferHighestPlaybackSwitch;
+ @property (nonatomic, retain) UISwitch *forceDarkBottomBarSwitch;
++@property (nonatomic, retain) UISegmentedControl *bottomContentStyleControl;
++@property (nonatomic, retain) UISegmentedControl *settingsGlassModeControl;
++@property (nonatomic, retain) UIVisualEffectView *settingsGlassBackgroundView;
++@property (nonatomic, retain) UISwitch *shareGlassSwitch;
++@property (nonatomic, retain) UISegmentedControl *shareGlassModeControl;
+ @property (nonatomic, retain) UISwitch *chatCapsuleSwitch;
+ @property (nonatomic, retain) UISwitch *chatSeparateLeftSwitch;
+ @property (nonatomic, retain) UISwitch *masterSwitch;
+@@ -18720,6 +18950,19 @@
+ 
+     self.pendingAccentColor = AWEStoredAccentColor();
+ 
++    UIVisualEffectView *settingsGlassBackground =
++        [[UIVisualEffectView alloc] initWithEffect:nil];
++    settingsGlassBackground.translatesAutoresizingMaskIntoConstraints = NO;
++    settingsGlassBackground.userInteractionEnabled = NO;
++    [self.view insertSubview:settingsGlassBackground atIndex:0];
++    [NSLayoutConstraint activateConstraints:@[
++        [settingsGlassBackground.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
++        [settingsGlassBackground.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
++        [settingsGlassBackground.topAnchor constraintEqualToAnchor:self.view.topAnchor],
++        [settingsGlassBackground.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor]
++    ]];
++    self.settingsGlassBackgroundView = settingsGlassBackground;
++
+     UIView *masterCard = [UIView new];
+     masterCard.translatesAutoresizingMaskIntoConstraints = NO;
+     masterCard.layer.cornerRadius = 24.0;
+@@ -19570,7 +19813,7 @@
+ 
+     UILabel *diagnosticLabel = [UILabel new];
+     diagnosticLabel.text = @"交互诊断日志（反馈用）";
+-    diagnosticLabel.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightMedium];
++    diagnosticLabel.font = [UIFont systemFontOfSize:11.5 weight:UIFontWeightMedium];
+     diagnosticLabel.numberOfLines = 1;
+     UISwitch *diagnosticSwitch = [UISwitch new];
+     diagnosticSwitch.on = AWEInteractionDiagnosticsEnabled();
+@@ -19601,8 +19844,70 @@
+     [exportLogButton addTarget:self action:@selector(exportProbeLogs:)
+               forControlEvents:UIControlEventTouchUpInside];
+ 
++    UILabel *settingsGlassModeLabel = [UILabel new];
++    settingsGlassModeLabel.text = @"设置页背景材质";
++    settingsGlassModeLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
++    UISegmentedControl *settingsGlassModeControl = [[UISegmentedControl alloc]
++        initWithItems:@[@"系统", @"玻璃", @"清透"]];
++    settingsGlassModeControl.selectedSegmentIndex = AWESettingsGlassBackgroundMode();
++    [settingsGlassModeControl addTarget:self action:@selector(settingsGlassModeChanged:)
++        forControlEvents:UIControlEventValueChanged];
++    self.settingsGlassModeControl = settingsGlassModeControl;
++    UIStackView *settingsGlassModeRow = [[UIStackView alloc]
++        initWithArrangedSubviews:@[settingsGlassModeLabel, settingsGlassModeControl]];
++    settingsGlassModeRow.axis = UILayoutConstraintAxisHorizontal;
++    settingsGlassModeRow.alignment = UIStackViewAlignmentCenter;
++    settingsGlassModeRow.spacing = 8.0;
++
++    UILabel *bottomContentStyleLabel = [UILabel new];
++    bottomContentStyleLabel.text = @"底栏内容样式";
++    bottomContentStyleLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
++    UISegmentedControl *bottomContentStyleControl = [[UISegmentedControl alloc]
++        initWithItems:@[@"图标", @"原生文字"]];
++    bottomContentStyleControl.selectedSegmentIndex = AWEBottomContentStyle();
++    [bottomContentStyleControl addTarget:self action:@selector(bottomContentStyleChanged:)
++        forControlEvents:UIControlEventValueChanged];
++    self.bottomContentStyleControl = bottomContentStyleControl;
++    UIStackView *bottomContentStyleRow = [[UIStackView alloc]
++        initWithArrangedSubviews:@[bottomContentStyleLabel, bottomContentStyleControl]];
++    bottomContentStyleRow.axis = UILayoutConstraintAxisHorizontal;
++    bottomContentStyleRow.alignment = UIStackViewAlignmentCenter;
++    bottomContentStyleRow.spacing = 8.0;
++
++    UILabel *shareGlassLabel = [UILabel new];
++    shareGlassLabel.text = @"转发页液态玻璃";
++    shareGlassLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
++    UISwitch *shareGlassSwitch = [UISwitch new];
++    shareGlassSwitch.on = AWEShareGlassEnabled();
++    shareGlassSwitch.onTintColor = AWEStoredAccentColor();
++    [shareGlassSwitch addTarget:self action:@selector(shareGlassSwitchChanged:)
++        forControlEvents:UIControlEventValueChanged];
++    self.shareGlassSwitch = shareGlassSwitch;
++    UIStackView *shareGlassRow = [[UIStackView alloc]
++        initWithArrangedSubviews:@[shareGlassLabel, shareGlassSwitch]];
++    shareGlassRow.axis = UILayoutConstraintAxisHorizontal;
++    shareGlassRow.alignment = UIStackViewAlignmentCenter;
++    shareGlassRow.distribution = UIStackViewDistributionEqualSpacing;
++
++    UILabel *shareGlassModeLabel = [UILabel new];
++    shareGlassModeLabel.text = @"转发页玻璃材质";
++    shareGlassModeLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
++    UISegmentedControl *shareGlassModeControl = [[UISegmentedControl alloc]
++        initWithItems:@[@"磨砂", @"清透"]];
++    shareGlassModeControl.selectedSegmentIndex = AWEShareGlassMode();
++    shareGlassModeControl.enabled = shareGlassSwitch.isOn;
++    [shareGlassModeControl addTarget:self action:@selector(shareGlassModeChanged:)
++        forControlEvents:UIControlEventValueChanged];
++    self.shareGlassModeControl = shareGlassModeControl;
++    UIStackView *shareGlassModeRow = [[UIStackView alloc]
++        initWithArrangedSubviews:@[shareGlassModeLabel, shareGlassModeControl]];
++    shareGlassModeRow.axis = UILayoutConstraintAxisHorizontal;
++    shareGlassModeRow.alignment = UIStackViewAlignmentCenter;
++    shareGlassModeRow.spacing = 8.0;
++
+     NSMutableArray<UIView *> *visualItems = [NSMutableArray arrayWithObjects:
+-        albumStyleRow, newBarIconCenterButton, nil];
++        settingsGlassModeRow, albumStyleRow, bottomContentStyleRow,
++        newBarIconCenterButton, nil];
+     if (AWECustomBottomBarReleaseAllowed()) {
+         [visualItems addObject:bottomBarDisplayRow];
+     }
+@@ -19615,7 +19920,8 @@
+         /* Message page */
+         messageTopBlurDistanceRow, messageBottomBlurDistanceRow,
+         /* Global material / auxiliary behavior */
+-        transparentGlassRow, avatarMenuDownloadRow, preferHighestPlaybackRow,
++        transparentGlassRow, shareGlassRow, shareGlassModeRow,
++        avatarMenuDownloadRow, preferHighestPlaybackRow,
+         pngRow, reloadPNG, iconCenterButton,
+         diagnosticRow, diagnosticButtons, exportLogButton
+     ]];
+@@ -19688,10 +19994,12 @@
+         masterTitle, headline, positionTitle, gestureTitle, chatTitle,
+         capsuleLabel, separateLabel, wanTitle, settingsGestureMineOnlyLabel,
+         commentGlassTitle, commentGlassModeLabel, commentGlassCornerLabel,
+-        albumStyleLabel, hideTitlesLabel, messageBadgeLabel, preferHighestPlaybackLabel,
++        settingsGlassModeLabel, albumStyleLabel, bottomContentStyleLabel,
++        hideTitlesLabel, messageBadgeLabel, preferHighestPlaybackLabel,
+         messageTopBlurDistanceLabel, messageBottomBlurDistanceLabel,
+         forceDarkBottomBarLabel, topLabel, topCategoryGroupLabel,
+-        topMenuMorphLabel, pngLabel, diagnosticLabel
++        topMenuMorphLabel, shareGlassLabel, shareGlassModeLabel,
++        pngLabel, diagnosticLabel
+     ];
+     self.themeSecondaryLabels = @[
+         positionValue, splitValue, commentGlassCornerValueLabel,
+@@ -19794,14 +20102,45 @@
+         self.overrideUserInterfaceStyle = style;
+         self.navigationController.overrideUserInterfaceStyle = style;
+     }
+-    self.view.backgroundColor = background;
+-    self.navigationController.view.backgroundColor = background;
++    NSInteger settingsGlassMode = AWESettingsGlassBackgroundMode();
++    if (settingsGlassMode > 0 && AWEOperatingSystemMajorVersion() >= 26) {
++        UIVisualEffect *effect = nil;
++        if (settingsGlassMode == 2) {
++            Class glassClass = NSClassFromString(@"UIGlassEffect");
++            SEL maker = NSSelectorFromString(@"effectWithStyle:");
++            id glass = (glassClass && [glassClass respondsToSelector:maker])
++                ? ((id (*)(id, SEL, NSInteger))objc_msgSend)(glassClass, maker, 1)
++                : nil;
++            if ([glass respondsToSelector:NSSelectorFromString(@"setInteractive:")])
++                ((void (*)(id, SEL, BOOL))objc_msgSend)(glass,
++                    NSSelectorFromString(@"setInteractive:"), NO);
++            if ([glass respondsToSelector:NSSelectorFromString(@"setTintColor:")])
++                ((void (*)(id, SEL, id))objc_msgSend)(glass,
++                    NSSelectorFromString(@"setTintColor:"), nil);
++            if ([glass isKindOfClass:UIVisualEffect.class]) effect = glass;
++        } else {
++            effect = AWECreateHomeAdaptiveGlassEffect();
++        }
++        self.settingsGlassBackgroundView.effect = effect;
++        self.settingsGlassBackgroundView.hidden = NO;
++        self.view.backgroundColor = UIColor.clearColor;
++        self.navigationController.view.backgroundColor = UIColor.clearColor;
++        card = dark ? [UIColor colorWithWhite:0.10 alpha:0.52]
++                    : [UIColor colorWithWhite:1.0 alpha:0.52];
++        background = UIColor.clearColor;
++    } else {
++        self.settingsGlassBackgroundView.effect = nil;
++        self.settingsGlassBackgroundView.hidden = YES;
++        self.view.backgroundColor = background;
++        self.navigationController.view.backgroundColor = background;
++    }
+     for (UIView *themeCard in self.themeCards) themeCard.backgroundColor = card;
+     for (UILabel *label in self.themePrimaryLabels) label.textColor = primary;
+     for (UILabel *label in self.themeSecondaryLabels) label.textColor = secondary;
+     UINavigationBarAppearance *appearance = [UINavigationBarAppearance new];
+     [appearance configureWithTransparentBackground];
+-    appearance.backgroundColor = background;
++    appearance.backgroundColor = (AWESettingsGlassBackgroundMode() > 0 &&
++        AWEOperatingSystemMajorVersion() >= 26) ? UIColor.clearColor : background;
+     appearance.titleTextAttributes = @{NSForegroundColorAttributeName: primary};
+     UINavigationBar *navigationBar = self.navigationController.navigationBar;
+     navigationBar.standardAppearance = appearance;
+@@ -19817,6 +20156,7 @@
+     self.collapseSwitch.onTintColor = accent;
+     self.doubleTapSplitSlider.minimumTrackTintColor = accent;
+     self.wanToWSwitch.onTintColor = accent;
++    self.shareGlassSwitch.onTintColor = accent;
+     self.chatCapsuleSwitch.onTintColor = accent;
+     self.chatSeparateLeftSwitch.onTintColor = accent;
+     self.customPNGModeSwitch.onTintColor = accent;
+@@ -20295,10 +20635,52 @@
+         forKey:kAWEHomeTransparentGlassDefaultsKey];
+     [NSUserDefaults.standardUserDefaults synchronize];
+     AWERefreshAllConfiguredIcons();
++    if (sender.isOn) AWEScheduleEventDrivenTransparentContrast(@"settings.transparent.on");
+     [[[UISelectionFeedbackGenerator alloc] init] selectionChanged];
+ }
+ 
+ 
++- (void)settingsGlassModeChanged:(UISegmentedControl *)sender {
++    NSInteger mode = MIN(2, MAX(0, sender.selectedSegmentIndex));
++    [NSUserDefaults.standardUserDefaults setInteger:mode
++        forKey:kAWESettingsGlassBackgroundModeDefaultsKey];
++    [NSUserDefaults.standardUserDefaults synchronize];
++    [self applyCurrentTheme];
++    [[[UISelectionFeedbackGenerator alloc] init] selectionChanged];
++}
++
++- (void)bottomContentStyleChanged:(UISegmentedControl *)sender {
++    NSInteger mode = sender.selectedSegmentIndex == 1 ? 1 : 0;
++    [NSUserDefaults.standardUserDefaults setInteger:mode
++        forKey:kAWEBottomContentStyleDefaultsKey];
++    [NSUserDefaults.standardUserDefaults synchronize];
++    if (gAWEAlbumMorphController) {
++        [gAWEAlbumMorphController reloadConfiguredImages];
++        [gAWEAlbumMorphController configureVisibleItemIdentifiers:
++            AWEAlbumMorphVisibleItemIdentifiers()];
++    }
++    if (gAWELastTabBar && AWEAlbumMorphStyleEnabled()) {
++        AWEInstallOrUpdateAlbumMorphBar((UIView *)gAWELastTabBar, NO);
++    }
++    [[[UISelectionFeedbackGenerator alloc] init] selectionChanged];
++}
++
++- (void)shareGlassSwitchChanged:(UISwitch *)sender {
++    [NSUserDefaults.standardUserDefaults setBool:sender.isOn
++        forKey:kAWEShareGlassEnabledDefaultsKey];
++    [NSUserDefaults.standardUserDefaults synchronize];
++    self.shareGlassModeControl.enabled = sender.isOn;
++    [[[UISelectionFeedbackGenerator alloc] init] selectionChanged];
++}
++
++- (void)shareGlassModeChanged:(UISegmentedControl *)sender {
++    NSInteger mode = sender.selectedSegmentIndex == 1 ? 1 : 0;
++    [NSUserDefaults.standardUserDefaults setInteger:mode
++        forKey:kAWEShareGlassModeDefaultsKey];
++    [NSUserDefaults.standardUserDefaults synchronize];
++    [[[UISelectionFeedbackGenerator alloc] init] selectionChanged];
++}
++
+ - (void)openNewBarIconCenter:(UIButton *)sender {
+     (void)sender;
+     AWEIconCenterController *controller =
+@@ -21654,8 +22036,10 @@
+ - (void)aweme:(id)aweme currentIndexDidChange:(NSInteger)index {
+     %orig(aweme, index);
+     if (gAWEStableCleanScreenEnabled) AWEScheduleCleanScreenReapply(@"index.didChange");
+-    /* v9 page-fixed policy: changing feed items never touches Liquid Glass
+-       traits/materials, so video swipes cannot trigger style work or screenshots. */
++    /* v19 only: two bounded ~0.16x captures after a feed item settles. There is
++       no timer/display-link and no sampling when clear material is disabled. */
++    AWEScheduleEventDrivenTransparentContrast(@"feed.indexDidChange");
++    /* v9 page-fixed policy otherwise remains intact. */
+     /* A few Home article/feed models leave the native bar hidden after reuse.
+        Re-evaluate once after the item switch; the Home-feed visibility rule
+        above decides whether the replacement should be restored. */
+@@ -23504,6 +23888,134 @@
+ }
+ 
+ 
++static BOOL AWEClassNameLooksLikeShareForwardDestinationV19(NSString *className) {
++    NSString *lower = className.lowercaseString;
++    return [lower containsString:@"share"] || [lower containsString:@"forward"] ||
++           [lower containsString:@"transpond"] || [lower containsString:@"sendpanel"];
++}
++
++static UIVisualEffect *AWEShareGlassEffectV19(void) {
++    if (AWEShareGlassMode() == 0) return AWECreateHomeAdaptiveGlassEffect();
++    Class glassClass = NSClassFromString(@"UIGlassEffect");
++    SEL maker = NSSelectorFromString(@"effectWithStyle:");
++    id effect = (glassClass && [glassClass respondsToSelector:maker])
++        ? ((id (*)(id, SEL, NSInteger))objc_msgSend)(glassClass, maker, 1) : nil;
++    if ([effect respondsToSelector:NSSelectorFromString(@"setInteractive:")])
++        ((void (*)(id, SEL, BOOL))objc_msgSend)(effect,
++            NSSelectorFromString(@"setInteractive:"), NO);
++    if ([effect respondsToSelector:NSSelectorFromString(@"setTintColor:")])
++        ((void (*)(id, SEL, id))objc_msgSend)(effect,
++            NSSelectorFromString(@"setTintColor:"), nil);
++    return [effect isKindOfClass:UIVisualEffect.class]
++        ? (UIVisualEffect *)effect : AWECreateHomeAdaptiveGlassEffect();
++}
++
++static BOOL AWEShareCandidateLooksLikeAvatarV19(UIView *view) {
++    if (![view isKindOfClass:UIImageView.class]) return NO;
++    CGFloat w = CGRectGetWidth(view.bounds), h = CGRectGetHeight(view.bounds);
++    if (w < 32.0 || w > 86.0 || h < 32.0 || h > 86.0) return NO;
++    CGFloat ratio = MIN(w,h) / MAX(MAX(w,h), 1.0);
++    return ratio > 0.82 && (view.layer.cornerRadius >= MIN(w,h) * 0.28 || view.clipsToBounds);
++}
++
++static BOOL AWEShareCandidateLooksLikeActionV19(UIView *view) {
++    CGFloat w = CGRectGetWidth(view.bounds), h = CGRectGetHeight(view.bounds);
++    if (w < 34.0 || w > 110.0 || h < 34.0 || h > 100.0) return NO;
++    if ([view isKindOfClass:UIControl.class]) return YES;
++    NSString *lower = NSStringFromClass(view.class).lowercaseString;
++    return [lower containsString:@"button"] || [lower containsString:@"action"] ||
++           [lower containsString:@"item"];
++}
++
++static void AWEInstallShareGlassPlateV19(UIView *candidate, BOOL circle) {
++    if (!candidate.superview || candidate.hidden || candidate.alpha < 0.01) return;
++    UIVisualEffectView *plate = objc_getAssociatedObject(candidate, &kAWEShareGlassPlateKey);
++    if (!plate) {
++        plate = [[UIVisualEffectView alloc] initWithEffect:AWEShareGlassEffectV19()];
++        plate.userInteractionEnabled = NO;
++        plate.clipsToBounds = YES;
++        objc_setAssociatedObject(candidate, &kAWEShareGlassPlateKey, plate,
++                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++        [candidate.superview insertSubview:plate belowSubview:candidate];
++    } else if (plate.superview != candidate.superview) {
++        [plate removeFromSuperview];
++        [candidate.superview insertSubview:plate belowSubview:candidate];
++    }
++    plate.effect = AWEShareGlassEffectV19();
++    CGRect frame = candidate.frame;
++    CGFloat pad = circle ? 3.0 : 2.0;
++    frame = CGRectInset(frame, -pad, -pad);
++    plate.frame = frame;
++    plate.layer.cornerCurve = kCACornerCurveContinuous;
++    plate.layer.cornerRadius = circle ? CGRectGetHeight(frame) * 0.5
++                                      : MIN(18.0, CGRectGetHeight(frame) * 0.42);
++}
++
++static void AWEApplyShareSheetGlassV19(UIViewController *controller,
++                                       NSString *reason) {
++    if (!controller || !controller.viewIfLoaded.window || !AWEShareGlassEnabled() ||
++        AWEOperatingSystemMajorVersion() < 26) return;
++    UIView *root = controller.view;
++    root.backgroundColor = UIColor.clearColor;
++    UIVisualEffectView *background = objc_getAssociatedObject(
++        controller, &kAWEShareGlassBackgroundKey);
++    if (!background) {
++        background = [[UIVisualEffectView alloc] initWithEffect:AWEShareGlassEffectV19()];
++        background.userInteractionEnabled = NO;
++        background.autoresizingMask = UIViewAutoresizingFlexibleWidth |
++                                      UIViewAutoresizingFlexibleHeight;
++        background.frame = root.bounds;
++        [root insertSubview:background atIndex:0];
++        objc_setAssociatedObject(controller, &kAWEShareGlassBackgroundKey,
++                                 background, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++    }
++    background.effect = AWEShareGlassEffectV19();
++    background.frame = root.bounds;
++    [root sendSubviewToBack:background];
++
++    NSMutableArray<NSArray *> *queue = [NSMutableArray arrayWithObject:@[root,@0]];
++    NSUInteger index = 0, buttons = 0, avatars = 0;
++    while (index < queue.count && index < 520) {
++        NSArray *entry = queue[index++]; UIView *view = entry[0];
++        NSUInteger depth = [entry[1] unsignedIntegerValue];
++        if (depth < 12) for (UIView *child in view.subviews)
++            if (child != background) [queue addObject:@[child,@(depth+1)]];
++        if (view == root || view == background) continue;
++        CGRect frame = [view convertRect:view.bounds toView:root];
++        BOOL largeBackdrop = CGRectGetWidth(frame) >= CGRectGetWidth(root.bounds) * 0.86 &&
++                             CGRectGetHeight(frame) >= CGRectGetHeight(root.bounds) * 0.30;
++        if (largeBackdrop && ![view isKindOfClass:UIControl.class] &&
++            ![view isKindOfClass:UILabel.class] && ![view isKindOfClass:UIImageView.class]) {
++            view.backgroundColor = UIColor.clearColor;
++            view.layer.backgroundColor = UIColor.clearColor.CGColor;
++            view.opaque = NO;
++        }
++        if (AWEShareCandidateLooksLikeAvatarV19(view)) {
++            AWEInstallShareGlassPlateV19(view, YES); avatars++;
++        } else if (AWEShareCandidateLooksLikeActionV19(view)) {
++            AWEInstallShareGlassPlateV19(view, NO); buttons++;
++        }
++    }
++    if (AWEInteractionDiagnosticsEnabled()) {
++        AWEInteractionDiagnosticWrite(@"SHARE_GLASS_V19 reason=%@ class=%@ buttons=%lu avatars=%lu mode=%ld",
++            reason ?: @"unknown", NSStringFromClass(controller.class),
++            (unsigned long)buttons, (unsigned long)avatars, (long)AWEShareGlassMode());
++    }
++}
++
++static void AWEScheduleShareSheetGlassV19(UIViewController *controller,
++                                          NSString *reason) {
++    if (!AWEShareGlassEnabled() || !controller) return;
++    __weak UIViewController *weakController = controller;
++    for (NSNumber *delay in @[@0.0,@0.08,@0.24]) {
++        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
++            (int64_t)(delay.doubleValue*NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
++            UIViewController *live = weakController;
++            if (live.viewIfLoaded.window) AWEApplyShareSheetGlassV19(live, reason);
++        });
++    }
++}
++
+ /*
+  Every completed page appearance is a useful, low-frequency recovery signal.
+  Unlike the old global UIView layout hook, this runs only on navigation/
+@@ -23594,6 +24106,9 @@
+     }
+ 
+     %orig(animated);
++    if (AWEClassNameLooksLikeShareForwardDestinationV19(className)) {
++        AWEScheduleShareSheetGlassV19(self, @"viewWillAppear");
++    }
+     if (friendsFeedContent && !AWESecondTabIsShop() &&
+         (AWECurrentOriginalMainTabIndex() == 1 || gAWEFriendsTabLatched)) {
+         AWEApplyFriendsCaptionBottomReserve(self, YES, @"viewWillAppear.after");
+@@ -23636,6 +24151,9 @@
+     AWELogBarSnapshot(@"vc.viewDidAppear", self, YES);
+ 
+     NSString *className = NSStringFromClass(self.class);
++    if (AWEClassNameLooksLikeShareForwardDestinationV19(className)) {
++        AWEScheduleShareSheetGlassV19(self, @"viewDidAppear");
++    }
+     if (AWEClassNameLooksLikeFriendsRootController(className)) {
+         gAWEFriendsTabLatched = YES;
+     }

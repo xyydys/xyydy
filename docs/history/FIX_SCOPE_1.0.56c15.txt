@@ -1,0 +1,6 @@
+AwemeLiquidBar 1.0.56c15 — article/avatar route ownership correction
+
+1. Home-feed article cards are rendered by AWESearchFeedArticleViewController. The renderer name alone no longer marks the route as Search; real Search still suppresses via the visible Search state or another AWESearch controller in its navigation stack.
+2. AWEProfileAvatarViewController is now an explicit sensitive destination independent of numeric tab index, so the separate LiquidBar UIWindow cannot cover the avatar editor.
+3. 1.0.56c14 IM/right-action ownership fix remains unchanged.
+4. Authorization remains 37 unique users; the custom bottom-bar release switch remains limited to Hoeyc_0505 and 0416xxd.

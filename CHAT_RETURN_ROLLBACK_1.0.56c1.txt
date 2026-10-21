@@ -1,0 +1,19 @@
+AwemeLiquidBar 1.0.56c1
+
+Base: exact 1.0.56c project.
+
+Preserved from 1.0.56c:
+- internal fullscreen implementation
+- clean-screen v2 and status-bar hiding
+- comment-area clean-screen protection
+- adaptive center Liquid Glass save HUD/menu wording
+- highest-bitrate / quality preference work
+- cold-start top-group suppression changes
+- 1.0.56c settings-route handling and all unrelated UI/features
+
+Rolled back ONLY the chat-return experiment that was introduced after 1.0.56a:
+1. directConversation sensitive-route classifier restored to 1.0.56a behavior.
+2. AWEApplyAlbumMorphVisibleFraction restored to 1.0.56a suppression semantics.
+3. AWEFinishAlbumMorphTransition restored to 1.0.56a completion ordering; removed the 0.20 s chat/settings handoff grace added for interactive return.
+
+Intent: return the Messages-tab bottom-bar lifecycle to the pre-chat-return-modification behavior. No attempt is made to fix or improve chat interactive-return animation in this build.

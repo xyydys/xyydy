@@ -1,0 +1,13 @@
+# TEST7 诊断结论与证据边界
+
+上传日志有54条COLLAPSE_STATE、40条FEED_ITEM_COMMIT；首页compact=true/false均出现。因此“作品切换没有读到”与这次日志不符，失效发生在状态提交之后。
+
+TEST6底座查找硬编码TabBarItemPlatterView、找到不足2块就直接退出，同一路径控制缩放与收缩。旧工程FLEX记录及材料代码使用_UITabBarPlatterView；新实现按原生材料分支和左右几何匹配，并具有整体变形兜底。日志没有TEST6底座树，故不能断言当时实际类名已被日志直接捕获。
+
+v9与TEST6的overlay透明函数逐字相同；差异包括透明UICollectionViewController被改成普通UIViewController、首页外观从v9固定Dark改为读取右侧按钮的Light trait、顶栏另加默认appearance。此次恢复前两项并删除第三项。
+
+窗口摘要frame=0不能证明窗口真为零尺寸：摘要函数在view.window=nil时直接输出CGRectZero，UIWindow本身即可触发该分支。本次未据此更换宿主。
+
+右侧闪回的可证路径：布局开始恢复alpha，稍后再隐藏，且设置可见会提前返回；新的持久隐藏状态与几何分离。头像固定44pt和原生形变时写frame已修。原图片收集器已有排除插件图片逻辑，未将“重复选中自有图片”错误归因于本次故障。
+
+运行时实际材料、融合、按压和FPS尚需真机确认；不以编译通过替代真机结论。

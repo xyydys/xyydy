@@ -1,0 +1,78 @@
+{
+  "version": "2.3",
+  "reason": "User requested shared material across owned glass, immediate route appearance, intact native button/menu interaction and native minimize completion repair. Unlisted runtime files retain historical hashes.",
+  "changes": {
+    "AwemeLiquidBar-Bridging-Header.h": {
+      "before": "a58776605df5fa284ec8f8b802802c5b683530bed54d767c194cb665e2bfd471",
+      "after": "525e508716becd5debf536c41c08b78fe370fddd98cf72b3c066555d1aedb814"
+    },
+    "ALBAvatarMenuTouch.h": {
+      "before": "beb56766a44d705dc5af1ca2356f3be8f74615b8d3dfba3f98ab7f2e1978f138",
+      "after": "f45f0d6d313238d48aab060b52663104fd14463fd009fc7eb5e440d53b0ae34f"
+    },
+    "AwemeAlbumMorphBar.swift": {
+      "before": "51b5c27f28c1ce9a013892da9752cc66fb4468b3efa28410417fee0dbb52a0a3",
+      "after": "c81165849f16c235a60a4bb03266898d160a86f0c8c81912f06af4783acd0bf6"
+    },
+    "ALBGlassMaterials.h": {
+      "before": "6f028f675525b46f19bb1227800e375708e2e6496c9252abbf8d59a279fe1e64",
+      "after": "c004e65a9a880eb4ead750b1335525eeb8590ebf3e4f307ab1df4d1436a4f3b5"
+    },
+    "CommentGlassDYKiller.xm": {
+      "before": "8f238e0ffae26c4bd4be258ce4c4653e5cbda28985c26cac9912484949e8d176",
+      "after": "c34740bf68d31363d2a155fe0d7f1a904ebe79bdd846f178137ef98047aa3a12"
+    },
+    "ALBBottomSupport.swift": {
+      "before": "999f6b805091dfe66043c54babbcea7b0942423e9a15b5fd7d095fc212665ced",
+      "after": "bcfa1c1a86950b71cdfdcb1bc42035cfc78f9bbd24f6b135d9bd206601acba3e"
+    },
+    "ALBSidePalette.h": {
+      "before": "beb4300c58c8239e397e27396e577abeaa941c26ee9b5faff9438201ed6fc678",
+      "after": "e0e8ae5ef9d58d5bb6c12385a4048d8629b6a990b52115a79190254c58a18e2d"
+    },
+    "MessageTopGlassV3.xm": {
+      "before": "d123b22e9b238ce9f06d939d02b3f96e3183af7363dead4759784321bc0dad5c",
+      "after": "709017caf7f3a088887fd2e3909b1968365fdd6b4066a7c5f61e73b0a476827c"
+    },
+    "Tweak.x": {
+      "before": "05c22fd7d575496a0f93b67b431571ffee9da946a7ec43bd04cbe46bff518161",
+      "after": "24fbf7a8a8d81b1a4e2fc3b2862f4bdf8520bd6d4a1966e714082f8bfc137971"
+    },
+    "ALBTopMaterial.h": {
+      "before": "0dc29ee8caaf69196b409ba0b7d9bee4a8d1a6d3dfeab2df50fbb14be913d7b8",
+      "after": "f5f956c2d5d42442babb35a2fb475061cc3eac170cccd90126f2894b814e96cc"
+    },
+    "ALBDanmakuGlass.h": {
+      "before": "c1e0ee1ee2bd24d3011330590d108e19c3f25de6081a03ed19ed48eb8b2c3143",
+      "after": "7fdd1624dd2f54f128bdbdec364bd883a9120b7791aa162106010545986b6f56"
+    },
+    "ALBSettingsGlass.h": {
+      "before": "9fa23447e09556f45cdb521e4cd31d417726f388fa49ad7cc980cfe794194e5c",
+      "after": "6860e5abd4cab0c6b556fa5130e256f81037326dda73002fc93845bf49e0e759"
+    },
+    "ALBTopNative/ALBNativeBarSurface.h": {
+      "before": "cf040bb4a537f761744b2aa9dc4c0f2c3b389a2a325deb302d1407c656646dab",
+      "after": "81daa426fb61f95656bb8e04dc5eb67d5244c7046d9c87e7975e6c2e26ad95e0"
+    },
+    "ALBTopNative/ALBTopNativeGroup.m": {
+      "before": "83d4094d250a26c112559ebc6eb79e9f72676a4945202864c26e83c7b2c218d2",
+      "after": "3d0c09e0457a3b25399eae46c2204cb954a018573e7b001e47ece9d769333055"
+    }
+  },
+  "intentional_changes": {
+    "AwemeLiquidBar-Bridging-Header.h": "525e508716becd5debf536c41c08b78fe370fddd98cf72b3c066555d1aedb814",
+    "ALBAvatarMenuTouch.h": "f45f0d6d313238d48aab060b52663104fd14463fd009fc7eb5e440d53b0ae34f",
+    "AwemeAlbumMorphBar.swift": "c81165849f16c235a60a4bb03266898d160a86f0c8c81912f06af4783acd0bf6",
+    "ALBGlassMaterials.h": "c004e65a9a880eb4ead750b1335525eeb8590ebf3e4f307ab1df4d1436a4f3b5",
+    "CommentGlassDYKiller.xm": "c34740bf68d31363d2a155fe0d7f1a904ebe79bdd846f178137ef98047aa3a12",
+    "ALBBottomSupport.swift": "bcfa1c1a86950b71cdfdcb1bc42035cfc78f9bbd24f6b135d9bd206601acba3e",
+    "ALBSidePalette.h": "e0e8ae5ef9d58d5bb6c12385a4048d8629b6a990b52115a79190254c58a18e2d",
+    "MessageTopGlassV3.xm": "709017caf7f3a088887fd2e3909b1968365fdd6b4066a7c5f61e73b0a476827c",
+    "Tweak.x": "24fbf7a8a8d81b1a4e2fc3b2862f4bdf8520bd6d4a1966e714082f8bfc137971",
+    "ALBTopMaterial.h": "f5f956c2d5d42442babb35a2fb475061cc3eac170cccd90126f2894b814e96cc",
+    "ALBDanmakuGlass.h": "7fdd1624dd2f54f128bdbdec364bd883a9120b7791aa162106010545986b6f56",
+    "ALBSettingsGlass.h": "6860e5abd4cab0c6b556fa5130e256f81037326dda73002fc93845bf49e0e759",
+    "ALBTopNative/ALBNativeBarSurface.h": "81daa426fb61f95656bb8e04dc5eb67d5244c7046d9c87e7975e6c2e26ad95e0",
+    "ALBTopNative/ALBTopNativeGroup.m": "3d0c09e0457a3b25399eae46c2204cb954a018573e7b001e47ece9d769333055"
+  }
+}

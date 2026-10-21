@@ -1,0 +1,10 @@
+AwemeLiquidBar 1.0.56c10 — visual-only bottom-bar visibility toggle
+
+Base: 1.0.56c8 playback lifecycle isolation.
+
+Only new behavior:
+- Add “显示液态底栏” (default ON).
+- OFF hides only LiquidBar's managed UITabBar and independent search capsule.
+- The overlay UIWindow remains resident for independent plugin controls, but hitTest returns nil for the former bottom-bar/search footprint, so Douyin/other tweaks underneath can receive touches.
+- Do NOT unsuppress/re-enable Douyin's native tab bar.
+- Do NOT uninstall the tab bridge or alter routing, player/feed layout, fullscreen geometry, foreground playback recovery, Friends playback, chat return, native Settings injection, max-five rules, badges, top/right controls, avatar menu, or authorization.

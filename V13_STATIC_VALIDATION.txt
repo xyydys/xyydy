@@ -1,0 +1,12 @@
+V13 static validation
+- release preflight: PASS
+- Swift frontend parse: PASS
+- Tweak.x brace/paren balance: PASS
+- MessageTopGlassV3.xm brace/paren balance: PASS
+- original search recognizer preferred before generic controls: present
+- top Search aligns to recognizer.view: present
+- passive avatar backplate + separate menu hit target: present
+- passive same-style/music backplate: present
+- independent message top/bottom blur settings: present
+- pre-presentation commerce fullscreen grace: present
+- Favorites scroll fix: unchanged from v12.2 baseline

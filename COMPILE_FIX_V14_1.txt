@@ -1,0 +1,6 @@
+AwemeLiquidBar v14.1 compilefix
+
+- Fixes linker failure: undefined symbol _AWERegisterNativeGlassTrackingMirror.
+- MessageTopGlassV3 no longer references the removed v12 foreign-UITouch mirror.
+- Message top Menu/Search/Add press/stretch visuals now use the existing passive zero-duration, non-cancelling, simultaneous UILongPressGestureRecognizer driver on iOS 26/27 as well.
+- No business-action forwarding, avatar/music rollback, clean-screen, commerce, blur, search coexistence, or collection-scroll logic changed.

@@ -1,0 +1,30 @@
+AwemeLiquidBar 1.0.56c16 auth44 v20 three-fix
+
+Scope intentionally limited to the three failures remaining after v19:
+
+1. Same-style / Listen Douyin glass
+- Lifetime no longer depends on the recycled "拍同款/听抖音" subtree.
+- One 50.16pt glass plate is owned by the stable AWEElementStackView.
+- Position comes from the lowest AWEBaseElementView (the persistent music slot) or a stack-bottom fallback.
+- AWEElementStackView layout drives the plate every pass, so it appears with the rest of the right action column.
+- New diagnostic: SAMESTYLE_V20_STACK.
+
+2. Message page bottom blank band
+- v17 diagnostics showed AWEIMChatTabTableView = 440x956 while AWEIMTabSkeletonCollectionView remained 440x850.
+- v20 extends AWEIM wide inner scroll/list nodes missing exactly the same ~106pt band and opens matching wrapper clipping.
+- Bottom content/indicator insets are released on those inner lists.
+- New diagnostic: MESSAGE_V20_INNER_EXTEND.
+
+3. Shop page bottom reservation
+- v19 used the wrong coordinate root (oldBottom=790 while the mall collection ended at 873), so no collection ever matched the extension condition.
+- v20 switches to UIWindow geometry, extends eligible mall scrolls and every wide/tall ancestor that still ends ~83pt above the screen bottom.
+- The actual vertical product feed also releases adjustedContentInset.bottom / indicator inset reserved for the native tab bar.
+- Existing protected floating UITabBar platter is preserved.
+- New diagnostics: BOTTOM_V20_SHOP_SCROLL, BOTTOM_V20_SHOP_ANCESTOR, BOTTOM_V20_SHOP_PASS.
+
+Unchanged intentionally:
+- v14 photo/live comment geometry behavior.
+- profile/favorites bottom fix already verified by user.
+- message top grey ScrollEdgeEffect suppression from v19.
+- message top button static appearance (user accepted it for now).
+- comment color work is not broadened in this build.

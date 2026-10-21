@@ -1,0 +1,20 @@
+Right action touch root-cause fix
+
+Observed symptom:
+- tapping the 46pt Liquid Glass circle did nothing;
+- tapping the number label immediately below still triggered the Douyin action.
+
+Root cause:
+AWEConfigureHomeActionSlot correctly made both AWEHomeActionSlotView and its
+systemGlassButton pass-through, but AWELayoutBoundHomeActionSlots later reset
+both userInteractionEnabled flags to YES.  The late 46pt overlay therefore
+became the hit-test owner and blocked the real AWEFeedVideoButton underneath.
+
+Fix:
+1. AWELayoutBoundHomeActionSlots now preserves NO/NO during every layout pass.
+2. AWEHomeActionSlotView hard-overrides hitTest -> nil and pointInside -> NO,
+   so future refresh/layout code cannot accidentally make it intercept touches.
+3. The real AWEFeedVideoButton remains the only business-touch owner.
+4. AWEInstallGlassPressFeedback remains attached to that real owner and only
+   drives the visual glass highlight/stretch with cancelsTouchesInView = NO.
+5. Settings page remains the plain non-glass version from the input package.

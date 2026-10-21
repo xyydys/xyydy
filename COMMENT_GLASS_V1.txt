@@ -1,0 +1,15 @@
+AwemeLiquidBar 1.0.56c16 auth44 comment-glass v1
+
+Clean baseline: AwemeLiquidBar_1.0.56c16_im_comment_auth44_project.
+No 1.0.57 avatar/search/morph experiments are included.
+
+Comment glass v1:
+- iOS 26+ only.
+- Resolves AWECommentPanelContainerSwiftImpl.CommentContainerInnerViewController.view as the panel slot.
+- Resolves AWECommentInputViewSwiftImpl.CommentInputContainerView as the input slot.
+- Uses native UIGlassEffect via the existing system-adaptive effect factory.
+- Reads UIWindowScene trait style instead of Douyin's forced window appearance.
+- Main panel: 12 pt horizontal / 9 pt vertical floating gutter, 30 pt continuous corner radius.
+- Input region: independent floating glass with 12 pt horizontal gutter.
+- Clears only full-width opaque non-label/non-control/non-image cover views.
+- Does not change comment text colors, fonts, cells, scrolling, bottom-bar logic, authorization logic, or 57x avatar/search code.

@@ -1,0 +1,60 @@
+--- /mnt/data/work_v9_rebuild/AwemeLiquidBar_1.0.58_auth47_PageFixedGlass_v9_project/scripts/preflight.sh	2026-08-23 08:33:22.000000000 +0000
++++ /mnt/data/AwemeLiquidBar_1.0.58_auth47_V9SelectiveFix_v15_project/scripts/preflight.sh	2026-09-03 10:10:53.752801586 +0000
+@@ -48,7 +48,6 @@
+     '@"头像菜单显示下载功能"', 'AWEAvatarMenuDownloadEnabled',
+     'slot.menuButton.menu = AWEAvatarBaseMenuForStack(stack, pictureHost);',
+     'slot.menuButton.showsMenuAsPrimaryAction = YES;',
+-    'AWEInstallGlassPressFeedback(slot.menuButton, slot.glassButton);',
+     'AWEStableEnterCleanScreenFromStack', 'AWEStableExitCleanScreen',
+     'AWEStableApplyCleanScreenGlobal', 'AWEStableCleanEnforceBottomBarSuppression',
+     'AWEStableCleanClassIsExplicitTarget', 'AWEScheduleCleanScreenReapply',
+@@ -82,6 +81,18 @@
+     '%hook AFDAIbumFolioView',
+     '%hook AFDAlbumFolioView', '%hook AWEFeedTableViewCell',
+     '%hook AWEFeedViewCell', '%hook AWEFeedContainerViewController',
++    # v15 selective fixes rebuilt directly from uploaded v9 baseline
++    'AWEForwardHomeActionKindFromStack', 'AWEInstallSearchForwardProxy',
++    'AwemeLiquidBarIOS27ClearBottomGlassSelectiveV15',
++    'AWEApplyIOS27UntintedClearPlatter',
++    'if (route == AWEBottomRouteProfile) return NO;',
++    'route == AWEBottomRouteShop || route == AWEBottomRouteProfile',
++    'gAWECommerceFullscreenSuppressionUntil',
++    'AwemeLiquidBarMessageTopEdgeBlurDistanceV2',
++    'AwemeLiquidBarMessageBottomEdgeBlurDistanceV2',
++    'AWEApplyResponsiveSettingsTypography',
++    '@"消息页顶部模糊距离"', '@"消息页底部模糊距离"',
++    '@"iOS 27 清透底栏（首页 + 个人页）"',
+ ]
+ for token in required_objc:
+     if token not in objc:
+@@ -103,6 +114,10 @@
+     'BOOL interactiveReveal =',
+     'switchStreamBitrate:type:completionHandler:',
+     'setResolutionWithIndex:isManual:beginChange:completion:',
++    # Never reintroduce v9-v14 action recognizer ownership transfer / foreign touch bridge.
++    '[materialButton addGestureRecognizer:gesture]',
++    'AWERegisterNativeGlassTrackingMirror',
++    'beginTrackingWithTouch:',
+ ]:
+     if forbidden in objc or forbidden in swift:
+         raise SystemExit(f'forbidden regression/bridge remains: {forbidden}')
+@@ -190,6 +205,19 @@
+     if objc.count(left) != objc.count(right):
+         raise SystemExit(f'Objective-C {name} count mismatch')
+ 
++message = Path('MessageTopGlassV3.xm').read_text()
++for token in [
++    'AwemeLiquidBarMessageTopEdgeBlurDistanceV2',
++    'AwemeLiquidBarMessageBottomEdgeBlurDistanceV2',
++    'const CGFloat topDistance = AWEMessageTopEdgeBlurDistance();',
++    'const CGFloat bottomDistance = AWEMessageBottomEdgeBlurDistance();',
++]:
++    if token not in message:
++        raise SystemExit('v15 message split-blur token missing: ' + token)
++
++if 'AWEMessageEdgeBlurDistance()' in message:
++    raise SystemExit('legacy single message blur getter still active')
++
+ if 'kAWEAuthorizationDigests[47]' not in objc:
+     raise SystemExit('auth47 digest table declaration missing')
+ start = objc.index('kAWEAuthorizationDigests[47]')

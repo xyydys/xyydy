@@ -1,0 +1,77 @@
+--- /mnt/data/work_v12_2/AwemeLiquidBar_1.0.58_auth47_InteractionWarp_v12_2_compilefix_project/MessageTopGlassV3.xm	2026-09-03 07:20:02.000000000 +0000
++++ /mnt/data/AwemeLiquidBar_1.0.58_auth47_TouchRollback_v13_project/MessageTopGlassV3.xm	2026-09-03 08:09:25.123663989 +0000
+@@ -8,15 +8,28 @@
+ 
+ static const NSInteger kAWEMessageGlassTagBase = 26082150;
+ static NSString * const kAWEMessageEdgeBlurDistanceDefaultsKey =
+-    @"AwemeLiquidBarMessageEdgeBlurDistanceV1";
+-
+-static CGFloat AWEMessageEdgeBlurDistance(void) {
+-    id stored = [NSUserDefaults.standardUserDefaults
+-        objectForKey:kAWEMessageEdgeBlurDistanceDefaultsKey];
+-    CGFloat value = [stored isKindOfClass:NSNumber.class]
+-        ? [(NSNumber *)stored doubleValue] : 118.0;
++    @"AwemeLiquidBarMessageEdgeBlurDistanceV1"; /* legacy migration */
++static NSString * const kAWEMessageTopEdgeBlurDistanceDefaultsKey =
++    @"AwemeLiquidBarMessageTopEdgeBlurDistanceV2";
++static NSString * const kAWEMessageBottomEdgeBlurDistanceDefaultsKey =
++    @"AwemeLiquidBarMessageBottomEdgeBlurDistanceV2";
++
++static CGFloat AWEMessageLegacyEdgeBlurDistance(void) {
++    id stored = [NSUserDefaults.standardUserDefaults objectForKey:kAWEMessageEdgeBlurDistanceDefaultsKey];
++    CGFloat value = [stored isKindOfClass:NSNumber.class] ? [(NSNumber *)stored doubleValue] : 118.0;
+     return MIN(180.0, MAX(60.0, value));
+ }
++static CGFloat AWEMessageTopEdgeBlurDistance(void) {
++    id stored = [NSUserDefaults.standardUserDefaults objectForKey:kAWEMessageTopEdgeBlurDistanceDefaultsKey];
++    CGFloat value = [stored isKindOfClass:NSNumber.class] ? [(NSNumber *)stored doubleValue] : AWEMessageLegacyEdgeBlurDistance();
++    return MIN(188.0, MAX(40.0, value));
++}
++static CGFloat AWEMessageBottomEdgeBlurDistance(void) {
++    id stored = [NSUserDefaults.standardUserDefaults objectForKey:kAWEMessageBottomEdgeBlurDistanceDefaultsKey];
++    CGFloat fallback = MIN(188.0, AWEMessageLegacyEdgeBlurDistance() + 8.0);
++    CGFloat value = [stored isKindOfClass:NSNumber.class] ? [(NSNumber *)stored doubleValue] : fallback;
++    return MIN(188.0, MAX(40.0, value));
++}
+ static __weak UIViewController *gAWEMessageActiveController = nil;
+ static NSHashTable<UIView *> *gAWEMessageClearedViews = nil;
+ static NSHashTable<UIView *> *gAWEMessageHiddenVisualViews = nil;
+@@ -1235,9 +1248,10 @@
+      opacity fade.  One user-facing distance parameter controls the visual
+      reach while the proven WCG variable-blur implementation stays passive.
+     */
+-    const CGFloat distance = AWEMessageEdgeBlurDistance();
+-    const CGFloat topHeight = distance;
+-    const CGFloat bottomHeight = MIN(188.0, distance + 8.0);
++    const CGFloat topDistance = AWEMessageTopEdgeBlurDistance();
++    const CGFloat bottomDistance = AWEMessageBottomEdgeBlurDistance();
++    const CGFloat topHeight = topDistance;
++    const CGFloat bottomHeight = bottomDistance;
+     const CGFloat topAlpha = 0.14;
+     const CGFloat bottomAlpha = 0.10;
+     const CGFloat blurRadius = 1.0;
+@@ -1254,11 +1268,11 @@
+                               width, MIN(bottomHeight, height));
+     [top updateWithContentColor:contentColor blur:YES alpha:topAlpha
+                            rect:top.bounds edge:WCLGEdgeEffectEdgeTop
+-                      edgeInset:0.0 transitionLength:MAX(44.0, distance * 0.78)
++                      edgeInset:0.0 transitionLength:MAX(44.0, topDistance * 0.78)
+                      blurRadius:blurRadius];
+     [bottom updateWithContentColor:contentColor blur:YES alpha:bottomAlpha
+                               rect:bottom.bounds edge:WCLGEdgeEffectEdgeBottom
+-                         edgeInset:0.0 transitionLength:MAX(48.0, distance * 0.92)
++                         edgeInset:0.0 transitionLength:MAX(48.0, bottomDistance * 0.92)
+                         blurRadius:blurRadius];
+ 
+     UIView *topNav = nav;
+@@ -1278,8 +1292,8 @@
+     NSString *oldSignature = objc_getAssociatedObject(
+         root, &kAWEMessageEdgeBlurLoggedKey);
+     if (![oldSignature isEqualToString:signature]) {
+-        AWEMessageProbe(@"MESSAGE_1_0_57_EDGE_BLUR distance=%.0f top=%.0f/%.2f bottom=%.0f/%.2f blur=%.1f variable=%d",
+-                        distance, topHeight, topAlpha, bottomHeight, bottomAlpha,
++        AWEMessageProbe(@"MESSAGE_V13_EDGE_BLUR topDistance=%.0f bottomDistance=%.0f top=%.0f/%.2f bottom=%.0f/%.2f blur=%.1f variable=%d",
++                        topDistance, bottomDistance, topHeight, topAlpha, bottomHeight, bottomAlpha,
+                         blurRadius, WCLGEdgeVariableBlurIsAvailable());
+         objc_setAssociatedObject(root, &kAWEMessageEdgeBlurLoggedKey,
+                                  signature, OBJC_ASSOCIATION_COPY_NONATOMIC);

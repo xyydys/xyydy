@@ -1,0 +1,18 @@
+1.0.56c10 scope lock
+
+Allowed changes:
+- native Douyin Settings shortcut entry only (DYYY-style two-layout hook);
+- six-entry bottom-bar overflow routing only;
+- settings gesture anti-lockout only;
+- playback-quality selection safety around app lifecycle only;
+- Friends unread badge zero-state only.
+
+Explicitly untouched:
+- existing gesture presentation semantics and bottom-bar routing;
+- chat-return transition behavior;
+- settings drawer/bar follow behavior;
+- fullscreen geometry;
+- normal video/image progress geometry;
+- clean-screen matching except existing c2 behavior;
+- save HUD;
+- authorization table/digests.

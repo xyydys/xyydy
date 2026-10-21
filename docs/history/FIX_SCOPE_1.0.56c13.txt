@@ -1,0 +1,9 @@
+AwemeLiquidBar 1.0.56c15 — c12 corrections + clean-screen hard guard
+
+Base: 1.0.56c12 route/feed/chat/search fixes.
+
+1. Keep all c12 route fixes: article feed recovery, IM media suppression, search isolation, gesture-safe feed sizing, single-category label correction.
+2. Correct authorization table from 38 rows / 37 unique users to 37 rows / 37 unique users. Hoeyc_0505 is not re-added; 0416xxd remains authorized.
+3. Keep the visual-bottom-bar release option visible/usable only for Hoeyc_0505 and 0416xxd.
+4. Add a source-level clean-screen no-show gate: lifecycle/route/pause callbacks cannot reveal LiquidBar while clean screen is active.
+5. Do not add timers, polling, global UIView hooks or forced play/pause behavior.

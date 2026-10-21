@@ -1,0 +1,13 @@
+AwemeLiquidBar 1.0.57b3 Search Container Double
+
+Baseline: 1.0.57b2 / 1.0.57b behavior and geometry.
+
+Change:
+- Fixes 57b2's invisible avatar base.
+- 57b2 copied a Search UIVisualEffect into a standalone effect view.
+- 57b3 accepts only the native Search leaf UIGlassEffect and hosts its twin
+  inside a UIGlassContainerEffect, following Apple's multiple-glass structure.
+- If the native leaf is not yet discoverable, a real UIGlassEffect fallback is
+  always rendered, so the avatar base cannot silently disappear.
+- Avatar image and click logic remain separate from the glass material.
+- No extra UITab, UISearchTab, or UITabBarController is created.

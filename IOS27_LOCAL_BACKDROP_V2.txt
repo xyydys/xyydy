@@ -1,0 +1,8 @@
+iOS 27 local-backdrop adaptive glass v2
+
+- Automatic mode no longer reads Douyin glyph tint/color.
+- No global source-tint signal controls iOS 27 glass style.
+- Each native glass button stays UIUserInterfaceStyleUnspecified and resolves its own backdrop.
+- Automatic glyph contrast is derived from that button's resolved local glass material.
+- Bottom bar auto mode no longer uses the corner probe to force Light/Dark; overlay/controller/tab bar remain Unspecified.
+- Force Dark remains the only explicit iOS 27 style override.

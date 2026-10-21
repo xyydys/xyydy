@@ -1,0 +1,300 @@
+--- /mnt/data/alb_v14_work/AwemeLiquidBar_1.0.58_auth47_TouchRollback_v13_1_compilefix_project/Tweak.x	2026-09-03 08:30:29.000000000 +0000
++++ Tweak.x	2026-09-03 08:58:52.249265047 +0000
+@@ -179,6 +179,7 @@
+ static void AWEStableApplyCleanScreenGlobal(void);
+ static void AWEScheduleCleanScreenReapply(NSString *reason);
+ static void AWEStableCleanEnforceBottomBarSuppression(void);
++static void AWERefreshProfileAvatarGlass(UIView *stack);
+ static void AWEInternalFSLayoutInteractionController(UIViewController *vc);
+ static void AWEInternalFSHandleElementStackLayout(UIView *stack);
+ static void AWEInternalFSTabBarUpdate(UIView *tabBar);
+@@ -245,10 +246,6 @@
+ static char kAWEHomeActionStackLastLayoutRefreshKey;
+ static char kAWEGlassPressFeedbackRecognizerKey;
+ static char kAWEGlassPressFeedbackTargetKey;
+-static char kAWEGlassNativeTrackingOwnerKey;
+-static char kAWEGlassNativeTrackingTouchKey;
+-static char kAWEGlassNativeTrackingAcceptedKey;
+-static NSMapTable<UIView *, UIButton *> *gAWEGlassNativeTrackingMirrors = nil;
+ static char kAWEExternalBridgeMenuSlotKey;
+ static char kAWEExternalBridgeMenuButtonKey;
+ static char kAWEExternalBridgeMenuModelIdentityKey;
+@@ -1114,7 +1111,10 @@
+ }
+ 
+ static void AWEIOS27BottomProbeWrite(NSString *format, ...) {
+-    if (!AWEIsIOS27OrLater() || format.length == 0) return;
++    /* v14: development probe I/O is diagnostic-only. It used to write on
++       normal iOS 27 layout/route changes and added avoidable file churn. */
++    if (!AWEIsIOS27OrLater() || !AWEInteractionDiagnosticsEnabled() ||
++        format.length == 0) return;
+     va_list args;
+     va_start(args, format);
+     NSString *message = [[NSString alloc] initWithFormat:format arguments:args];
+@@ -8898,113 +8898,16 @@
+ }
+ @end
+ 
+-/* v12: passive-native tracking bridge. The user touches Douyin's real
+-   control, so its business action is never synthesized or intercepted. We
+-   mirror that *same UITouch/UIEvent* into the visual Glass UIButton's public
+-   UIControl tracking lifecycle. UIKit therefore owns highlighted state,
+-   touch-location distortion and release spring, while the glass button itself
+-   remains outside hit testing. This is materially different from the older
+-   scale-only long-press imitation. */
+-#ifdef __cplusplus
+-extern "C"
+-#endif
+-void AWERegisterNativeGlassTrackingMirror(UIView *touchOwner,
+-                                          UIButton *glassButton) {
+-    if (!touchOwner || !glassButton) return;
+-    if (!gAWEGlassNativeTrackingMirrors) {
+-        gAWEGlassNativeTrackingMirrors = [NSMapTable weakToWeakObjectsMapTable];
+-    }
+-    UIView *oldOwner = objc_getAssociatedObject(
+-        glassButton, &kAWEGlassNativeTrackingOwnerKey);
+-    if (oldOwner && oldOwner != touchOwner) {
+-        [gAWEGlassNativeTrackingMirrors removeObjectForKey:oldOwner];
+-    }
+-    objc_setAssociatedObject(glassButton, &kAWEGlassNativeTrackingOwnerKey,
+-                             touchOwner, OBJC_ASSOCIATION_ASSIGN);
+-    [gAWEGlassNativeTrackingMirrors setObject:glassButton forKey:touchOwner];
+-}
+-
+-static BOOL AWEGlassTouchBelongsToOwner(UITouch *touch, UIView *owner) {
+-    if (!touch || !owner || !owner.window) return NO;
+-    UIView *view = touch.view;
+-    if (view == owner || [view isDescendantOfView:owner]) return YES;
+-    /* Some private Douyin controls put their tap recognizer on a compact
+-       ancestor while UIKit reports the visual child as touch.view. Geometry
+-       is a safe secondary check only when both are in the same window. */
+-    if (view.window != owner.window) return NO;
+-    CGPoint p = [touch locationInView:owner];
+-    CGRect hit = CGRectInset(owner.bounds, -3.0, -3.0);
+-    return CGRectContainsPoint(hit, p) && owner.userInteractionEnabled;
+-}
+-
+-static void AWEGlassMirrorNativeTrackingEvent(UIEvent *event) {
+-    if (!event || !gAWEGlassNativeTrackingMirrors ||
+-        gAWEGlassNativeTrackingMirrors.count == 0) return;
+-    NSSet<UITouch *> *touches = event.allTouches;
+-    if (touches.count == 0) return;
+-
+-    NSArray<UIView *> *owners = gAWEGlassNativeTrackingMirrors.keyEnumerator.allObjects;
+-    for (UIView *owner in owners) {
+-        UIButton *glass = [gAWEGlassNativeTrackingMirrors objectForKey:owner];
+-        if (!owner || !glass || !owner.window || !glass.window || glass.hidden || glass.alpha < 0.01)
+-            continue;
+-
+-        UITouch *active = nil;
+-        NSValue *activeValue = objc_getAssociatedObject(glass, &kAWEGlassNativeTrackingTouchKey);
+-        if ([activeValue isKindOfClass:NSValue.class]) active = activeValue.nonretainedObjectValue;
+-
+-        for (UITouch *touch in touches) {
+-            UITouchPhase phase = touch.phase;
+-            if (phase == UITouchPhaseBegan) {
+-                if (active || !AWEGlassTouchBelongsToOwner(touch, owner)) continue;
+-                objc_setAssociatedObject(glass, &kAWEGlassNativeTrackingTouchKey,
+-                    [NSValue valueWithNonretainedObject:touch], OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-                BOOL accepted = [glass beginTrackingWithTouch:touch withEvent:event];
+-                objc_setAssociatedObject(glass, &kAWEGlassNativeTrackingAcceptedKey,
+-                                         @(accepted), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-                if (!accepted) {
+-                    glass.highlighted = YES;
+-                    [glass setNeedsUpdateConfiguration];
+-                }
+-                active = touch;
+-            } else if (active == touch) {
+-                BOOL accepted = [objc_getAssociatedObject(
+-                    glass, &kAWEGlassNativeTrackingAcceptedKey) boolValue];
+-                if (phase == UITouchPhaseMoved || phase == UITouchPhaseStationary) {
+-                    if (accepted) [glass continueTrackingWithTouch:touch withEvent:event];
+-                } else if (phase == UITouchPhaseEnded) {
+-                    if (accepted) [glass endTrackingWithTouch:touch withEvent:event];
+-                    else {
+-                        glass.highlighted = NO;
+-                        [glass setNeedsUpdateConfiguration];
+-                    }
+-                    objc_setAssociatedObject(glass, &kAWEGlassNativeTrackingTouchKey,
+-                                             nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-                    objc_setAssociatedObject(glass, &kAWEGlassNativeTrackingAcceptedKey,
+-                                             nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-                    active = nil;
+-                } else if (phase == UITouchPhaseCancelled) {
+-                    if (accepted) [glass cancelTrackingWithEvent:event];
+-                    glass.highlighted = NO;
+-                    [glass setNeedsUpdateConfiguration];
+-                    objc_setAssociatedObject(glass, &kAWEGlassNativeTrackingTouchKey,
+-                                             nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-                    objc_setAssociatedObject(glass, &kAWEGlassNativeTrackingAcceptedKey,
+-                                             nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-                    active = nil;
+-                }
+-            }
+-        }
+-    }
+-}
+-
++/* v14: the v12 foreign-UITouch tracking bridge was removed completely. */
+ static void AWEInstallGlassPressFeedback(UIView *touchOwner,
+                                          UIButton *glassButton) {
+     if (!touchOwner || !glassButton) return;
+-    if (@available(iOS 26.0, *)) {
+-        AWERegisterNativeGlassTrackingMirror(touchOwner, glassButton);
+-        return;
+-    }
++    /* v14 stability rollback: never feed a foreign UITouch into a visual
++       UIButton's begin/continue/endTracking methods. That v12 experiment ran
++       from UIApplication.sendEvent for every touch and could outlive recycled
++       feed controls. A zero-duration, non-cancelling simultaneous recognizer
++       keeps Douyin's real control as the business responder while driving the
++       glass highlighted/stretch visual only. */
+     UILongPressGestureRecognizer *recognizer = objc_getAssociatedObject(
+         touchOwner, &kAWEGlassPressFeedbackRecognizerKey);
+     AWEGlassPressFeedbackTarget *target = objc_getAssociatedObject(
+@@ -9734,7 +9637,7 @@
+         return;
+     }
+     /* v13 rollback: keep Douyin's artwork completely native. LiquidBar only
+-       adds one passive 52 pt glass base underneath it. */
++       adds one passive 50.16 pt glass base underneath it. */
+     UIView *target = AWEFindSameStyleTargetViewV13(host, 0);
+     if (!target) { plate.hidden = YES; return; }
+     if (!plate) {
+@@ -9755,7 +9658,7 @@
+     if (CGRectIsEmpty(targetFrame) || CGRectIsNull(targetFrame)) {
+         plate.hidden = YES; return;
+     }
+-    const CGFloat diameter = 52.0;
++    const CGFloat diameter = 50.16;
+     plate.bounds = CGRectMake(0.0, 0.0, diameter, diameter);
+     plate.center = CGPointMake(CGRectGetMidX(targetFrame), CGRectGetMidY(targetFrame));
+     plate.hidden = NO;
+@@ -11218,21 +11121,29 @@
+ 
+ static void AWEStableCleanSuppressRightStack(UIView *stack) {
+     if (!gAWEStableCleanScreenEnabled || !stack) return;
+-    AWEHomeProfileGlassView *slot = objc_getAssociatedObject(stack, &kAWEProfileGlassSlotKey);
++    AWEHomeProfileGlassView *slot = objc_getAssociatedObject(
++        stack, &kAWEProfileGlassSlotKey);
+     for (UIView *child in [stack.subviews copy]) {
++        /* menuButton is transparent and remains only as the exit hot zone at
++           the real avatar position. The visible avatar glass is intentionally
++           not preserved in clean screen. */
+         if (child == slot || child == slot.menuButton) continue;
+         AWEStableCleanSuppressView(child, YES);
+     }
+-    if (slot && slot.glassButton) {
+-        AWEStableCleanRestoreView(slot);
+-        slot.layer.opacity = 1.0f;
+-        slot.userInteractionEnabled = YES;
+-        slot.hidden = NO;
+-        slot.alpha = 1.0;
+-        slot.glassButton.userInteractionEnabled = YES;
+-        slot.glassButton.menu = AWEAvatarBaseMenuForStack(stack, slot.profileHost);
+-        slot.glassButton.showsMenuAsPrimaryAction = YES;
+-        [stack bringSubviewToFront:slot];
++    if (slot) {
++        slot.hidden = YES;
++        slot.alpha = 0.0;
++        slot.userInteractionEnabled = NO;
++        slot.glassButton.hidden = YES;
++        slot.glassButton.userInteractionEnabled = NO;
++        if (slot.menuButton) {
++            slot.menuButton.hidden = NO;
++            slot.menuButton.alpha = 1.0;
++            slot.menuButton.userInteractionEnabled = YES;
++            slot.menuButton.menu = AWEAvatarBaseMenuForStack(stack, slot.profileHost);
++            slot.menuButton.showsMenuAsPrimaryAction = YES;
++            [stack bringSubviewToFront:slot.menuButton];
++        }
+     }
+ }
+ 
+@@ -11434,10 +11345,11 @@
+ static void AWEStableRefreshCurrentCleanMenu(void) {
+     UIView *stack = gAWEStableCleanScreenStack;
+     if (!stack) return;
+-    AWEHomeProfileGlassView *slot = objc_getAssociatedObject(stack, &kAWEProfileGlassSlotKey);
+-    if (!slot.glassButton) return;
+-    slot.glassButton.menu = AWEAvatarBaseMenuForStack(stack, slot.profileHost);
+-    slot.glassButton.showsMenuAsPrimaryAction = YES;
++    AWEHomeProfileGlassView *slot = objc_getAssociatedObject(
++        stack, &kAWEProfileGlassSlotKey);
++    if (!slot || !slot.menuButton) return;
++    slot.menuButton.menu = AWEAvatarBaseMenuForStack(stack, slot.profileHost);
++    slot.menuButton.showsMenuAsPrimaryAction = YES;
+ }
+ 
+ static void AWEStableEnterCleanScreenFromStack(UIView *stack) {
+@@ -11453,14 +11365,27 @@
+ 
+ static void AWEStableExitCleanScreen(void) {
+     if (!gAWEStableCleanScreenEnabled) return;
+-    UIView *stack = gAWEStableCleanScreenStack;
++    __weak UIView *weakStack = gAWEStableCleanScreenStack;
+     gAWEStableCleanScreenEnabled = NO;
+     ++gAWEStableCleanReapplyGeneration;
+     AWEStableCleanRestoreAll();
+     AWEStableCleanRequestStatusBarRefresh();
+-    gAWEStableCleanScreenStack = stack;
+-    AWEStableRefreshCurrentCleanMenu();
+-    gAWEStableCleanScreenStack = nil;
++    UIView *stack = weakStack;
++    if (stack.window) {
++        AWERefreshProfileAvatarGlass(stack);
++        gAWEStableCleanScreenStack = stack;
++        AWEStableRefreshCurrentCleanMenu();
++        gAWEStableCleanScreenStack = nil;
++        /* Feed cells may finish one layout pass just after clean-screen exit.
++           Re-anchor once, bounded, instead of resurrecting the old cached plate
++           center above the new avatar. */
++        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
++            (int64_t)(0.08 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
++            UIView *live = weakStack;
++            if (live.window && !gAWEStableCleanScreenEnabled)
++                AWERefreshProfileAvatarGlass(live);
++        });
++    }
+     AWEInteractionDiagnosticWrite(@"CLEAN_STABLE exit");
+ }
+ 
+@@ -11633,6 +11558,7 @@
+     slot.center = center; slot.glassButton.frame = slot.bounds;
+     slot.profileHost = pictureHost; slot.avatarImageView = avatar;
+     slot.hidden = NO; slot.alpha = 1.0;
++    slot.glassButton.hidden = NO;
+     slot.userInteractionEnabled = NO; slot.glassButton.userInteractionEnabled = NO;
+     slot.glassButton.showsMenuAsPrimaryAction = NO;
+     CGFloat avatarHitDiameter = MIN(50.0, MAX(40.0, MIN(CGRectGetWidth(avatar.bounds), CGRectGetHeight(avatar.bounds))));
+@@ -11654,7 +11580,8 @@
+         menuStyle = AWEAppResolvedAppearanceStyle(stack.window);
+     slot.menuButton.overrideUserInterfaceStyle = menuStyle;
+     slot.menuButton.menu = AWEAvatarBaseMenuForStack(stack, pictureHost);
+-    AWEInstallGlassPressFeedback(slot.menuButton, slot.glassButton);
++    /* v14 user-requested rollback: avatar is only a normal passive glass
++       backplate. Do not animate/stretch the avatar plate. */
+ }
+ 
+ static NSMutableDictionary<NSNumber *, AWEHomeActionSlotView *> *
+@@ -23511,20 +23438,6 @@
+ }
+ 
+ %end
+-
+-/* Observe only; never swallow or rewrite app events. This keeps the
+-   original Douyin controls as the actual responders while visual Glass
+-   buttons receive the same native tracking lifecycle. */
+-%hook UIApplication
+-
+-- (void)sendEvent:(UIEvent *)event {
+-    if (@available(iOS 26.0, *)) {
+-        AWEGlassMirrorNativeTrackingEvent(event);
+-    }
+-    %orig(event);
+-}
+-
+-%end
+ 
+ %ctor {
+     @autoreleasepool {

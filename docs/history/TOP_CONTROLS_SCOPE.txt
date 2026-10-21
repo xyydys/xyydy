@@ -1,0 +1,20 @@
+AwemeLiquidBar 2.0 auth47 — SettingsRefactor TopControls
+
+Kept:
+- settings-page refactor
+- Home top LEFT button scale 70–130%
+- Home top RIGHT button scale 70–130%
+- Home top LEFT margin 24–96 pt
+- Home top RIGHT margin 24–96 pt
+
+Explicitly removed / not implemented:
+- bottom-bar scaling
+- right action-button scaling
+- avatar scaling
+- same-style / 拍同款 scaling
+- right-side font scaling
+- right-side spacing or vertical offset
+- right-side hide / repacking logic
+- middle top capsule scaling
+
+Reason: preserve native Liquid Glass press/stretch behavior and avoid mutating Douyin-owned right/bottom geometry.

@@ -1,0 +1,63 @@
+{
+  "source_preflight": "passed",
+  "C_tests": [
+    {
+      "source": "Tests/scroll_intent_test.c",
+      "exit": 0,
+      "output": "scroll intent: directions, reversal, dedup and manual-vs-idle feed ownership passed"
+    },
+    {
+      "source": "Tests/right_layout_test.c",
+      "exit": 0,
+      "output": "right layout: coordinate transforms + icon-slot packing + repeated cycles passed"
+    },
+    {
+      "source": "Tests/right_music_anchor_test.c",
+      "exit": 0,
+      "output": "Right music anchor / screen gap / hidden-tail alternatives: 7980 cases passed."
+    },
+    {
+      "source": "Tests/right_tail_anchor_test.c",
+      "exit": 0,
+      "output": "hidden-share count anchoring: 420 visibility/scale cases passed"
+    },
+    {
+      "source": "Tests/right_persistence_test.c",
+      "exit": 0,
+      "output": "right persistence: 1.3M stable cycles, 64 hide masks, cross-root inverse maps passed; old restore/apply negative control stays dirty"
+    },
+    {
+      "source": "ALBTopNative/Tests/window_geometry_test.c",
+      "exit": 0,
+      "output": "top native window, platter and shared baseline geometry: PASS"
+    },
+    {
+      "source": "Tests/bottom_geometry_test.c",
+      "exit": 0,
+      "output": "bottom geometry: native pair, pivot, 256000 idempotent layouts, reverse trajectory and interrupted animation passed"
+    },
+    {
+      "source": "Tests/download_state_test.c",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "source": "Tests/native_endpoint_policy_test.c",
+      "exit": 0,
+      "output": "Native endpoint policy: 71 assertions passed (ABI/name filter only; not UIKit execution)."
+    },
+    {
+      "source": "Tests/native_state_test.c",
+      "exit": 0,
+      "output": "native-state predicates: BOOL ABI checks, unknown/single-item/transition/expanded/compact/invalid geometry passed"
+    },
+    {
+      "source": "Tests/test23_regression_test.c",
+      "exit": 0,
+      "output": "TEST23: raw runtime ABI / portal-safe policy / row-spacing invariants passed (C only, no UIKit)."
+    }
+  ],
+  "runtime_code_changed": false,
+  "swift_and_apple_sdk": "unavailable locally; CI checks retained",
+  "device_test": false
+}

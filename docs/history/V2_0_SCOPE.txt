@@ -1,0 +1,44 @@
+AwemeLiquidBar 2.0 auth47 - SettingsRefactor scope
+
+BASELINE KEPT
+- v18 right Like/Comment/Favorite/Share real-touch ownership
+- v18 top/bottom Search real recognizer lease
+- Home/Friends visual parity
+- iOS27 pure-transparent platter path and vertical-offset geometry fix
+- Favorites no-jump repair
+- commerce/group-buy fullscreen suppression
+- independent message top/bottom blur distances
+- v19 avatar UIMenu semantic-signature refresh
+- v19 bounded comment keyboard/emoji-row background cleanup
+
+SETTINGS REFACTOR
+- title: LiquidBar · 2.0
+- responsive role-based typography based on safe-area width
+- button titles remain single-line and can shrink inside their own pill
+- cards: 基础 / 底栏 / 手势 / 顶部与右侧 / 消息与评论 / 图标 / 其他 / 诊断
+- one 图标中心 entry; bottom/top/right are sections inside it
+- terminology uses 纯透明 only
+
+REMOVED
+- settings-page glass material modes
+- share-page glass material modes
+- bottom text-only style
+- chat input capsule/separate-left-button cosmetics
+- highest-quality playback option and AWEVideoModel bitrate sorting hook
+
+GESTURES
+- mode 0: native
+- mode 1: existing split double tap
+- mode 2: double tap -> comment; triple tap -> performLikeAction
+- repeated triple tap is intended to use Douyin's native like toggle path
+- diagnostic marker: TAP_MODE triple_like_result
+
+DARK MODE
+- native Douyin Settings push: UIUserInterfaceStyleUnspecified
+- modal fallback: AWEAppResolvedAppearanceStyle(active Douyin window)
+- no physical-screen override for settings
+- no 0.5s theme polling timer
+
+PERFORMANCE
+- no new permanent timer/display-link
+- removed theme poll, bitrate hook, share material scans, chat composer cosmetic relayout hooks

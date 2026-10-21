@@ -1,0 +1,37 @@
+AwemeLiquidBar 1.0.58 auth46 - native comment dismiss fullscreen recovery
+
+Problem
+-------
+With comment glass disabled, a feed video that was fullscreen before opening
+comments could return with an opaque/black 83pt strip at the bottom after the
+comment panel closed.
+
+Root causes addressed
+---------------------
+1. Tweak.x treated comment controllers as a fullscreen-blocking sensitive route
+   unless the optional comment-glass switch was enabled. Therefore the core
+   fullscreen layout helpers could be suspended specifically for users running
+   native comments without comment glass.
+2. CommentGlassDYKiller.xm guarded player geometry while the panel was visible,
+   but immediately discarded the pre-open snapshot in viewDidDisappear. Douyin
+   can perform one last 956 -> 873 host relayout after viewDidDisappear.
+
+Fix
+---
+- Comment controllers no longer disable the internal fullscreen geometry,
+  regardless of comment-glass mode.
+- Before comments open, only the currently-visible fullscreen player/media-host
+  chain is snapshotted.
+- On dismissal, a bounded recovery pass at 0/80/250/550 ms restores only views
+  that were genuinely fullscreen before comments and became one-tab-short or
+  otherwise materially shrunk.
+- Feed cell/table geometry is never snapshotted or rewritten.
+- Snapshot state is cleared after 780 ms and is generation-guarded so a later
+  comment session cannot be affected by an older recovery task.
+
+Diagnostics
+-----------
+COMMENT_MEDIA_CAPTURE_DONE ... fullscreen=1
+COMMENT_DISMISS_RECOVERY ...
+COMMENT_DISMISS_RECOVERY_PASS ...
+COMMENT_DISMISS_RECOVERY_DONE ...

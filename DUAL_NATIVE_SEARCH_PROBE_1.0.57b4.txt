@@ -1,0 +1,20 @@
+AwemeLiquidBar 1.0.57b4 — exact dual-UISearchTab feasibility probe
+
+Purpose: answer one question with one cloud build: can iOS 26 render a second
+real UISearchTab as an independent Search-style Liquid Glass surface in the
+same UITabBarController?
+
+No custom avatar glass is used in this probe. No UIGlassEffect/UIVisualEffect
+copy, no UIButton glass, no helper UITabBarController, no reparented private
+view. The avatar is the image of a second UISearchTab.
+
+Start mode: exactly 5 total entries (Home / Messages / Me / Search / AvatarSearch)
+to eliminate the legacy >5/More confound. Regular tabs are explicitly .fixed;
+both UISearchTabs are explicitly .pinned.
+
+Tap AvatarSearch: toggles a 6-entry full-layout probe (Home / Friends / Messages /
+Me / Search / AvatarSearch, subject to current configured entries) so the same
+build also tests whether explicit fixed+pinned placement avoids More.
+
+This is deliberately a material/layout probe, not the final collapse state
+machine. The old overlay avatar chrome and auto-collapse mask are disabled.

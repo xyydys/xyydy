@@ -1,0 +1,6 @@
+AwemeLiquidBar 1.0.58 auth47 TouchRollback v13.1 compilefix
+
+Compile-only fix:
+- Removed the invalid Tweak.x call to AWECommentSystemResolvedGlassStyle().
+- AWEAppResolvedAppearanceStyle() already guarantees Light/Dark, so the removed fallback was unreachable and unnecessary.
+- No runtime feature logic changed.

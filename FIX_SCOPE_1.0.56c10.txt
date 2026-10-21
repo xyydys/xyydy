@@ -1,0 +1,13 @@
+AwemeLiquidBar 1.0.56c10 — true bottom-bar ownership release
+
+Base: validated 1.0.56c9.
+
+Only change:
+- "显示液态底栏" OFF now physically uninstalls the LiquidBar UITabBar/overlay.
+- Restore the original AWENormalModeTabBar opacity/interaction host so another tweak can own it.
+- Remove the independent search proxy together with LiquidBar through the normal uninstall path.
+- Top/right/avatar/settings/clean/fullscreen features remain independent.
+- ON explicitly rebuilds LiquidBar from the last native tab-bar host.
+
+Do not change playback lifecycle, Friends behavior, fullscreen geometry, clean screen,
+chat-return behavior, max-five tabs, authorization, native Settings injection, or badges.

@@ -1,0 +1,44 @@
+AwemeLiquidBar 1.0.56c16 auth44 v22 shop/avatar/fade
+
+Scope
+=====
+This iteration intentionally preserves the v20/v21 paths that the user reported as successful (message page overall geometry, same-style/music glass lifetime, photo/live comment geometry, Favorites bottom cleanup, hard native-tabbar visibility gate). Only the remaining shop, comment-style sampling, and message-edge fade paths are changed.
+
+1. Shop
+-------
+v21 logs showed two candidates being bound on the same appearance pass: the real UICollectionView and IESECMitaViewPager. The latter is a pager and must not be resized as a vertical product feed. The old code also disabled clipping on many fold/page ancestors and repeatedly re-applied frames, which can interfere with the mall's native fold/sticky-header behavior.
+
+v22:
+- Rejects ViewPager/PagerContainer/FoldScroll/FoldContainer/PageContainer classes as feed candidates.
+- Rejects horizontally-dominant collections.
+- Binds at most one vertical product UICollectionView.
+- Does not globally disable clipping. If a clipping ancestor itself ends at the old 873pt boundary, only its bottom height is extended by 83pt while preserving clipsToBounds/masksToBounds values.
+- Adds short settle passes after mall appearance to clear the full-width native tabbar carrier on first entry, avoiding the previous need to switch tabs before transparency appears.
+- Adds a fast shop-only native-bar carrier cleanup and avoids touching platter/visual-provider/tab-button/liquid/glass internals.
+
+Markers:
+BOTTOM_V22_SHOP_BIND
+BOTTOM_V22_SHOP_REAPPLY
+BOTTOM_V22_SHOP_CLIP_EXTEND
+BOTTOM_V22_SHOP_CHROME_FAST
+BOTTOM_V22_SHOP_PASS
+
+2. Comment adaptive material sampling
+------------------------------------
+The v21 4x4 probe was a newly-created glass view and could visibly appear at the wrong location when the avatar coordinate source was stale/reused. v22 creates no probe view. It reuses the already-existing system-glass UIButton owned by AWEHomeProfileGlassView and centered on the actual profile avatar. If that button is temporarily unavailable, an existing right-action system glass button is used as fallback. No extra UI is inserted.
+
+Marker:
+COMMENT_PROFILE_GLASS_V22
+
+3. Message edge fade
+--------------------
+v21 verified that the message table/host are already full height (440x956) with bottom inset 0, so this iteration does not change their geometry. The previous WCLG preset mainly blurred the edge and had weak content disappearance. v22 keeps a softer backdrop edge effect and also applies WCLGFadeContentMask to the message table so content opacity genuinely fades near both edges.
+
+Preset:
+- top edge effect height: 112pt; transition: 86pt; alpha: 0.075
+- bottom edge effect height: 118pt; transition: 96pt; alpha: 0.055
+- blur radius: 0.65
+- content fade mask: top opaque 42pt + fade 72pt; bottom fade 112pt
+
+Marker:
+MESSAGE_V22_EDGE_FADE

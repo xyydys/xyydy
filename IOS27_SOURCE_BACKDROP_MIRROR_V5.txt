@@ -1,0 +1,37 @@
+AwemeLiquidBar 1.0.58 auth47 — iOS 27 Source Backdrop Mirror v5
+
+1. Removed the iOS 27 4x4 local glass probes from the resolver path.
+   Device log showed PROBE samples=L,L,L while visible system glass on the feed
+   was already changing; the tiny UIGlassEffect probes were not a trustworthy
+   local-backdrop signal.
+
+2. iOS 27 style source now prefers an already-visible adaptive system-glass
+   control in Douyin's real source UIWindow. The persistent SameStyle/right
+   action glass is preferred. Non-feed pages fall back to Douyin's own page/
+   window interface style.
+
+3. New iOS 27 native source-window backdrop mirror:
+   - a native system glass capsule is created in Douyin's real UIWindow under
+     the regular tab items;
+   - a separate native system glass circle is created under UISearchTab;
+   - both remain non-interactive and use UIKit's clear/tinted glass configuration,
+     so iOS 27 owns user transparency/tint settings and backdrop adaptation;
+   - the overlay UITabBar remains the interaction/icon layer;
+   - only its bottom backdrop/system-background material nodes are suppressed.
+
+4. Search remains direct-to-UISearchTab on iOS 27, preserving native press/stretch.
+
+5. Message top-right glass disappearance fixed for 390pt-wide iOS 27 devices.
+   The old source scanners used hard-coded 440pt x thresholds; after Search was
+   inset to x≈304 it could no longer be rediscovered, and Add required x>=392
+   which was impossible on a 390pt display. Search/Add source identities are now
+   cached and fallback scanning uses nav-width-relative thresholds.
+
+Automatic low-frequency log:
+  Documents/AwemeLiquidBar_iOS27BottomProbe_v5.log
+Markers:
+  SOURCE kind=...
+  MIRROR main=... search=...
+  SUPPRESS class=... frame=...
+  MATERIAL style=...
+  SEARCH_DIRECT enabled=1

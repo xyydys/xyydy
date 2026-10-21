@@ -1,0 +1,8 @@
+AwemeLiquidBar 1.0.56c15 authorization correction
+
+- Hoeyc_0505 was already present in the pre-existing authorization table.
+- 1.0.56c12 accidentally appended its digest a second time.
+- The duplicate row/tag is removed.
+- 0416xxd remains the one new account added after the original 36-user baseline.
+- Effective authorization count: 37 unique users.
+- Bottom-bar ownership-release permission remains limited to Hoeyc_0505 and 0416xxd.

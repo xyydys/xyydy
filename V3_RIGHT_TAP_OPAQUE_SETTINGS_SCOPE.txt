@@ -1,0 +1,18 @@
+V3 RIGHT TAP / OPAQUE SETTINGS RECOVERY
+
+1. Right-side Home actions
+- Preserve V3 real-owner touch path.
+- AWEFeedVideoButton remains user-interaction owner.
+- Overlay slots remain non-interactive after configuration.
+- No AWEInstallGlassPressFeedback right-action gesture experiment.
+
+2. Settings
+- Root controller opaque systemGroupedBackgroundColor.
+- Scroll view opaque systemGroupedBackgroundColor.
+- Cards opaque secondarySystemGroupedBackgroundColor.
+- Navigation bar configureWithOpaqueBackground; translucent = NO.
+- Settings text buttons are solid UIKit buttons, not Liquid Glass.
+- No active settings UIGlassEffect / UIVisualEffectView / clear backgrounds.
+
+3. Scope
+- No other runtime subsystem intentionally changed.

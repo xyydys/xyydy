@@ -1,0 +1,26 @@
+AwemeLiquidBar 1.0.58 auth47 — v14 StableTouch
+
+1. Crash-risk rollback
+- Removes the UIApplication.sendEvent runtime hook used by v12/v13 to mirror every UITouch into visual UIButton beginTracking/continueTracking/endTracking, and deletes the now-dead foreign-touch mirror map/functions.
+- AWEInstallGlassPressFeedback now uses the older zero-duration, non-cancelling, simultaneous long-press driver on all supported systems. Douyin remains the business responder; the driver only changes visual glass highlight/transform.
+
+2. User-requested avatar/music rollback
+- Avatar remains native artwork + passive 54 pt glass backplate. No warp/foreign touch tracking is installed on the avatar plate.
+- Same-style/music remains native artwork + passive 50.16 pt glass backplate.
+
+3. Clean screen
+- Clean mode hides the visible avatar glass instead of leaving an empty circle.
+- The existing transparent avatar menu hit target stays at the avatar position solely to provide the Exit Clean Screen action.
+- Clean-screen exit reacquires current avatar geometry immediately and once after 80 ms so a recycled feed cell cannot resurrect the old cached glass position.
+
+4. Performance
+- iOS 27 bottom probe file logging is diagnostic-only.
+- MessageTopGlassV3 probe file logging is diagnostic-only.
+- No continuous display link or background sampling is added.
+
+5. Preserved
+- v13 search coexistence/click routing.
+- v13 independent message top/bottom blur distances.
+- v13 commerce/group-buy fullscreen suppression grace.
+- Favorites no-snap-to-top fix.
+- auth47.

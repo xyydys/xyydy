@@ -1,0 +1,14 @@
+AwemeLiquidBar 1.0.58 auth47 ClearGlassPolicy v11.1 compile fix
+
+Fix only: cross-translation-unit C/C++ linkage for AWEAppResolvedAppearanceStyle.
+
+GitHub/Xcode27 linker error:
+  Undefined symbol: AWEAppResolvedAppearanceStyle(UIWindow*)
+  NOTE: found _AWEAppResolvedAppearanceStyle in Tweak.x, declaration possibly missing extern "C"
+
+Cause:
+  Tweak.x exports AWEAppResolvedAppearanceStyle with C linkage.
+  MessageTopGlassV3.xm is compiled as Objective-C++ by the Logos toolchain and the v11 declaration lacked extern "C", so the call site requested a C++-mangled symbol.
+
+Resolution:
+  Wrap the MessageTopGlassV3.xm declaration in __cplusplus and use extern "C" for Objective-C++ builds. No UI, policy, geometry, touch, or glass behavior changed from v11.

@@ -1,0 +1,15 @@
+AwemeLiquidBar 1.0.57c — native-search-matched avatar launcher
+
+Changes from 1.0.57b
+- The avatar launcher is owned by the same AWEAlbumMorphTabController hierarchy as the native tab bar instead of being appended directly to the overlay UIWindow.
+- Avatar control diameter is measured from the live rightmost UISearchTab control and mirrored at runtime.
+- Avatar glass uses UIKit's default glassButtonConfiguration path rather than forcing clearGlassButtonConfiguration, so the OS resolves Clear/Tinted material consistently with the native tab/search surface.
+- The native Profile / “我” tab remains in the regular tab cluster. The avatar is only an expand/collapse toggle and never substitutes for Profile navigation.
+- Regular tab, Publish, and Search actions no longer collapse the launcher immediately. They re-arm the five-second idle timer.
+- Home-feed upward swipe still collapses immediately. Tapping the avatar still toggles immediately.
+- The reveal mask now applies to the native tab bar only, leaving the controller-owned avatar unmasked while collapsed.
+
+Preserved
+- c16 fullscreen/comment/IM/clean-screen/native-badge behavior.
+- auth42 authorization table.
+- Xcode 27 GitHub Actions build path.

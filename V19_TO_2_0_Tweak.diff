@@ -1,0 +1,3926 @@
+--- /mnt/data/AwemeLiquidBar_1.0.58_auth47_GlassPolish_v19_project/Tweak.x	2026-09-05 21:17:56.211149142 +0000
++++ /mnt/data/AwemeLiquidBar_2.0_auth47_SettingsRefactor_project/Tweak.x	2026-09-05 22:36:17.895622689 +0000
+@@ -12,7 +12,7 @@
+ #include <dlfcn.h>
+ 
+ /*
+- AwemeLiquidBar 1.0.58 — auth47 + page-fixed Liquid Glass v9 + interaction fixes
++ AwemeLiquidBar 2.0 — auth47 + page-fixed Liquid Glass v9 + interaction fixes
+ 
+  Fullscreen/clean consolidation release:
+  - starts from the verified 1.0.55a stable baseline; unrelated layout experiments remain excluded;
+@@ -149,6 +149,7 @@
+ @property(nonatomic, strong) NSString *referString;
+ @property(nonatomic, assign) BOOL isCommentVCShowing;
+ - (void)performCommentAction;
++- (void)performLikeAction;
+ - (void)onVideoPlayerViewDoubleClicked:(id)sender;
+ @end
+ 
+@@ -210,17 +211,6 @@
+ static char kAWESettingsGestureKey;
+ static char kAWELogSignatureKey;
+ static char kAWEWanStylingKey;
+-static char kAWEComposerProbeCountKey;
+-static char kAWEComposerProbeLastSignatureKey;
+-static char kAWEInputControllerProbeCountKey;
+-static char kAWEChatCapsuleMaskKey;
+-static char kAWEChatOriginalRadiusKey;
+-static char kAWEChatOriginalMasksKey;
+-static char kAWEChatOriginalClipsKey;
+-static char kAWEChatTextBaseFrameKey;
+-static char kAWEChatTextAppliedFrameKey;
+-static char kAWEChatPlaceholderBaseFrameKey;
+-static char kAWEChatPlaceholderAppliedFrameKey;
+ static char kAWEVisibilityMaskKey;
+ static char kAWEVisibilityCoordinatorRegistrationKey;
+ static char kAWEStableCleanMarkerKey;
+@@ -314,8 +304,6 @@
+ static char kAWETopTelegramHiddenSourcesKey;
+ static char kAWETopLiquidGroupViewKey;
+ static char kAWETopLiquidGroupRefreshKey;
+-static char kAWEComposerRefreshPendingKey;
+-static char kAWEChatResolvedFillKey;
+ static char kAWEAlbumMorphOriginalOpacityKey;
+ static char kAWEAlbumMorphOriginalInteractionKey;
+ static char kAWEProfileGlassSlotKey;
+@@ -328,10 +316,10 @@
+ static char kAWEIOS27PlatterOriginalGlassKey;
+ static char kAWEIOS27PlatterInstalledGlassKey;
+ static char kAWESettingsOriginalFontKey;
++static char kAWETapModeTripleRecognizerKey;
++static char kAWETapModeDoubleGenerationKey;
+ static char kAWEAvatarMenuSignatureKey;
+ static char kAWEAvatarMenuStyleKey;
+-static char kAWEShareGlassBackgroundKey;
+-static char kAWEShareGlassPlateKey;
+ static char kAWESearchForwardProxyKey;
+ 
+ typedef NS_ENUM(NSInteger, AWEHomeDiagnosticForegroundMode) {
+@@ -347,6 +335,9 @@
+ 
+ static BOOL gAWESettingsVisible = NO;
+ static char kAWELiquidSettingsNativePushKey;
++static char kAWELiquidSettingsNativeBackgroundKey;
++static char kAWELiquidSettingsNativeCardBackgroundKey;
++static char kAWESettingsCardMarkerKey;
+ static BOOL gAWESecondTabRoleLoaded = NO;
+ static BOOL gAWESecondTabIsShop = NO;
+ 
+@@ -426,12 +417,10 @@
+ static NSString * const kAWEAccentHexDefaultsKey = @"AwemeLiquidBarAccentHex";
+ static NSString * const kAWEAccentHistoryDefaultsKey =
+     @"AwemeLiquidBarAccentHistory";
+-static NSString * const kAWEChatCapsuleEnabledDefaultsKey =
+-    @"AwemeLiquidBarChatCapsuleEnabled1.0.46";
+-static NSString * const kAWEChatSeparateLeftDefaultsKey =
+-    @"AwemeLiquidBarChatSeparateLeft1.0.46";
+ static NSString * const kAWELowerHalfDoubleTapCommentDefaultsKey =
+     @"AwemeLiquidBarLowerHalfDoubleTapComment";
++static NSString * const kAWETapGestureModeDefaultsKey =
++    @"AwemeLiquidBarTapGestureModeV2"; /* 0 native, 1 split double, 2 double-comment/triple-like */
+ static NSString * const kAWEVerticalOffsetDefaultsKey =
+     @"AwemeLiquidBarVerticalOffset";
+ static NSString * const kAWEAlbumMorphCollapseEnabledDefaultsKey =
+@@ -480,22 +469,12 @@
+     @"AwemeLiquidBarHideBottomTitlesV1";
+ static NSString * const kAWEBottomBarDisplayEnabledDefaultsKey =
+     @"AwemeLiquidBarBottomBarDisplayEnabledV1";
+-static NSString * const kAWEBottomContentStyleDefaultsKey =
+-    @"AwemeLiquidBarBottomContentStyleV19"; /* 0 icons, 1 native text */
+-static NSString * const kAWESettingsGlassBackgroundModeDefaultsKey =
+-    @"AwemeLiquidBarSettingsGlassBackgroundModeV19"; /* 0 system, 1 glass, 2 clear */
+-static NSString * const kAWEShareGlassEnabledDefaultsKey =
+-    @"AwemeLiquidBarShareGlassEnabledV19";
+-static NSString * const kAWEShareGlassModeDefaultsKey =
+-    @"AwemeLiquidBarShareGlassModeV19"; /* 0 regular, 1 clear */
+ static NSString * const kAWESettingsGestureMineOnlyDefaultsKey =
+     @"AwemeLiquidBarSettingsGestureMineOnlyV1";
+ static NSString * const kAWEMessageBadgeEnabledDefaultsKey =
+     @"AwemeLiquidBarMessageBadgeEnabledV1";
+ static NSString * const kAWEAvatarMenuDownloadEnabledDefaultsKey =
+     @"AwemeLiquidBarAvatarMenuDownloadEnabledV1";
+-static NSString * const kAWEPreferHighestPlaybackDefaultsKey =
+-    @"AwemeLiquidBarPreferHighestPlaybackV1";
+ static NSString * const kAWEAlbumMorphStyleDefaultsKey =
+     @"AwemeLiquidBarAlbumMorphStyleV1";
+ static NSString * const kAWEInternalFullscreenDefaultsKey =
+@@ -718,56 +697,12 @@
+     return [stored isKindOfClass:NSNumber.class] ? [(NSNumber *)stored boolValue] : YES;
+ }
+ 
+-static BOOL AWEPreferHighestPlaybackEnabled(void) {
+-    id stored = [NSUserDefaults.standardUserDefaults
+-        objectForKey:kAWEPreferHighestPlaybackDefaultsKey];
+-    /* 1.0.55a: do not opt fresh installs into continuous player quality
+-       intervention. Users who explicitly enabled the switch keep their value. */
+-    return [stored isKindOfClass:NSNumber.class] ? [(NSNumber *)stored boolValue] : NO;
+-}
+-
+ /* Swift native-tab bridge. Keep the exported ABI integer-based so the
+    Objective-C++/Swift boundary does not depend on Bool ABI details. */
+ int32_t AWEAlbumMorphHideTitlesEnabled(void) {
+     return AWEHideBottomTitlesEnabled() ? 1 : 0;
+ }
+ 
+-static NSInteger AWEBottomContentStyle(void) {
+-    id stored = [NSUserDefaults.standardUserDefaults
+-        objectForKey:kAWEBottomContentStyleDefaultsKey];
+-    NSInteger value = [stored isKindOfClass:NSNumber.class]
+-        ? [(NSNumber *)stored integerValue] : 0;
+-    return value == 1 ? 1 : 0;
+-}
+-
+-/* Swift native-tab bridge. 1 means the DYKiller-style centered text-image
+-   layout: Home / current second tab / Messages / Profile, no Publish/Search. */
+-int32_t AWEAlbumMorphTextOnlyStyleEnabled(void) {
+-    return AWEBottomContentStyle() == 1 ? 1 : 0;
+-}
+-
+-static NSInteger AWESettingsGlassBackgroundMode(void) {
+-    id stored = [NSUserDefaults.standardUserDefaults
+-        objectForKey:kAWESettingsGlassBackgroundModeDefaultsKey];
+-    NSInteger value = [stored isKindOfClass:NSNumber.class]
+-        ? [(NSNumber *)stored integerValue] : 1;
+-    return MIN(2, MAX(0, value));
+-}
+-
+-static BOOL AWEShareGlassEnabled(void) {
+-    id stored = [NSUserDefaults.standardUserDefaults
+-        objectForKey:kAWEShareGlassEnabledDefaultsKey];
+-    return [stored isKindOfClass:NSNumber.class]
+-        ? [(NSNumber *)stored boolValue] : YES;
+-}
+-
+-static NSInteger AWEShareGlassMode(void) {
+-    id stored = [NSUserDefaults.standardUserDefaults
+-        objectForKey:kAWEShareGlassModeDefaultsKey];
+-    return ([stored isKindOfClass:NSNumber.class] &&
+-            [(NSNumber *)stored integerValue] == 1) ? 1 : 0;
+-}
+-
+ static BOOL AWEAlbumMorphCollapseEnabled(void) {
+     /* 1.0.48a retires the experimental collapse path completely.  Keep the
+        historical preference key only so old installs do not crash while
+@@ -1108,7 +1043,7 @@
+         NSString *documents = NSSearchPathForDirectoriesInDomains(
+             NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+         path = [[documents stringByAppendingPathComponent:
+-            @"AwemeLiquidBar_1.0.58_interaction.log"] copy];
++            @"AwemeLiquidBar_2.0_interaction.log"] copy];
+     });
+     return path;
+ }
+@@ -1241,7 +1176,7 @@
+         NSString *documents = NSSearchPathForDirectoriesInDomains(
+             NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+         path = [[documents stringByAppendingPathComponent:
+-            @"AwemeLiquidBar_1.0.58_probe.log"] copy];
++            @"AwemeLiquidBar_2.0_probe.log"] copy];
+     });
+     return path;
+ }
+@@ -1924,24 +1859,6 @@
+     AWEAttemptAuthorizationFromVisiblePage(controller);
+ }
+ 
+-static BOOL AWEChatCapsuleEnabled(void) {
+-    if (!AWEPluginFeaturesEnabled()) return NO;
+-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+-    if (![defaults objectForKey:kAWEChatCapsuleEnabledDefaultsKey]) {
+-        return NO;
+-    }
+-    return [defaults boolForKey:kAWEChatCapsuleEnabledDefaultsKey];
+-}
+-
+-static BOOL AWEChatSeparateLeftEnabled(void) {
+-    if (!AWEPluginFeaturesEnabled()) return NO;
+-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+-    if (![defaults objectForKey:kAWEChatSeparateLeftDefaultsKey]) {
+-        return NO;
+-    }
+-    return [defaults boolForKey:kAWEChatSeparateLeftDefaultsKey];
+-}
+-
+ static NSHashTable *AWESensitiveVisibleControllers(void) {
+     static dispatch_once_t onceToken;
+     dispatch_once(&onceToken, ^{
+@@ -1987,646 +1904,9 @@
+     return NO;
+ }
+ 
+-#pragma mark - Chat composer diagnostics
+-
+-static dispatch_queue_t AWEComposerLogQueue(void) {
+-    static dispatch_queue_t queue = nil;
+-    static dispatch_once_t onceToken;
+-    dispatch_once(&onceToken, ^{
+-        queue = dispatch_queue_create("com.awemeliquidbar.chat-input-log",
+-                                      DISPATCH_QUEUE_SERIAL);
+-    });
+-    return queue;
+-}
+-
+-static NSString *AWEComposerLogPath(void) {
+-    static NSString *path = nil;
+-    static dispatch_once_t onceToken;
+-    dispatch_once(&onceToken, ^{
+-        NSString *documents =
+-            NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,
+-                                                NSUserDomainMask,
+-                                                YES).firstObject;
+-        if (documents.length > 0) {
+-            path = [[documents
+-                stringByAppendingPathComponent:
+-                    @"AwemeLiquidBar_chat_input.log"] copy];
+-        }
+-    });
+-    return path;
+-}
+-
+-static BOOL AWEComposerDiagnosticsEnabled(void) { return NO; }
+-
+-static void AWEComposerLog(NSString *format, ...) { (void)format; }
+-
+-static NSString *AWEComposerColorDescription(UIColor *color) {
+-    if (!color) return @"<nil>";
+-
+-    CGFloat white = 0.0;
+-    CGFloat alpha = 0.0;
+-    if ([color getWhite:&white alpha:&alpha]) {
+-        return [NSString stringWithFormat:@"white=%.4f alpha=%.4f dynamic=%d",
+-                                          white, alpha,
+-                                          color != [color resolvedColorWithTraitCollection:
+-                                              [UITraitCollection traitCollectionWithUserInterfaceStyle:
+-                                                  UIUserInterfaceStyleLight]]];
+-    }
+-
+-    CGFloat red = 0.0, green = 0.0, blue = 0.0;
+-    if ([color getRed:&red green:&green blue:&blue alpha:&alpha]) {
+-        return [NSString stringWithFormat:
+-            @"rgba=(%.4f,%.4f,%.4f,%.4f)", red, green, blue, alpha];
+-    }
+-
+-    return color.description ?: @"<unknown>";
+-}
+-
+-static NSString *AWEComposerViewSignature(UIView *view) {
+-    if (!view) return @"<nil>";
+-
+-    return [NSString stringWithFormat:
+-        @"class=%@ ptr=%p frame=%@ bounds=%@ hidden=%d alpha=%.3f "
+-         @"bg={%@} radius=%.3f curve=%@ masks=%d clips=%d opaque=%d "
+-         @"window=%p super=%@ subviews=%lu",
+-         NSStringFromClass(view.class), (__bridge void *)view,
+-         NSStringFromCGRect(view.frame), NSStringFromCGRect(view.bounds),
+-         view.hidden, view.alpha,
+-         AWEComposerColorDescription(view.backgroundColor),
+-         view.layer.cornerRadius,
+-         view.layer.cornerCurve ?: @"<nil>",
+-         view.layer.masksToBounds, view.clipsToBounds, view.opaque,
+-         (__bridge void *)view.window,
+-         view.superview ? NSStringFromClass(view.superview.class) : @"<nil>",
+-         (unsigned long)view.subviews.count];
+-}
+-
+-static void AWEAppendComposerTree(NSMutableString *output,
+-                                  UIView *view,
+-                                  NSUInteger depth,
+-                                  NSUInteger maximumDepth) {
+-    if (!output || !view || depth > maximumDepth) return;
+-
+-    NSMutableString *indent = [NSMutableString string];
+-    for (NSUInteger index = 0; index < depth; index++) {
+-        [indent appendString:@"  "];
+-    }
+-
+-    [output appendFormat:@"\n%@- %@",
+-                         indent, AWEComposerViewSignature(view)];
+-
+-    if (depth == maximumDepth) return;
+-    for (UIView *subview in view.subviews) {
+-        AWEAppendComposerTree(output, subview, depth + 1, maximumDepth);
+-    }
+-}
+-
+-static void AWELogComposerTree(NSString *event,
+-                               UIView *root,
+-                               NSUInteger maximumDepth) {
+-    if (!AWEComposerDiagnosticsEnabled()) return;
+-
+-    if (!event || !root) return;
+-
+-    NSMutableString *tree = [NSMutableString
+-        stringWithFormat:@"%@ ROOT %@", event,
+-                         AWEComposerViewSignature(root)];
+-    for (UIView *subview in root.subviews) {
+-        AWEAppendComposerTree(tree, subview, 1, maximumDepth);
+-    }
+-    AWEComposerLog(@"%@", tree);
+-}
+-
+-static void AWELogComposerSnapshot(NSString *event,
+-                                   UIView *composer,
+-                                   BOOL includeTree,
+-                                   BOOL force) {
+-    if (!AWEComposerDiagnosticsEnabled()) return;
+-
+-    if (!event || !composer) return;
+-
+-    NSString *signature = AWEComposerViewSignature(composer);
+-    NSString *last = objc_getAssociatedObject(
+-        composer, &kAWEComposerProbeLastSignatureKey);
+-    if (!force && [last isEqualToString:signature]) return;
+-
+-    objc_setAssociatedObject(composer,
+-                             &kAWEComposerProbeLastSignatureKey,
+-                             signature,
+-                             OBJC_ASSOCIATION_COPY_NONATOMIC);
+-
+-    AWEComposerLog(@"%@ %@", event, signature);
+-    if (includeTree) {
+-        AWELogComposerTree([event stringByAppendingString:@".tree"],
+-                           composer, 3);
+-    }
+-}
+-
+-
+-static BOOL AWEApproximatelyEqual(CGFloat first,
+-                                  CGFloat second,
+-                                  CGFloat tolerance) {
+-    return fabs(first - second) <= tolerance;
+-}
+-
+-static UIView *AWEFindViewByRuntimeClassName(UIView *root, NSString *className);
+-
+-static UIView *AWEChatPaintFillView(UIView *container) {
+-    if (!container) return nil;
+-
+-    for (UIView *subview in container.subviews) {
+-        BOOL fillsBounds =
+-            AWEApproximatelyEqual(CGRectGetMinX(subview.frame), 0.0, 1.0) &&
+-            AWEApproximatelyEqual(CGRectGetMinY(subview.frame), 0.0, 1.0) &&
+-            AWEApproximatelyEqual(CGRectGetWidth(subview.frame),
+-                                  CGRectGetWidth(container.bounds), 1.5) &&
+-            AWEApproximatelyEqual(CGRectGetHeight(subview.frame),
+-                                  CGRectGetHeight(container.bounds), 1.5);
+-
+-        if (fillsBounds && subview.backgroundColor) {
+-            return subview;
+-        }
+-    }
+-
+-    return nil;
+-}
+-
+-static BOOL AWEChatViewHasVisiblePaint(UIView *view) {
+-    if (!view || !view.backgroundColor) return NO;
+-    UIColor *resolved = view.backgroundColor;
+-    if (@available(iOS 13.0, *)) {
+-        resolved = [resolved resolvedColorWithTraitCollection:view.traitCollection];
+-    }
+-    CGFloat alpha = 0.0, white = 0.0;
+-    if ([resolved getWhite:&white alpha:&alpha]) return alpha > 0.02;
+-    CGFloat red = 0.0, green = 0.0, blue = 0.0;
+-    if ([resolved getRed:&red green:&green blue:&blue alpha:&alpha]) {
+-        return alpha > 0.02;
+-    }
+-    return CGColorGetAlpha(resolved.CGColor) > 0.02;
+-}
+-
+-static UIView *AWEChatPaintContainer(UIView *inputRoot) {
+-    if (!inputRoot) return nil;
+-
+-    CGFloat rootWidth = CGRectGetWidth(inputRoot.bounds);
+-    CGFloat rootHeight = CGRectGetHeight(inputRoot.bounds);
+-    if (rootWidth <= 1.0 || rootHeight <= 1.0) return nil;
+-
+-    UIView *growing = AWEFindViewByRuntimeClassName(
+-        inputRoot, @"IESIMGrowingTextView");
+-    CGRect growingRect = CGRectNull;
+-    if (growing) {
+-        @try { growingRect = [growing convertRect:growing.bounds toView:inputRoot]; }
+-        @catch (__unused NSException *exception) { growingRect = CGRectNull; }
+-    }
+-
+-    NSMutableArray<NSDictionary *> *queue = [NSMutableArray arrayWithObject:
+-        @{ @"view": inputRoot, @"depth": @0 }];
+-    UIView *best = nil;
+-    NSInteger bestScore = NSIntegerMin;
+-    NSUInteger visited = 0;
+-
+-    while (queue.count > 0 && visited < 240) {
+-        NSDictionary *entry = queue.firstObject;
+-        [queue removeObjectAtIndex:0];
+-        UIView *candidate = entry[@"view"];
+-        NSUInteger depth = [entry[@"depth"] unsignedIntegerValue];
+-        visited++;
+-
+-        if (candidate != inputRoot &&
+-            ![candidate isKindOfClass:UILabel.class] &&
+-            ![candidate isKindOfClass:UIImageView.class] &&
+-            ![candidate isKindOfClass:UITextView.class] &&
+-            ![candidate isKindOfClass:UITextField.class] &&
+-            ![candidate isKindOfClass:UIControl.class]) {
+-            CGRect frame = CGRectNull;
+-            @try { frame = [candidate convertRect:candidate.bounds toView:inputRoot]; }
+-            @catch (__unused NSException *exception) {}
+-            CGFloat width = CGRectGetWidth(frame);
+-            CGFloat height = CGRectGetHeight(frame);
+-            UIView *fill = AWEChatPaintFillView(candidate);
+-            BOOL painted = AWEChatViewHasVisiblePaint(candidate) || fill != nil;
+-            BOOL plausibleSize = !CGRectIsNull(frame) && !CGRectIsEmpty(frame) &&
+-                width >= MAX(150.0, rootWidth * 0.42) &&
+-                width <= rootWidth + 4.0 && height >= 40.0 && height <= 190.0;
+-            if (painted && plausibleSize) {
+-                NSInteger score = 0;
+-                if (fill) score += 180;
+-                if (AWEChatViewHasVisiblePaint(candidate)) score += 90;
+-                if (candidate.superview == inputRoot) score += 40;
+-                NSString *name = NSStringFromClass(candidate.class).lowercaseString;
+-                if ([name containsString:@"input"] ||
+-                    [name containsString:@"text"] ||
+-                    [name containsString:@"container"] ||
+-                    [name containsString:@"background"] ||
+-                    [name containsString:@"panel"]) score += 45;
+-                if (!CGRectIsNull(growingRect)) {
+-                    CGRect expanded = CGRectInset(growingRect, -34.0, -12.0);
+-                    CGRect intersection = CGRectIntersection(frame, expanded);
+-                    if (!CGRectIsNull(intersection) && !CGRectIsEmpty(intersection)) {
+-                        CGFloat overlap = CGRectGetWidth(intersection) *
+-                                          CGRectGetHeight(intersection);
+-                        CGFloat growingArea = MAX(1.0, CGRectGetWidth(growingRect) *
+-                                                       CGRectGetHeight(growingRect));
+-                        if (overlap / growingArea > 0.55) score += 220;
+-                    }
+-                    score -= (NSInteger)MIN(100.0,
+-                        fabs(CGRectGetMidY(frame) - CGRectGetMidY(growingRect)));
+-                }
+-                score -= (NSInteger)(depth * 3);
+-                if (score > bestScore) { bestScore = score; best = candidate; }
+-            }
+-        }
+-
+-        if (depth < 6) {
+-            for (UIView *child in candidate.subviews) {
+-                [queue addObject:@{ @"view": child, @"depth": @(depth + 1) }];
+-            }
+-        }
+-    }
+-    return best;
+-}
+-
+-static UIView *AWEFindLeftComposerAction(UIView *root) {
+-    if (!root) return nil;
+-
+-    UIView *best = nil;
+-    CGFloat bestMinX = CGFLOAT_MAX;
+-
+-    NSMutableArray<UIView *> *queue =
+-        [NSMutableArray arrayWithObject:root];
+-
+-    while (queue.count > 0) {
+-        UIView *view = queue.firstObject;
+-        [queue removeObjectAtIndex:0];
+-
+-        NSString *className = NSStringFromClass(view.class);
+-        BOOL matchingClass =
+-            [className isEqualToString:@"AWEIMInputVCBadgeButton"] ||
+-            [className isEqualToString:
+-                @"AWEIMInputVCUnhighlightedBadgeButton"];
+-
+-        if (matchingClass && view != root) {
+-            CGRect rect = [view convertRect:view.bounds toView:root];
+-            CGFloat width = CGRectGetWidth(rect);
+-            CGFloat height = CGRectGetHeight(rect);
+-
+-            BOOL expectedSize =
+-                width >= 24.0 && width <= 40.0 &&
+-                height >= 24.0 && height <= 40.0;
+-            BOOL onLeft =
+-                CGRectGetMinX(rect) >= -2.0 &&
+-                CGRectGetMaxX(rect) <= 90.0;
+-
+-            if (expectedSize && onLeft &&
+-                CGRectGetMinX(rect) < bestMinX) {
+-                best = view;
+-                bestMinX = CGRectGetMinX(rect);
+-            }
+-        }
+-
+-        [queue addObjectsFromArray:view.subviews];
+-    }
+-
+-    return best;
+-}
+-
+-static CGFloat AWEChatCapsuleLeftInset(UIView *backgroundView) {
+-    if (!backgroundView || !AWEChatSeparateLeftEnabled()) return 0.0;
+-
+-    UIView *root = backgroundView.superview;
+-    if (!root) return 45.0;
+-
+-    UIView *leftAction = AWEFindLeftComposerAction(root);
+-    if (!leftAction) {
+-        return MIN(45.0, MAX(0.0,
+-                   CGRectGetWidth(backgroundView.bounds) - 44.0));
+-    }
+-
+-    CGRect localRect =
+-        [leftAction convertRect:leftAction.bounds toView:backgroundView];
+-
+-    /*
+-     The logged layout uses a 30 pt action at root x=15 and a background at
+-     root x=8. This calculation therefore yields 45 pt locally:
+-     maxX(37) + 8 pt visual gap. It also adapts if Douyin shifts the button.
+-    */
+-    CGFloat inset = CGRectGetMaxX(localRect) + 8.0;
+-    CGFloat maximum =
+-        MAX(0.0, CGRectGetWidth(backgroundView.bounds) - 44.0);
+-    return MIN(MAX(inset, 36.0), MIN(64.0, maximum));
+-}
+-
+-static void AWEStoreOriginalChatShapeIfNeeded(UIView *view) {
+-    if (!view) return;
+-    if (objc_getAssociatedObject(view, &kAWEChatOriginalRadiusKey)) return;
+-
+-    objc_setAssociatedObject(view,
+-                             &kAWEChatOriginalRadiusKey,
+-                             @(view.layer.cornerRadius),
+-                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-    objc_setAssociatedObject(view,
+-                             &kAWEChatOriginalMasksKey,
+-                             @(view.layer.masksToBounds),
+-                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-    objc_setAssociatedObject(view,
+-                             &kAWEChatOriginalClipsKey,
+-                             @(view.clipsToBounds),
+-                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-}
+-
+-static void AWERestoreOriginalChatShape(UIView *view) {
+-    if (!view) return;
+-
+-    NSNumber *radius =
+-        objc_getAssociatedObject(view, &kAWEChatOriginalRadiusKey);
+-    NSNumber *masks =
+-        objc_getAssociatedObject(view, &kAWEChatOriginalMasksKey);
+-    NSNumber *clips =
+-        objc_getAssociatedObject(view, &kAWEChatOriginalClipsKey);
+-
+-    [CATransaction begin];
+-    [CATransaction setDisableActions:YES];
+-
+-    view.layer.mask = nil;
+-    view.layer.cornerRadius = radius ? radius.doubleValue : 8.0;
+-    view.layer.masksToBounds = masks ? masks.boolValue : YES;
+-    view.clipsToBounds = clips ? clips.boolValue : YES;
+-
+-    [CATransaction commit];
+-}
+-
+-static void AWEApplyExactChatCapsuleMask(UIView *view,
+-                                         NSString *event,
+-                                         BOOL shouldLog) {
+-    if (!view || !AWEChatCapsuleEnabled()) return;
+-
+-    AWEStoreOriginalChatShapeIfNeeded(view);
+-
+-    CGFloat width = CGRectGetWidth(view.bounds);
+-    CGFloat height = CGRectGetHeight(view.bounds);
+-    if (width <= 1.0 || height <= 1.0) return;
+-
+-    CGFloat leftInset = AWEChatCapsuleLeftInset(view);
+-    CGRect capsuleRect =
+-        CGRectMake(leftInset, 0.0, MAX(1.0, width - leftInset), height);
+-    /* Keep the single-line 22 pt end radius while the composer grows.
+-       Using height/2 on a multi-line field turns the whole tall background
+-       into two oversized semicircles instead of vertically stretching it. */
+-    CGFloat radius = MIN(22.0, height * 0.5);
+-
+-    CAShapeLayer *mask =
+-        objc_getAssociatedObject(view, &kAWEChatCapsuleMaskKey);
+-    if (![mask isKindOfClass:[CAShapeLayer class]]) {
+-        mask = [CAShapeLayer layer];
+-        objc_setAssociatedObject(view,
+-                                 &kAWEChatCapsuleMaskKey,
+-                                 mask,
+-                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-    }
+-
+-    UIBezierPath *path =
+-        [UIBezierPath bezierPathWithRoundedRect:capsuleRect
+-                                   cornerRadius:radius];
+-
+-    [CATransaction begin];
+-    [CATransaction setDisableActions:YES];
+-
+-    mask.frame = view.bounds;
+-    mask.path = path.CGPath;
+-    view.layer.mask = mask;
+-
+-    /*
+-     Use the geometric path itself for the two half-circles. Do not combine it
+-     with continuous-corner rounding, which made the 44 pt bar look swollen.
+-    */
+-    view.layer.cornerRadius = 0.0;
+-    view.layer.masksToBounds = NO;
+-    view.clipsToBounds = NO;
+-
+-    [CATransaction commit];
+-
+-    if (shouldLog) {
+-        AWEComposerLog(@"%@ exactCapsule inset=%.2f radius=%.2f rect=%@ view={%@}",
+-                       event ?: @"chatCapsule",
+-                       leftInset,
+-                       radius,
+-                       NSStringFromCGRect(capsuleRect),
+-                       AWEComposerViewSignature(view));
+-    }
+-}
+-
+-static BOOL AWEApplyPaintedChatInputPill(UIViewController *controller,
+-                                        NSString *event,
+-                                        BOOL shouldLog) {
+-    if (!controller.view || !AWEChatCapsuleEnabled()) return NO;
+-
+-    UIView *container = AWEChatPaintContainer(controller.view);
+-    UIView *fill = AWEChatPaintFillView(container);
+-    if (container && !fill && AWEChatViewHasVisiblePaint(container)) {
+-        fill = container;
+-    }
+-    if (!container || !fill) {
+-        if (shouldLog) {
+-            AWEComposerLog(@"%@ target-missing root=%@",
+-                           event ?: @"paintedPill",
+-                           AWEComposerViewSignature(controller.view));
+-        }
+-        return NO;
+-    }
+-
+-    if (shouldLog) {
+-        AWEComposerLog(@"%@ before container={%@} fill={%@}",
+-                       event ?: @"paintedPill",
+-                       AWEComposerViewSignature(container),
+-                       AWEComposerViewSignature(fill));
+-    }
+-
+-    AWEApplyExactChatCapsuleMask(container,
+-                                event ?: @"paintedPill",
+-                                shouldLog);
+-
+-    AWEStoreOriginalChatShapeIfNeeded(fill);
+-
+-    if (AWEChatCapsuleEnabled()) {
+-        [CATransaction begin];
+-        [CATransaction setDisableActions:YES];
+-        fill.layer.cornerRadius = 0.0;
+-        fill.layer.masksToBounds = NO;
+-        fill.clipsToBounds = NO;
+-        [CATransaction commit];
+-    } else {
+-        AWERestoreOriginalChatShape(fill);
+-    }
+-
+-    if (shouldLog) {
+-        AWEComposerLog(@"%@ after container={%@} fill={%@}",
+-                       event ?: @"paintedPill",
+-                       AWEComposerViewSignature(container),
+-                       AWEComposerViewSignature(fill));
+-    }
+-
+-    return YES;
+-}
+-
+-static void AWEApplyChatPillNearGrowingTextView(UIView *growing,
+-                                                NSString *event) {
+-    if (!growing || !AWEChatCapsuleEnabled()) return;
+-    UIView *root = growing;
+-    for (NSUInteger depth = 0; depth < 6 && root.superview; depth++) {
+-        UIView *next = root.superview;
+-        root = next;
+-        if (CGRectGetWidth(root.bounds) >= CGRectGetWidth(growing.bounds) + 70.0 &&
+-            CGRectGetHeight(root.bounds) <= 220.0) {
+-            UIView *container = AWEChatPaintContainer(root);
+-            if (container) {
+-                UIView *fill = AWEChatPaintFillView(container);
+-                AWEApplyExactChatCapsuleMask(container, event, NO);
+-                if (fill && fill != container) {
+-                    [CATransaction begin];
+-                    [CATransaction setDisableActions:YES];
+-                    fill.layer.cornerRadius = 0.0;
+-                    fill.layer.masksToBounds = NO;
+-                    fill.clipsToBounds = NO;
+-                    [CATransaction commit];
+-                }
+-                return;
+-            }
+-        }
+-    }
+-}
+-
+-static void AWEApplyChatCornerToView(UIView *view,
+-                                     NSString *event,
+-                                     BOOL shouldLog) {
+-    if (!AWEChatCapsuleEnabled()) return;
+-    AWEApplyExactChatCapsuleMask(view, event, shouldLog);
+-}
+-
+-static UIView *AWEFindViewByRuntimeClassName(UIView *root,
+-                                             NSString *className) {
+-    if (!root || className.length == 0) return nil;
+-    if ([NSStringFromClass(root.class) isEqualToString:className]) {
+-        return root;
+-    }
+-    for (UIView *subview in root.subviews) {
+-        UIView *match = AWEFindViewByRuntimeClassName(subview, className);
+-        if (match) return match;
+-    }
+-    return nil;
+-}
+-
+-
+-static BOOL AWEFrameNearEqual(CGRect left, CGRect right) {
+-    return fabs(CGRectGetMinX(left) - CGRectGetMinX(right)) < 0.6 &&
+-           fabs(CGRectGetMinY(left) - CGRectGetMinY(right)) < 0.6 &&
+-           fabs(CGRectGetWidth(left) - CGRectGetWidth(right)) < 0.6 &&
+-           fabs(CGRectGetHeight(left) - CGRectGetHeight(right)) < 0.6;
+-}
+-
+-static void AWEApplyHorizontalFrameShift(UIView *view,
+-                                         CGFloat shift,
+-                                         const void *baseKey,
+-                                         const void *appliedKey) {
+-    if (!view) return;
+-
+-    CGRect current = view.frame;
+-    NSValue *baseValue = objc_getAssociatedObject(view, baseKey);
+-    NSValue *appliedValue = objc_getAssociatedObject(view, appliedKey);
+-    CGRect base = current;
+-
+-    if (baseValue && appliedValue &&
+-        AWEFrameNearEqual(current, appliedValue.CGRectValue)) {
+-        base = baseValue.CGRectValue;
+-    } else {
+-        objc_setAssociatedObject(view,
+-                                 baseKey,
+-                                 [NSValue valueWithCGRect:current],
+-                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-    }
+-
+-    CGFloat safeShift =
+-        MIN(MAX(shift, 0.0), MAX(0.0, CGRectGetWidth(base) - 20.0));
+-
+-    CGRect target = base;
+-    target.origin.x += safeShift;
+-    target.size.width = MAX(20.0, target.size.width - safeShift);
+-
+-    if (!AWEFrameNearEqual(current, target)) {
+-        [CATransaction begin];
+-        [CATransaction setDisableActions:YES];
+-        view.frame = target;
+-        [CATransaction commit];
+-    }
+-
+-    objc_setAssociatedObject(view,
+-                             appliedKey,
+-                             [NSValue valueWithCGRect:target],
+-                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-}
+-
+-static BOOL AWEViewIsDescendantOfView(UIView *view, UIView *ancestor) {
+-    if (!view || !ancestor) return NO;
+-
+-    UIView *cursor = view;
+-    while (cursor) {
+-        if (cursor == ancestor) return YES;
+-        cursor = cursor.superview;
+-    }
+-    return NO;
+-}
+-
+-static void AWECollectPlaceholderLabels(UIView *root,
+-                                        NSMutableArray *results) {
+-    if (!root || !results) return;
+-
+-    if ([root isKindOfClass:[UILabel class]]) {
+-        UILabel *label = (UILabel *)root;
+-        NSString *value = label.text ?: label.accessibilityLabel;
+-        if ([value containsString:@"发消息"]) {
+-            [results addObject:label];
+-        }
+-    }
+-
+-    for (UIView *subview in root.subviews) {
+-        AWECollectPlaceholderLabels(subview, results);
+-    }
+-}
+-
+-static void AWEApplyChatTextGeometry(UIView *root) {
+-    if (!root) return;
+-
+-    /*
+-     IESIMTextViewInternal is corrected by its own setFrame:/layoutSubviews
+-     hook below. FLEX confirmed that Douyin resets that frame after the input
+-     controller has completed layout, which is why the previous controller-
+-     level correction did not remain visible.
+-
+-     Keep only the fallback for builds that render “发消息…” as a separate
+-     UILabel outside IESIMTextViewInternal.
+-    */
+-    CGFloat shift =
+-        (AWEChatCapsuleEnabled() && AWEChatSeparateLeftEnabled()) ? 10.0 : 0.0;
+-
+-    UIView *internal =
+-        AWEFindViewByRuntimeClassName(root, @"IESIMTextViewInternal");
+-
+-    NSMutableArray *labels = [NSMutableArray array];
+-    AWECollectPlaceholderLabels(root, labels);
+-
+-    for (UILabel *label in labels) {
+-        if (internal && AWEViewIsDescendantOfView(label, internal)) continue;
+-
+-        AWEApplyHorizontalFrameShift(label,
+-                                     shift,
+-                                     &kAWEChatPlaceholderBaseFrameKey,
+-                                     &kAWEChatPlaceholderAppliedFrameKey);
+-    }
+-}
+-
+ #pragma mark - Transition diagnostics
+ 
++
+ static dispatch_queue_t AWETransitionLogQueue(void) {
+     static dispatch_queue_t queue = nil;
+     static dispatch_once_t onceToken;
+@@ -2993,6 +2273,17 @@
+     return MIN(MAX(value, 0.20), 0.80);
+ }
+ 
++static NSInteger AWEStoredTapGestureMode(void) {
++    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
++    id stored = [defaults objectForKey:kAWETapGestureModeDefaultsKey];
++    if ([stored isKindOfClass:NSNumber.class]) {
++        NSInteger mode = [(NSNumber *)stored integerValue];
++        return MIN(2, MAX(0, mode));
++    }
++    /* One-time compatibility migration: the old boolean meant split-double-tap. */
++    return [defaults boolForKey:kAWELowerHalfDoubleTapCommentDefaultsKey] ? 1 : 0;
++}
++
+ static BOOL gAWEWanToWLoaded = NO;
+ static BOOL gAWEWanToWEnabled = NO;
+ 
+@@ -7530,7 +6821,6 @@
+ 
+ static __weak UIView *gAWEDownloadToastView = nil;
+ static NSUInteger gAWEDownloadToastGeneration = 0;
+-static CFTimeInterval gAWEPlaybackPreferenceResumeGraceUntil = 0.0;
+ 
+ static id AWESafeValueForKey(id object, NSString *key) {
+     if (!object || key.length == 0) return nil;
+@@ -8361,10 +7651,9 @@
+     return [UIMenu menuWithTitle:@"下载与复制" children:items];
+ }
+ 
+-/* Highest-quality playback deliberately avoids runtime stream switching.
+-   Reconfiguring an already-playing private player can race Douyin's own
+-   background/foreground pause state. The active implementation below only
+-   biases the advertised bitrate list before native selection. */
++/* Video-variant metadata above is retained only by the downloader.
++   The former highest-quality playback preference and bitrate-list mutation
++   hook are removed in 2.0. */
+ 
+ typedef NS_ENUM(NSInteger, AWEHomeTopActionKind) {
+     AWEHomeTopActionKindMenu = 1,
+@@ -17946,7 +17235,10 @@
+ 
+     UIButtonConfiguration *configuration =
+         AWECreateSystemGlassButtonConfiguration(prominent);
+-    configuration.title = title;
++    configuration.title = nil;
++    configuration.attributedTitle = [[NSAttributedString alloc]
++        initWithString:title ?: @"" attributes:@{NSFontAttributeName:
++            [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium]}];
+     configuration.baseBackgroundColor = tintColor;
+ 
+     UIColor *buttonForeground = UIColor.labelColor;
+@@ -17978,6 +17270,10 @@
+                                                                0.0, 12.0);
+ 
+     button.configuration = configuration;
++    button.titleLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
++    button.titleLabel.adjustsFontSizeToFitWidth = YES;
++    button.titleLabel.minimumScaleFactor = 0.80;
++    button.titleLabel.numberOfLines = 1;
+     button.tintColor = tintColor;
+ }
+ 
+@@ -17994,9 +17290,9 @@
+ 
+ static UIUserInterfaceStyle AWESystemInterfaceStyle(void) {
+     if (@available(iOS 13.0, *)) {
+-        /* Prefer the physical screen trait. Douyin can override a window or
+-           controller locally, but the settings sheet must follow the user's
+-           actual system appearance rather than that app-local override. */
++        /* Generic fallback for non-settings presentation helpers. Settings
++           themselves inherit Douyin's app/window appearance via
++           AWEAppResolvedAppearanceStyle or an unspecified native push trait. */
+         UIUserInterfaceStyle screenStyle =
+             UIScreen.mainScreen.traitCollection.userInterfaceStyle;
+         if (screenStyle != UIUserInterfaceStyleUnspecified) return screenStyle;
+@@ -18215,8 +17511,6 @@
+ 
+ @class AWEIconEditorController;
+ @interface AWEIconCenterController : UITableViewController
+-@property(nonatomic, assign) BOOL newBarOnly;
+-- (instancetype)initWithNewBarOnly:(BOOL)newBarOnly;
+ @end
+ 
+ @interface AWEIconEditorController : UIViewController <UIColorPickerViewControllerDelegate, UITextFieldDelegate>
+@@ -18233,20 +17527,19 @@
+ 
+ @implementation AWEIconCenterController
+ - (instancetype)init {
+-    return [self initWithNewBarOnly:NO];
+-}
+-- (instancetype)initWithNewBarOnly:(BOOL)newBarOnly {
+-    self = [super initWithStyle:UITableViewStyleInsetGrouped];
+-    if (self) _newBarOnly = newBarOnly;
+-    return self;
++    return [super initWithStyle:UITableViewStyleInsetGrouped];
+ }
+ - (NSArray<NSDictionary *> *)definitionsForSection:(NSInteger)section {
+-    return self.newBarOnly ? AWENewBarIconDefinitions()
+-                           : AWEIconDefinitionsForSection(section);
++    switch (section) {
++        case 0: return AWENewBarIconDefinitions();
++        case 1: return AWEIconDefinitionsForSection(0);
++        case 2: return AWEIconDefinitionsForSection(1);
++        default: return @[];
++    }
+ }
+ - (void)viewDidLoad {
+     [super viewDidLoad];
+-    self.title = self.newBarOnly ? @"新底栏图标中心" : @"顶部与右侧图标中心";
++    self.title = @"图标中心";
+     self.tableView.rowHeight = 72.0;
+     self.tableView.estimatedRowHeight = 72.0;
+     self.tableView.backgroundColor = UIColor.systemGroupedBackgroundColor;
+@@ -18256,17 +17549,22 @@
+               target:self action:@selector(resetAll:)];
+ }
+ - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+-    return self.newBarOnly ? 1 : 2;
++    (void)tableView;
++    return 3;
+ }
+ - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
++    (void)tableView;
+     return (NSInteger)[self definitionsForSection:section].count;
+ }
+ - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
+-    return self.newBarOnly ? @"原生液态底栏" : AWEIconSectionTitles()[(NSUInteger)section];
++    (void)tableView;
++    NSArray<NSString *> *titles = @[@"底栏", @"顶部", @"右侧"];
++    return (section >= 0 && section < (NSInteger)titles.count) ? titles[(NSUInteger)section] : nil;
+ }
+ - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
+-    if (self.newBarOnly && section == 0) {
+-        return [NSString stringWithFormat:@"第二项当前识别为“%@”；搜索按钮是否显示仍由底栏按钮配置决定。每个入口只使用一个图标，选中/未选中共用同一图形，状态仅由前景色/强调色表达。",
++    (void)tableView;
++    if (section == 0) {
++        return [NSString stringWithFormat:@"第二项当前识别为“%@”；搜索入口是否显示仍由底栏按钮布局决定。",
+             AWESecondTabIsShop() ? @"商城" : @"朋友"];
+     }
+     return nil;
+@@ -18289,14 +17587,12 @@
+         configurationWithPointSize:22.0 weight:UIImageSymbolWeightMedium];
+     UIImage *image = [[UIImage systemImageNamed:name] imageWithConfiguration:configuration];
+     UIColor *previewColor = unifiedBottomColour
+-        ? (AWEIconDefinitionRepresentsSelectedState(definition)
+-            ? AWEStoredAccentColor() : UIColor.labelColor)
++        ? (AWEIconDefinitionRepresentsSelectedState(definition) ? AWEStoredAccentColor() : UIColor.labelColor)
+         : AWEApplyConfiguredIconColorMode(key, UIColor.labelColor);
+     cell.previewImage.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+     cell.previewImage.tintColor = previewColor;
+     AWEConfiguredIconColorMode mode = unifiedBottomColour
+-        ? AWEConfiguredIconColorModeAutomatic
+-        : AWEStoredSymbolColorMode(key);
++        ? AWEConfiguredIconColorModeAutomatic : AWEStoredSymbolColorMode(key);
+     if (!unifiedBottomColour && mode == AWEConfiguredIconColorModeWhite) {
+         cell.previewPlate.backgroundColor = [UIColor colorWithWhite:0.12 alpha:1.0];
+     } else if (!unifiedBottomColour && mode == AWEConfiguredIconColorModeBlack) {
+@@ -18318,20 +17614,15 @@
+ }
+ - (void)resetAll:(id)sender {
+     (void)sender;
+-    NSString *message = self.newBarOnly
+-        ? @"恢复新底栏所有图标名称。每个入口只有一个图标，强调色设置不会改变。"
+-        : @"恢复顶部与右侧所有 SF Symbols 名称、颜色模式和自定义颜色。透明 PNG 文件不会被删除。";
+     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"恢复全部图标"
+-        message:message preferredStyle:UIAlertControllerStyleAlert];
++        message:@"恢复底栏、顶部与右侧的 SF Symbols 名称、颜色模式和自定义颜色。PNG 文件不会被删除。"
++        preferredStyle:UIAlertControllerStyleAlert];
+     [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+     [alert addAction:[UIAlertAction actionWithTitle:@"恢复" style:UIAlertActionStyleDestructive handler:^(__unused UIAlertAction *action) {
+         NSMutableArray<NSDictionary *> *definitions = [NSMutableArray array];
+-        if (self.newBarOnly) {
+-            [definitions addObjectsFromArray:AWENewBarIconDefinitions()];
+-        } else {
+-            [definitions addObjectsFromArray:AWEIconDefinitionsForSection(0)];
+-            [definitions addObjectsFromArray:AWEIconDefinitionsForSection(1)];
+-        }
++        [definitions addObjectsFromArray:AWENewBarIconDefinitions()];
++        [definitions addObjectsFromArray:AWEIconDefinitionsForSection(0)];
++        [definitions addObjectsFromArray:AWEIconDefinitionsForSection(1)];
+         AWEClearStoredIconConfigurationForDefinitions(definitions);
+         AWERefreshAllConfiguredIcons();
+         [self.tableView reloadData];
+@@ -18806,15 +18097,21 @@
+ @end
+ 
+ static CGFloat AWESettingsResponsiveScaleForWidth(CGFloat width) {
+-    /* v17: compact by default on every iPhone. The old curve reached 1.0 on
+-       large screens, leaving long diagnostic/settings labels visibly oversized. */
+-    if (width <= 350.0) return 0.70;
+-    if (width <= 360.0) return 0.72;
+-    if (width <= 375.0) return 0.75;
+-    if (width <= 390.0) return 0.78;
+-    if (width <= 402.0) return 0.81;
+-    if (width <= 414.0) return 0.84;
+-    return 0.86;
++    /* 2.0: modest scaling around 390 pt, not blanket shrinking. */
++    if (width <= 350.0) return 0.92;
++    if (width <= 375.0) return 0.96;
++    if (width <= 402.0) return 1.00;
++    if (width <= 430.0) return 1.03;
++    return 1.05;
++}
++
++static CGFloat AWESettingsRolePointSizeForBase(CGFloat base, CGFloat scale) {
++    CGFloat target = 12.0;
++    if (base >= 15.5) target = 15.5;       /* card/section heading */
++    else if (base >= 13.0) target = 13.8;  /* ordinary setting row */
++    else if (base >= 11.5) target = 11.8;  /* hint/value */
++    else target = 11.0;
++    return target * scale;
+ }
+ 
+ static void AWEApplyResponsiveSettingsTypography(UIView *root, CGFloat scale) {
+@@ -18827,19 +18124,14 @@
+             objc_setAssociatedObject(label, &kAWESettingsOriginalFontKey, base,
+                                      OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+         }
+-        if (base) {
+-            CGFloat point = MAX(9.0, base.pointSize * scale);
+-            label.font = [base fontWithSize:point];
+-        }
++        if (base) label.font = [base fontWithSize:AWESettingsRolePointSizeForBase(base.pointSize, scale)];
+         if (label.numberOfLines == 1) {
+             label.adjustsFontSizeToFitWidth = YES;
+-            label.minimumScaleFactor = 0.68;
++            label.minimumScaleFactor = 0.86;
+             label.lineBreakMode = NSLineBreakByTruncatingTail;
+         }
+         [label setContentCompressionResistancePriority:UILayoutPriorityDefaultLow
+-                                                   forAxis:UILayoutConstraintAxisHorizontal];
+-        [label setContentHuggingPriority:UILayoutPriorityDefaultLow
+-                                 forAxis:UILayoutConstraintAxisHorizontal];
++                                               forAxis:UILayoutConstraintAxisHorizontal];
+     } else if ([root isKindOfClass:UISwitch.class]) {
+         [root setContentCompressionResistancePriority:UILayoutPriorityRequired
+                                               forAxis:UILayoutConstraintAxisHorizontal];
+@@ -18847,40 +18139,172 @@
+                                 forAxis:UILayoutConstraintAxisHorizontal];
+     } else if ([root isKindOfClass:UIButton.class]) {
+         UIButton *button = (UIButton *)root;
+-        if (button.titleLabel) {
+-            UIFont *base = objc_getAssociatedObject(button.titleLabel,
+-                &kAWESettingsOriginalFontKey);
+-            if (!base && button.titleLabel.font) {
+-                base = button.titleLabel.font;
+-                objc_setAssociatedObject(button.titleLabel,
+-                    &kAWESettingsOriginalFontKey, base,
+-                    OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++        CGFloat point = 13.8 * scale;
++        NSString *title = button.configuration.title ?: button.currentTitle;
++        if (!title.length && button.configuration.attributedTitle.length) {
++            title = button.configuration.attributedTitle.string;
++        }
++        if (button.configuration && title.length) {
++            UIButtonConfiguration *configuration = [button.configuration copy];
++            configuration.title = nil;
++            configuration.attributedTitle = [[NSAttributedString alloc]
++                initWithString:title attributes:@{NSFontAttributeName:
++                    [UIFont systemFontOfSize:point weight:UIFontWeightMedium]}];
++            configuration.contentInsets = NSDirectionalEdgeInsetsMake(0, 9, 0, 9);
++            button.configuration = configuration;
++        }
++        button.titleLabel.font = [UIFont systemFontOfSize:point weight:UIFontWeightMedium];
++        button.titleLabel.adjustsFontSizeToFitWidth = YES;
++        button.titleLabel.minimumScaleFactor = 0.78;
++        button.titleLabel.numberOfLines = 1;
++        button.titleLabel.lineBreakMode = NSLineBreakByClipping;
++    } else if ([root isKindOfClass:UISegmentedControl.class]) {
++        UIFont *font = [UIFont systemFontOfSize:12.5 * scale weight:UIFontWeightMedium];
++        [(UISegmentedControl *)root setTitleTextAttributes:@{NSFontAttributeName:font}
++                                                  forState:UIControlStateNormal];
++    }
++    for (UIView *child in root.subviews) AWEApplyResponsiveSettingsTypography(child, scale);
++}
++
++static UILabel *AWESettingsMakeLabel(NSString *text, CGFloat size, UIFontWeight weight) {
++    UILabel *label = [UILabel new];
++    label.text = text;
++    label.font = [UIFont systemFontOfSize:size weight:weight];
++    label.textColor = UIColor.labelColor;
++    label.numberOfLines = 1;
++    return label;
++}
++
++static UIStackView *AWESettingsSwitchRow(NSString *title, UISwitch *toggle) {
++    UILabel *label = AWESettingsMakeLabel(title, 14.0, UIFontWeightMedium);
++    [label setContentCompressionResistancePriority:UILayoutPriorityDefaultLow forAxis:UILayoutConstraintAxisHorizontal];
++    [toggle setContentCompressionResistancePriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
++    UIStackView *row = [[UIStackView alloc] initWithArrangedSubviews:@[label, toggle]];
++    row.axis = UILayoutConstraintAxisHorizontal;
++    row.alignment = UIStackViewAlignmentCenter;
++    row.spacing = 10.0;
++    return row;
++}
++
++static UIStackView *AWESettingsSegmentedRow(NSString *title, UISegmentedControl *control) {
++    UILabel *label = AWESettingsMakeLabel(title, 14.0, UIFontWeightMedium);
++    [label setContentCompressionResistancePriority:UILayoutPriorityDefaultLow forAxis:UILayoutConstraintAxisHorizontal];
++    [control setContentHuggingPriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
++    UIStackView *row = [[UIStackView alloc] initWithArrangedSubviews:@[label, control]];
++    row.axis = UILayoutConstraintAxisHorizontal;
++    row.alignment = UIStackViewAlignmentCenter;
++    row.spacing = 10.0;
++    return row;
++}
++
++static UIStackView *AWESettingsSliderRow(NSString *title, UILabel *valueLabel, UISlider *slider) {
++    UILabel *label = AWESettingsMakeLabel(title, 14.0, UIFontWeightMedium);
++    valueLabel.textColor = UIColor.secondaryLabelColor;
++    UIStackView *header = [[UIStackView alloc] initWithArrangedSubviews:@[label, valueLabel]];
++    header.axis = UILayoutConstraintAxisHorizontal;
++    header.alignment = UIStackViewAlignmentCenter;
++    header.distribution = UIStackViewDistributionEqualSpacing;
++    UIStackView *row = [[UIStackView alloc] initWithArrangedSubviews:@[header, slider]];
++    row.axis = UILayoutConstraintAxisVertical;
++    row.spacing = 5.0;
++    return row;
++}
++
++static UIView *AWESettingsCard(NSString *title, NSArray<UIView *> *items) {
++    UIView *card = [UIView new];
++    card.translatesAutoresizingMaskIntoConstraints = NO;
++    objc_setAssociatedObject(card, &kAWESettingsCardMarkerKey, @YES,
++                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++    card.layer.cornerRadius = 22.0;
++    card.layer.cornerCurve = kCACornerCurveContinuous;
++    card.clipsToBounds = YES;
++    card.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
++    NSMutableArray<UIView *> *arranged = [NSMutableArray array];
++    if (title.length) [arranged addObject:AWESettingsMakeLabel(title, 16.0, UIFontWeightSemibold)];
++    [arranged addObjectsFromArray:items ?: @[]];
++    UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:arranged];
++    stack.translatesAutoresizingMaskIntoConstraints = NO;
++    stack.axis = UILayoutConstraintAxisVertical;
++    stack.spacing = 10.0;
++    [card addSubview:stack];
++    [NSLayoutConstraint activateConstraints:@[
++        [stack.leadingAnchor constraintEqualToAnchor:card.leadingAnchor constant:14.0],
++        [stack.trailingAnchor constraintEqualToAnchor:card.trailingAnchor constant:-14.0],
++        [stack.topAnchor constraintEqualToAnchor:card.topAnchor constant:14.0],
++        [stack.bottomAnchor constraintEqualToAnchor:card.bottomAnchor constant:-14.0]
++    ]];
++    return card;
++}
++
++/* 2.0 native-settings appearance bridge. DYYY avoids the colour mismatch by
++   building its pages on Douyin's own AWESettingBaseViewController with
++   colorStyle=0/useCardUIStyle. LiquidBar keeps its custom card layout, so copy
++   the actual dynamic page/cell colours from the Douyin Settings host before
++   pushing instead of substituting UIKit's physical-device palette. */
++static BOOL AWEColorIsVisiblyOpaque(UIColor *color) {
++    if (!color) return NO;
++    CGFloat alpha = 0.0;
++    if ([color getWhite:nil alpha:&alpha]) return alpha > 0.01;
++    CGFloat r=0,g=0,b=0;
++    if ([color getRed:&r green:&g blue:&b alpha:&alpha]) return alpha > 0.01;
++    CGColorRef cg = color.CGColor;
++    return cg && CGColorGetAlpha(cg) > 0.01;
++}
++
++static UIColor *AWENativeSettingsPageBackground(UIView *root) {
++    if (!root) return nil;
++    UIColor *rootColor = root.backgroundColor;
++    NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:root];
++    NSUInteger idx = 0;
++    while (idx < queue.count && idx < 900) {
++        UIView *view = queue[idx++];
++        for (UIView *sub in view.subviews) [queue addObject:sub];
++        if ([view isKindOfClass:UITableView.class] ||
++            [view isKindOfClass:UICollectionView.class] ||
++            [NSStringFromClass(view.class) containsString:@"Setting"]) {
++            if (AWEColorIsVisiblyOpaque(view.backgroundColor)) return view.backgroundColor;
++        }
++    }
++    return AWEColorIsVisiblyOpaque(rootColor) ? rootColor : nil;
++}
++
++static UIColor *AWENativeSettingsCardBackground(UIView *root) {
++    if (!root) return nil;
++    NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:root];
++    NSUInteger idx = 0;
++    while (idx < queue.count && idx < 1200) {
++        UIView *view = queue[idx++];
++        for (UIView *sub in view.subviews) [queue addObject:sub];
++        if ([view isKindOfClass:UITableViewCell.class] ||
++            [view isKindOfClass:UICollectionViewCell.class]) {
++            UIColor *color = view.backgroundColor;
++            if ([view isKindOfClass:UITableViewCell.class]) {
++                UITableViewCell *cell = (UITableViewCell *)view;
++                if (AWEColorIsVisiblyOpaque(cell.contentView.backgroundColor))
++                    color = cell.contentView.backgroundColor;
+             }
+-            if (base) button.titleLabel.font = [base fontWithSize:
+-                MAX(9.0, base.pointSize * scale)];
+-            button.titleLabel.adjustsFontSizeToFitWidth = YES;
+-            button.titleLabel.minimumScaleFactor = 0.64;
+-            button.titleLabel.numberOfLines = 1;
+-            button.titleLabel.lineBreakMode = NSLineBreakByTruncatingTail;
++            if (AWEColorIsVisiblyOpaque(color)) return color;
+         }
+     }
+-    for (UIView *child in root.subviews) {
+-        AWEApplyResponsiveSettingsTypography(child, scale);
++    return nil;
++}
++
++static void AWEApplySettingsCardBackground(UIView *root, UIColor *color) {
++    if (!root || !color) return;
++    if ([objc_getAssociatedObject(root, &kAWESettingsCardMarkerKey) boolValue]) {
++        root.backgroundColor = color;
+     }
++    for (UIView *child in root.subviews) AWEApplySettingsCardBackground(child, color);
+ }
+ 
+ @interface AWELiquidSettingsController : UIViewController <UIColorPickerViewControllerDelegate>
+ @property (nonatomic, retain) UIView *previewView;
+ @property (nonatomic, retain) UIButton *applyButton;
+ @property (nonatomic, retain) UIColor *pendingAccentColor;
+-@property (nonatomic, retain) NSArray<UIView *> *themeCards;
+-@property (nonatomic, retain) NSArray<UILabel *> *themePrimaryLabels;
+-@property (nonatomic, retain) NSArray<UILabel *> *themeSecondaryLabels;
+-@property (nonatomic, retain) UISwitch *lowerHalfCommentSwitch;
++@property (nonatomic, retain) UISegmentedControl *tapGestureModeControl;
+ @property (nonatomic, retain) UISwitch *settingsGestureMineOnlySwitch;
+ @property (nonatomic, retain) UISlider *verticalOffsetSlider;
+ @property (nonatomic, retain) UILabel *verticalOffsetValueLabel;
+-@property (nonatomic, retain) UISwitch *collapseSwitch;
+ @property (nonatomic, retain) UISlider *doubleTapSplitSlider;
+ @property (nonatomic, retain) UILabel *doubleTapSplitValueLabel;
+ @property (nonatomic, retain) UISwitch *wanToWSwitch;
+@@ -18896,21 +18320,12 @@
+ @property (nonatomic, retain) UISegmentedControl *topCategoryVisibleCountControl;
+ @property (nonatomic, retain) UISwitch *topMenuMorphSwitch;
+ @property (nonatomic, retain) UISwitch *transparentGlassSwitch;
+-@property (nonatomic, retain) UISwitch *albumMorphStyleSwitch;
+ @property (nonatomic, retain) UISwitch *hideBottomTitlesSwitch;
+ @property (nonatomic, retain) UISwitch *bottomBarDisplaySwitch;
+ @property (nonatomic, retain) UISwitch *internalFullscreenSwitch;
+ @property (nonatomic, retain) UISwitch *messageBadgeSwitch;
+ @property (nonatomic, retain) UISwitch *avatarMenuDownloadSwitch;
+-@property (nonatomic, retain) UISwitch *preferHighestPlaybackSwitch;
+ @property (nonatomic, retain) UISwitch *forceDarkBottomBarSwitch;
+-@property (nonatomic, retain) UISegmentedControl *bottomContentStyleControl;
+-@property (nonatomic, retain) UISegmentedControl *settingsGlassModeControl;
+-@property (nonatomic, retain) UIVisualEffectView *settingsGlassBackgroundView;
+-@property (nonatomic, retain) UISwitch *shareGlassSwitch;
+-@property (nonatomic, retain) UISegmentedControl *shareGlassModeControl;
+-@property (nonatomic, retain) UISwitch *chatCapsuleSwitch;
+-@property (nonatomic, retain) UISwitch *chatSeparateLeftSwitch;
+ @property (nonatomic, retain) UISwitch *masterSwitch;
+ @property (nonatomic, retain) UISwitch *interactionDiagnosticSwitch;
+ @property (nonatomic, retain) UISwitch *commentGlassSwitch;
+@@ -18918,26 +18333,21 @@
+ @property (nonatomic, retain) UISlider *commentGlassCornerSlider;
+ @property (nonatomic, retain) UILabel *commentGlassCornerValueLabel;
+ @property (nonatomic, retain) UILabel *authorizationFooter;
+-@property (nonatomic, retain) NSTimer *systemThemeTimer;
+-@property (nonatomic, assign) UIUserInterfaceStyle lastAppliedSystemStyle;
+ @property (nonatomic, assign) CGFloat lastResponsiveWidth;
+ - (void)applyCurrentTheme;
+ - (void)updateApplyButtonTint:(UIColor *)colour;
+ - (void)refreshAuthorizationUI;
+ - (void)manualAuthorizationCheck:(UIButton *)sender;
++- (void)updateTapGestureModeUI;
+ @end
+ 
+ @implementation AWELiquidSettingsController
+ 
+ - (void)viewDidLoad {
+     [super viewDidLoad];
+-
+-    self.title = @"LiquidBar 设置 · 1.0.58";
+-    if (@available(iOS 13.0, *)) {
+-        self.view.backgroundColor = UIColor.systemGroupedBackgroundColor;
+-    } else {
+-        self.view.backgroundColor = UIColor.whiteColor;
+-    }
++    self.title = @"LiquidBar · 2.0";
++    self.view.backgroundColor = UIColor.systemGroupedBackgroundColor;
++    self.pendingAccentColor = AWEStoredAccentColor();
+ 
+     BOOL nativeSettingsPush =
+         [objc_getAssociatedObject(self, &kAWELiquidSettingsNativePushKey) boolValue];
+@@ -18948,1070 +18358,309 @@
+                                                          action:@selector(closeSettings)];
+     }
+ 
+-    self.pendingAccentColor = AWEStoredAccentColor();
+-
+-    UIVisualEffectView *settingsGlassBackground =
+-        [[UIVisualEffectView alloc] initWithEffect:nil];
+-    settingsGlassBackground.translatesAutoresizingMaskIntoConstraints = NO;
+-    settingsGlassBackground.userInteractionEnabled = NO;
+-    [self.view insertSubview:settingsGlassBackground atIndex:0];
+-    [NSLayoutConstraint activateConstraints:@[
+-        [settingsGlassBackground.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
+-        [settingsGlassBackground.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+-        [settingsGlassBackground.topAnchor constraintEqualToAnchor:self.view.topAnchor],
+-        [settingsGlassBackground.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor]
+-    ]];
+-    self.settingsGlassBackgroundView = settingsGlassBackground;
+-
+-    UIView *masterCard = [UIView new];
+-    masterCard.translatesAutoresizingMaskIntoConstraints = NO;
+-    masterCard.layer.cornerRadius = 24.0;
+-    masterCard.layer.cornerCurve = kCACornerCurveContinuous;
+-    masterCard.clipsToBounds = YES;
+-    masterCard.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+-
+-    UILabel *masterTitle = [UILabel new];
+-    masterTitle.text = @"LiquidBar 总开关";
+-    masterTitle.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightSemibold];
++    UIColor *accent = self.pendingAccentColor ?: AWEStoredAccentColor();
+ 
++    /* 基础 */
+     UISwitch *masterSwitch = [UISwitch new];
+-    masterSwitch.onTintColor = AWEStoredAccentColor();
+-    [masterSwitch addTarget:self action:@selector(masterSwitchChanged:)
+-           forControlEvents:UIControlEventValueChanged];
++    masterSwitch.on = AWEAuthorizationValid() && AWEMasterEnabledStored();
++    masterSwitch.onTintColor = accent;
++    [masterSwitch addTarget:self action:@selector(masterSwitchChanged:) forControlEvents:UIControlEventValueChanged];
+     self.masterSwitch = masterSwitch;
++    UIStackView *masterRow = AWESettingsSwitchRow(@"LiquidBar 总开关", masterSwitch);
+ 
+-    UIButton *albumButtonsButton = AWECreateGlassTextButton(
+-        @"调整底栏按钮布局", AWEStoredAccentColor(), YES);
+-    [albumButtonsButton addTarget:self
+-                           action:@selector(openAlbumMorphButtonSettings:)
+-                 forControlEvents:UIControlEventTouchUpInside];
+-
+-    UIStackView *masterRow = [[UIStackView alloc] initWithArrangedSubviews:@[masterTitle, masterSwitch]];
+-    masterRow.axis = UILayoutConstraintAxisHorizontal;
+-    masterRow.alignment = UIStackViewAlignmentCenter;
+-    masterRow.spacing = 12.0;
+-
+-    UIButton *authorizationCheckButton =
+-        AWECreateGlassTextButton(@"重新检测授权", UIColor.systemGrayColor, NO);
+-    [authorizationCheckButton addTarget:self
+-                                 action:@selector(manualAuthorizationCheck:)
+-                       forControlEvents:UIControlEventTouchUpInside];
+-
+-    UIStackView *masterStack = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[masterRow, albumButtonsButton]];
+-    masterStack.translatesAutoresizingMaskIntoConstraints = NO;
+-    masterStack.axis = UILayoutConstraintAxisVertical;
+-    masterStack.spacing = 10.0;
+-    [masterCard addSubview:masterStack];
+-    [NSLayoutConstraint activateConstraints:@[
+-        [masterStack.leadingAnchor constraintEqualToAnchor:masterCard.leadingAnchor constant:14.0],
+-        [masterStack.trailingAnchor constraintEqualToAnchor:masterCard.trailingAnchor constant:-14.0],
+-        [masterStack.topAnchor constraintEqualToAnchor:masterCard.topAnchor constant:14.0],
+-        [masterStack.bottomAnchor constraintEqualToAnchor:masterCard.bottomAnchor constant:-14.0]
+-    ]];
+-
+-    UIView *accentCard = [UIView new];
+-    accentCard.translatesAutoresizingMaskIntoConstraints = NO;
+-    accentCard.layer.cornerRadius = 24.0;
+-    accentCard.layer.cornerCurve = kCACornerCurveContinuous;
+-    accentCard.clipsToBounds = YES;
+-    accentCard.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+-
+-    UILabel *headline = [UILabel new];
+-    headline.text = @"强调色";
+-    headline.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightSemibold];
++    UIButton *albumButtonsButton = AWECreateGlassTextButton(@"调整底栏按钮布局", accent, YES);
++    [albumButtonsButton addTarget:self action:@selector(openAlbumMorphButtonSettings:) forControlEvents:UIControlEventTouchUpInside];
+ 
+     UIView *preview = [UIView new];
+     preview.translatesAutoresizingMaskIntoConstraints = NO;
+-    preview.backgroundColor = self.pendingAccentColor;
+-    preview.layer.cornerRadius = 18.0;
++    preview.backgroundColor = accent;
++    preview.layer.cornerRadius = 17.0;
+     preview.layer.cornerCurve = kCACornerCurveContinuous;
+-    preview.layer.borderWidth = 1.0;
+-    preview.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.24].CGColor;
+     [NSLayoutConstraint activateConstraints:@[
+-        [preview.widthAnchor constraintEqualToConstant:36.0],
+-        [preview.heightAnchor constraintEqualToConstant:36.0]
++        [preview.widthAnchor constraintEqualToConstant:34.0],
++        [preview.heightAnchor constraintEqualToConstant:34.0]
+     ]];
+     self.previewView = preview;
+-
+     UIButton *pickerButton = AWECreateGlassTextButton(@"调色盘", UIColor.systemGrayColor, NO);
+-    [pickerButton addTarget:self action:@selector(openAccentPicker:)
+-           forControlEvents:UIControlEventTouchUpInside];
+-
+-    UIButton *applyButton = AWECreateGlassTextButton(@"确认并应用", self.pendingAccentColor, YES);
+-    [applyButton addTarget:self action:@selector(confirmAccentColor:)
+-          forControlEvents:UIControlEventTouchUpInside];
++    [pickerButton addTarget:self action:@selector(openAccentPicker:) forControlEvents:UIControlEventTouchUpInside];
++    UIButton *applyButton = AWECreateGlassTextButton(@"应用强调色", accent, YES);
++    [applyButton addTarget:self action:@selector(confirmAccentColor:) forControlEvents:UIControlEventTouchUpInside];
+     self.applyButton = applyButton;
+-
+-    UIStackView *accentRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[preview, pickerButton, applyButton]];
++    UIStackView *accentRow = [[UIStackView alloc] initWithArrangedSubviews:@[preview, pickerButton, applyButton]];
+     accentRow.axis = UILayoutConstraintAxisHorizontal;
+     accentRow.alignment = UIStackViewAlignmentCenter;
+     accentRow.spacing = 8.0;
+-
+-    // Activate sibling constraints only after both buttons belong to the same
+-    // stack-view hierarchy. Activating this before accentRow exists raises
+-    // NSGenericException (anchors have no common ancestor).
+     [pickerButton.widthAnchor constraintEqualToAnchor:applyButton.widthAnchor].active = YES;
++    UIView *basicCard = AWESettingsCard(@"基础", @[masterRow, albumButtonsButton, accentRow]);
+ 
+-    UIStackView *accentStack = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[headline, accentRow]];
+-    accentStack.translatesAutoresizingMaskIntoConstraints = NO;
+-    accentStack.axis = UILayoutConstraintAxisVertical;
+-    accentStack.spacing = 10.0;
+-    [accentCard addSubview:accentStack];
+-    [NSLayoutConstraint activateConstraints:@[
+-        [accentStack.leadingAnchor constraintEqualToAnchor:accentCard.leadingAnchor constant:14.0],
+-        [accentStack.trailingAnchor constraintEqualToAnchor:accentCard.trailingAnchor constant:-14.0],
+-        [accentStack.topAnchor constraintEqualToAnchor:accentCard.topAnchor constant:14.0],
+-        [accentStack.bottomAnchor constraintEqualToAnchor:accentCard.bottomAnchor constant:-14.0]
+-    ]];
+-
+-    UIView *positionCard = [UIView new];
+-    positionCard.translatesAutoresizingMaskIntoConstraints = NO;
+-    positionCard.layer.cornerRadius = 24.0;
+-    positionCard.layer.cornerCurve = kCACornerCurveContinuous;
+-    positionCard.clipsToBounds = YES;
+-    if (@available(iOS 13.0, *)) {
+-        positionCard.backgroundColor =
+-            UIColor.secondarySystemGroupedBackgroundColor;
+-    } else {
+-        positionCard.backgroundColor =
+-            [UIColor colorWithWhite:0.94 alpha:1.0];
+-    }
+-
+-    UILabel *positionTitle = [UILabel new];
+-    positionTitle.text = @"底栏垂直位置";
+-    positionTitle.font =
+-        [UIFont systemFontOfSize:16.0 weight:UIFontWeightSemibold];
+-
++    /* 底栏 */
+     UILabel *positionValue = [UILabel new];
+-    positionValue.font =
+-        [UIFont monospacedDigitSystemFontOfSize:13.0 weight:UIFontWeightMedium];
+-    positionValue.textColor = UIColor.secondaryLabelColor;
++    positionValue.font = [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
+     self.verticalOffsetValueLabel = positionValue;
+-
+     UISlider *positionSlider = [UISlider new];
+     positionSlider.minimumValue = -24.0;
+     positionSlider.maximumValue = 80.0;
+     positionSlider.value = AWEStoredVerticalOffset();
+-    positionSlider.minimumTrackTintColor = AWEStoredAccentColor();
+-    [positionSlider addTarget:self
+-                       action:@selector(verticalOffsetSliderChanged:)
+-             forControlEvents:UIControlEventValueChanged];
++    positionSlider.minimumTrackTintColor = accent;
++    [positionSlider addTarget:self action:@selector(verticalOffsetSliderChanged:) forControlEvents:UIControlEventValueChanged];
+     self.verticalOffsetSlider = positionSlider;
++    UIStackView *positionRow = AWESettingsSliderRow(@"底栏垂直位置", positionValue, positionSlider);
+ 
+-    UIStackView *positionStack =
+-        [[UIStackView alloc] initWithArrangedSubviews:@[
+-            positionTitle, positionValue, positionSlider
+-        ]];
+-    positionStack.translatesAutoresizingMaskIntoConstraints = NO;
+-    positionStack.axis = UILayoutConstraintAxisVertical;
+-    positionStack.spacing = 7.0;
+-    [positionCard addSubview:positionStack];
+-    [NSLayoutConstraint activateConstraints:@[
+-        [positionStack.leadingAnchor
+-            constraintEqualToAnchor:positionCard.leadingAnchor constant:14.0],
+-        [positionStack.trailingAnchor
+-            constraintEqualToAnchor:positionCard.trailingAnchor constant:-14.0],
+-        [positionStack.topAnchor
+-            constraintEqualToAnchor:positionCard.topAnchor constant:14.0],
+-        [positionStack.bottomAnchor
+-            constraintEqualToAnchor:positionCard.bottomAnchor constant:-14.0]
+-    ]];
++    NSMutableArray<UIView *> *bottomItems = [NSMutableArray arrayWithObject:positionRow];
++    if (AWECustomBottomBarReleaseAllowed()) {
++        UISwitch *displaySwitch = [UISwitch new];
++        displaySwitch.on = AWEBottomBarDisplayEnabled();
++        displaySwitch.onTintColor = accent;
++        [displaySwitch addTarget:self action:@selector(bottomBarDisplaySwitchChanged:) forControlEvents:UIControlEventValueChanged];
++        self.bottomBarDisplaySwitch = displaySwitch;
++        [bottomItems addObject:AWESettingsSwitchRow(@"显示液态底栏", displaySwitch)];
++    }
++    UISwitch *fullscreenSwitch = [UISwitch new];
++    fullscreenSwitch.on = AWEInternalFullscreenEnabled();
++    fullscreenSwitch.onTintColor = accent;
++    [fullscreenSwitch addTarget:self action:@selector(internalFullscreenSwitchChanged:) forControlEvents:UIControlEventValueChanged];
++    self.internalFullscreenSwitch = fullscreenSwitch;
++    [bottomItems addObject:AWESettingsSwitchRow(@"全屏播放", fullscreenSwitch)];
+ 
+-    UIView *gestureCard = [UIView new];
+-    gestureCard.translatesAutoresizingMaskIntoConstraints = NO;
+-    gestureCard.layer.cornerRadius = 24.0;
+-    gestureCard.layer.cornerCurve = kCACornerCurveContinuous;
+-    gestureCard.clipsToBounds = YES;
+-    if (@available(iOS 13.0, *)) {
+-        gestureCard.backgroundColor =
+-            UIColor.secondarySystemGroupedBackgroundColor;
+-    } else {
+-        gestureCard.backgroundColor =
+-            [UIColor colorWithWhite:0.94 alpha:1.0];
+-    }
++    UISwitch *hideTitlesSwitch = [UISwitch new];
++    hideTitlesSwitch.on = AWEHideBottomTitlesEnabled();
++    hideTitlesSwitch.onTintColor = accent;
++    [hideTitlesSwitch addTarget:self action:@selector(hideBottomTitlesSwitchChanged:) forControlEvents:UIControlEventValueChanged];
++    self.hideBottomTitlesSwitch = hideTitlesSwitch;
++    [bottomItems addObject:AWESettingsSwitchRow(@"隐藏底栏标题", hideTitlesSwitch)];
+ 
+-    UILabel *gestureTitle = [UILabel new];
+-    gestureTitle.text = @"分区双击";
+-    gestureTitle.font =
+-        [UIFont systemFontOfSize:16.0 weight:UIFontWeightSemibold];
+-
+-    UIStackView *gestureTextStack =
+-        [[UIStackView alloc] initWithArrangedSubviews:@[
+-            gestureTitle
+-        ]];
+-    gestureTextStack.axis = UILayoutConstraintAxisVertical;
+-    gestureTextStack.spacing = 4.0;
++    UISwitch *badgeSwitch = [UISwitch new];
++    badgeSwitch.on = AWEMessageBadgeEnabled();
++    badgeSwitch.onTintColor = accent;
++    [badgeSwitch addTarget:self action:@selector(messageBadgeSwitchChanged:) forControlEvents:UIControlEventValueChanged];
++    self.messageBadgeSwitch = badgeSwitch;
++    [bottomItems addObject:AWESettingsSwitchRow(@"显示朋友/消息未读角标", badgeSwitch)];
+ 
+-    UISwitch *gestureSwitch = [UISwitch new];
+-    gestureSwitch.on =
+-        [[NSUserDefaults standardUserDefaults]
+-            boolForKey:kAWELowerHalfDoubleTapCommentDefaultsKey];
+-    gestureSwitch.onTintColor = AWEStoredAccentColor();
+-    [gestureSwitch addTarget:self
+-                      action:@selector(lowerHalfCommentSwitchChanged:)
+-            forControlEvents:UIControlEventValueChanged];
+-    self.lowerHalfCommentSwitch = gestureSwitch;
+-
+-    UIStackView *gestureHeader =
+-        [[UIStackView alloc] initWithArrangedSubviews:@[
+-            gestureTextStack, gestureSwitch
+-        ]];
+-    gestureHeader.axis = UILayoutConstraintAxisHorizontal;
+-    gestureHeader.alignment = UIStackViewAlignmentCenter;
+-    gestureHeader.spacing = 12.0;
++    if (AWEIsIOS27OrLater()) {
++        UISwitch *clearSwitch = [UISwitch new];
++        clearSwitch.on = AWEIOS27ClearBottomGlassEnabled();
++        clearSwitch.onTintColor = accent;
++        [clearSwitch addTarget:self action:@selector(forceDarkBottomBarSwitchChanged:) forControlEvents:UIControlEventValueChanged];
++        self.forceDarkBottomBarSwitch = clearSwitch;
++        [bottomItems addObject:AWESettingsSwitchRow(@"底栏纯透明（首页 + 朋友 + 个人页）", clearSwitch)];
++    }
++    UIView *bottomCard = AWESettingsCard(@"底栏", bottomItems);
++
++    /* 手势 */
++    UISegmentedControl *tapMode = [[UISegmentedControl alloc] initWithItems:@[@"关闭", @"分区双击", @"双击评论·三击点赞"]];
++    tapMode.selectedSegmentIndex = AWEStoredTapGestureMode();
++    [tapMode addTarget:self action:@selector(tapGestureModeChanged:) forControlEvents:UIControlEventValueChanged];
++    self.tapGestureModeControl = tapMode;
++    UIStackView *tapModeRow = [[UIStackView alloc] initWithArrangedSubviews:@[tapMode]];
++    tapModeRow.axis = UILayoutConstraintAxisVertical;
+ 
+     UILabel *splitValue = [UILabel new];
+-    splitValue.font =
+-        [UIFont monospacedDigitSystemFontOfSize:13.0 weight:UIFontWeightMedium];
+-    splitValue.textColor = UIColor.secondaryLabelColor;
++    splitValue.font = [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
+     self.doubleTapSplitValueLabel = splitValue;
+-
+     UISlider *splitSlider = [UISlider new];
+     splitSlider.minimumValue = 0.20;
+     splitSlider.maximumValue = 0.80;
+     splitSlider.value = AWEStoredDoubleTapLikeFraction();
+-    splitSlider.minimumTrackTintColor = AWEStoredAccentColor();
+-    splitSlider.enabled = gestureSwitch.isOn;
+-    [splitSlider addTarget:self
+-                    action:@selector(doubleTapSplitSliderChanged:)
+-          forControlEvents:UIControlEventValueChanged];
++    splitSlider.minimumTrackTintColor = accent;
++    [splitSlider addTarget:self action:@selector(doubleTapSplitSliderChanged:) forControlEvents:UIControlEventValueChanged];
+     self.doubleTapSplitSlider = splitSlider;
++    UIStackView *splitRow = AWESettingsSliderRow(@"分区比例", splitValue, splitSlider);
+ 
+-    UILabel *settingsGestureMineOnlyLabel = [UILabel new];
+-    settingsGestureMineOnlyLabel.text = @"双指长按仅在‘我’页面触发";
+-    settingsGestureMineOnlyLabel.font =
+-        [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UISwitch *settingsGestureMineOnlySwitch = [UISwitch new];
+-    settingsGestureMineOnlySwitch.on = AWESettingsGestureMineOnlyEnabled();
+-    settingsGestureMineOnlySwitch.onTintColor = AWEStoredAccentColor();
+-    [settingsGestureMineOnlySwitch addTarget:self
+-        action:@selector(settingsGestureMineOnlySwitchChanged:)
+-        forControlEvents:UIControlEventValueChanged];
+-    self.settingsGestureMineOnlySwitch = settingsGestureMineOnlySwitch;
+-    UIStackView *settingsGestureMineOnlyRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[settingsGestureMineOnlyLabel,
+-                                  settingsGestureMineOnlySwitch]];
+-    settingsGestureMineOnlyRow.axis = UILayoutConstraintAxisHorizontal;
+-    settingsGestureMineOnlyRow.alignment = UIStackViewAlignmentCenter;
+-    settingsGestureMineOnlyRow.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UIStackView *gestureStack =
+-        [[UIStackView alloc] initWithArrangedSubviews:@[
+-            gestureHeader, splitValue, splitSlider, settingsGestureMineOnlyRow
+-        ]];
+-    gestureStack.translatesAutoresizingMaskIntoConstraints = NO;
+-    gestureStack.axis = UILayoutConstraintAxisVertical;
+-    gestureStack.spacing = 9.0;
+-    [gestureCard addSubview:gestureStack];
+-    [NSLayoutConstraint activateConstraints:@[
+-        [gestureStack.leadingAnchor
+-            constraintEqualToAnchor:gestureCard.leadingAnchor constant:14.0],
+-        [gestureStack.trailingAnchor
+-            constraintEqualToAnchor:gestureCard.trailingAnchor constant:-14.0],
+-        [gestureStack.topAnchor
+-            constraintEqualToAnchor:gestureCard.topAnchor constant:14.0],
+-        [gestureStack.bottomAnchor
+-            constraintEqualToAnchor:gestureCard.bottomAnchor constant:-14.0]
+-    ]];
+-
+-    UIView *chatCard = [UIView new];
+-    chatCard.translatesAutoresizingMaskIntoConstraints = NO;
+-    chatCard.layer.cornerRadius = 24.0;
+-    chatCard.layer.cornerCurve = kCACornerCurveContinuous;
+-    chatCard.clipsToBounds = YES;
+-    if (@available(iOS 13.0, *)) {
+-        chatCard.backgroundColor =
+-            UIColor.secondarySystemGroupedBackgroundColor;
+-    } else {
+-        chatCard.backgroundColor =
+-            [UIColor colorWithWhite:0.94 alpha:1.0];
+-    }
+-
+-    UILabel *chatTitle = [UILabel new];
+-    chatTitle.text = @"聊天输入框（实验）";
+-    chatTitle.font =
+-        [UIFont systemFontOfSize:16.0 weight:UIFontWeightSemibold];
+-
+-    UILabel *capsuleLabel = [UILabel new];
+-    capsuleLabel.text = @"启用圆角胶囊";
+-    capsuleLabel.font =
+-        [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-
+-    UISwitch *capsuleSwitch = [UISwitch new];
+-    capsuleSwitch.on = AWEChatCapsuleEnabled();
+-    capsuleSwitch.onTintColor = AWEStoredAccentColor();
+-    [capsuleSwitch addTarget:self
+-                      action:@selector(chatCapsuleSwitchChanged:)
+-            forControlEvents:UIControlEventValueChanged];
+-    self.chatCapsuleSwitch = capsuleSwitch;
+-
+-    UIStackView *capsuleRow =
+-        [[UIStackView alloc] initWithArrangedSubviews:@[
+-            capsuleLabel, capsuleSwitch
+-        ]];
+-    capsuleRow.axis = UILayoutConstraintAxisHorizontal;
+-    capsuleRow.alignment = UIStackViewAlignmentCenter;
+-    capsuleRow.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UILabel *separateLabel = [UILabel new];
+-    separateLabel.text = @"左侧按钮与背景分离";
+-    separateLabel.font =
+-        [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-
+-    UISwitch *separateSwitch = [UISwitch new];
+-    separateSwitch.on = AWEChatSeparateLeftEnabled();
+-    separateSwitch.enabled = capsuleSwitch.isOn;
+-    separateSwitch.onTintColor = AWEStoredAccentColor();
+-    [separateSwitch addTarget:self
+-                       action:@selector(chatSeparateLeftSwitchChanged:)
+-             forControlEvents:UIControlEventValueChanged];
+-    self.chatSeparateLeftSwitch = separateSwitch;
+-
+-    UIStackView *separateRow =
+-        [[UIStackView alloc] initWithArrangedSubviews:@[
+-            separateLabel, separateSwitch
+-        ]];
+-    separateRow.axis = UILayoutConstraintAxisHorizontal;
+-    separateRow.alignment = UIStackViewAlignmentCenter;
+-    separateRow.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UIStackView *chatStack =
+-        [[UIStackView alloc] initWithArrangedSubviews:@[
+-            chatTitle, capsuleRow, separateRow
+-        ]];
+-    chatStack.translatesAutoresizingMaskIntoConstraints = NO;
+-    chatStack.axis = UILayoutConstraintAxisVertical;
+-    chatStack.spacing = 10.0;
+-
+-    [chatCard addSubview:chatStack];
+-    [NSLayoutConstraint activateConstraints:@[
+-        [chatStack.leadingAnchor
+-            constraintEqualToAnchor:chatCard.leadingAnchor constant:14.0],
+-        [chatStack.trailingAnchor
+-            constraintEqualToAnchor:chatCard.trailingAnchor constant:-14.0],
+-        [chatStack.topAnchor
+-            constraintEqualToAnchor:chatCard.topAnchor constant:14.0],
+-        [chatStack.bottomAnchor
+-            constraintEqualToAnchor:chatCard.bottomAnchor constant:-14.0]
+-    ]];
+-
+-    UIView *wanCard = [UIView new];
+-    wanCard.translatesAutoresizingMaskIntoConstraints = NO;
+-    wanCard.layer.cornerRadius = 24.0;
+-    wanCard.layer.cornerCurve = kCACornerCurveContinuous;
+-    wanCard.clipsToBounds = YES;
+-    if (@available(iOS 13.0, *)) {
+-        wanCard.backgroundColor =
+-            UIColor.secondarySystemGroupedBackgroundColor;
+-    } else {
+-        wanCard.backgroundColor =
+-            [UIColor colorWithWhite:0.94 alpha:1.0];
+-    }
+-
+-    UILabel *wanTitle = [UILabel new];
+-    wanTitle.text = @"数字计数：万 → W";
+-    wanTitle.font =
+-        [UIFont systemFontOfSize:16.0 weight:UIFontWeightSemibold];
+-
+-    UIStackView *wanTextStack =
+-        [[UIStackView alloc] initWithArrangedSubviews:@[
+-            wanTitle
+-        ]];
+-    wanTextStack.axis = UILayoutConstraintAxisVertical;
+-    wanTextStack.spacing = 4.0;
+-
+-    UISwitch *wanSwitch = [UISwitch new];
+-    wanSwitch.on = AWEWanToWEnabled();
+-    wanSwitch.onTintColor = AWEStoredAccentColor();
+-    [wanSwitch addTarget:self
+-                  action:@selector(wanToWSwitchChanged:)
+-        forControlEvents:UIControlEventValueChanged];
+-    self.wanToWSwitch = wanSwitch;
+-
+-    UIStackView *wanRow =
+-        [[UIStackView alloc] initWithArrangedSubviews:@[
+-            wanTextStack, wanSwitch
+-        ]];
+-    wanRow.translatesAutoresizingMaskIntoConstraints = NO;
+-    wanRow.axis = UILayoutConstraintAxisHorizontal;
+-    wanRow.alignment = UIStackViewAlignmentCenter;
+-    wanRow.spacing = 12.0;
+-    [wanCard addSubview:wanRow];
+-    [NSLayoutConstraint activateConstraints:@[
+-        [wanRow.leadingAnchor
+-            constraintEqualToAnchor:wanCard.leadingAnchor constant:14.0],
+-        [wanRow.trailingAnchor
+-            constraintEqualToAnchor:wanCard.trailingAnchor constant:-14.0],
+-        [wanRow.topAnchor
+-            constraintEqualToAnchor:wanCard.topAnchor constant:14.0],
+-        [wanRow.bottomAnchor
+-            constraintEqualToAnchor:wanCard.bottomAnchor constant:-14.0]
+-    ]];
+-
+-    UIView *commentGlassCard = [UIView new];
+-    commentGlassCard.translatesAutoresizingMaskIntoConstraints = NO;
+-    commentGlassCard.layer.cornerRadius = 24.0;
+-    commentGlassCard.layer.cornerCurve = kCACornerCurveContinuous;
+-    commentGlassCard.clipsToBounds = YES;
+-    commentGlassCard.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+-
+-    UILabel *commentGlassTitle = [UILabel new];
+-    commentGlassTitle.text = @"评论区液态玻璃";
+-    commentGlassTitle.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightSemibold];
+-    UISwitch *commentGlassSwitch = [UISwitch new];
+-    commentGlassSwitch.on = AWECommentGlassEnabledSetting();
+-    commentGlassSwitch.onTintColor = AWEStoredAccentColor();
+-    [commentGlassSwitch addTarget:self
+-                           action:@selector(commentGlassSwitchChanged:)
+-                 forControlEvents:UIControlEventValueChanged];
+-    self.commentGlassSwitch = commentGlassSwitch;
+-    UIStackView *commentGlassHeader = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[commentGlassTitle, commentGlassSwitch]];
+-    commentGlassHeader.axis = UILayoutConstraintAxisHorizontal;
+-    commentGlassHeader.alignment = UIStackViewAlignmentCenter;
+-    commentGlassHeader.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UILabel *commentGlassModeLabel = [UILabel new];
+-    commentGlassModeLabel.text = @"材质模式";
+-    commentGlassModeLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UISegmentedControl *commentGlassMode = [[UISegmentedControl alloc]
+-        initWithItems:@[@"纯透明", @"色调"]];
+-    commentGlassMode.selectedSegmentIndex = AWECommentGlassModeSetting();
+-    commentGlassMode.enabled = commentGlassSwitch.isOn;
+-    [commentGlassMode addTarget:self
+-                         action:@selector(commentGlassModeChanged:)
+-               forControlEvents:UIControlEventValueChanged];
+-    self.commentGlassModeControl = commentGlassMode;
+-    UIStackView *commentGlassModeRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[commentGlassModeLabel, commentGlassMode]];
+-    commentGlassModeRow.axis = UILayoutConstraintAxisHorizontal;
+-    commentGlassModeRow.alignment = UIStackViewAlignmentCenter;
+-    commentGlassModeRow.spacing = 12.0;
+-    [commentGlassMode setContentHuggingPriority:UILayoutPriorityRequired
+-                                       forAxis:UILayoutConstraintAxisHorizontal];
+-
+-    UILabel *commentGlassCornerLabel = [UILabel new];
+-    commentGlassCornerLabel.text = @"面板圆角";
+-    commentGlassCornerLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UILabel *commentGlassCornerValueLabel = [UILabel new];
+-    commentGlassCornerValueLabel.font = [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
+-    commentGlassCornerValueLabel.textColor = UIColor.secondaryLabelColor;
+-    commentGlassCornerValueLabel.text = [NSString stringWithFormat:@"%.0f pt", AWECommentGlassCornerRadiusSetting()];
+-    self.commentGlassCornerValueLabel = commentGlassCornerValueLabel;
+-    UIStackView *commentGlassCornerHeader = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[commentGlassCornerLabel, commentGlassCornerValueLabel]];
+-    commentGlassCornerHeader.axis = UILayoutConstraintAxisHorizontal;
+-    commentGlassCornerHeader.alignment = UIStackViewAlignmentCenter;
+-    commentGlassCornerHeader.distribution = UIStackViewDistributionEqualSpacing;
+-    UISlider *commentGlassCornerSlider = [UISlider new];
+-    commentGlassCornerSlider.minimumValue = 16.0;
+-    commentGlassCornerSlider.maximumValue = 40.0;
+-    commentGlassCornerSlider.value = AWECommentGlassCornerRadiusSetting();
+-    commentGlassCornerSlider.minimumTrackTintColor = AWEStoredAccentColor();
+-    commentGlassCornerSlider.enabled = commentGlassSwitch.isOn;
+-    [commentGlassCornerSlider addTarget:self
+-        action:@selector(commentGlassCornerRadiusChanged:)
+-        forControlEvents:UIControlEventValueChanged];
+-    self.commentGlassCornerSlider = commentGlassCornerSlider;
+-    UIStackView *commentGlassCornerRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[commentGlassCornerHeader, commentGlassCornerSlider]];
+-    commentGlassCornerRow.axis = UILayoutConstraintAxisVertical;
+-    commentGlassCornerRow.spacing = 5.0;
+-
+-    UILabel *commentGlassHint = [UILabel new];
+-    commentGlassHint.text = @"色调跟随抖音浅色/深色；圆角仅调整评论面板顶部。";
+-    commentGlassHint.font = [UIFont systemFontOfSize:11.5 weight:UIFontWeightRegular];
+-    commentGlassHint.textColor = UIColor.tertiaryLabelColor;
+-    commentGlassHint.numberOfLines = 0;
+-
+-    UIStackView *commentGlassStack = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[commentGlassHeader, commentGlassModeRow,
+-                                  commentGlassCornerRow, commentGlassHint]];
+-    commentGlassStack.translatesAutoresizingMaskIntoConstraints = NO;
+-    commentGlassStack.axis = UILayoutConstraintAxisVertical;
+-    commentGlassStack.spacing = 10.0;
+-    [commentGlassCard addSubview:commentGlassStack];
+-    [NSLayoutConstraint activateConstraints:@[
+-        [commentGlassStack.leadingAnchor constraintEqualToAnchor:commentGlassCard.leadingAnchor constant:14.0],
+-        [commentGlassStack.trailingAnchor constraintEqualToAnchor:commentGlassCard.trailingAnchor constant:-14.0],
+-        [commentGlassStack.topAnchor constraintEqualToAnchor:commentGlassCard.topAnchor constant:14.0],
+-        [commentGlassStack.bottomAnchor constraintEqualToAnchor:commentGlassCard.bottomAnchor constant:-14.0]
+-    ]];
+-
+-    UIView *homeVisualCard = [UIView new];
+-    homeVisualCard.translatesAutoresizingMaskIntoConstraints = NO;
+-    homeVisualCard.layer.cornerRadius = 24.0;
+-    homeVisualCard.layer.cornerCurve = kCACornerCurveContinuous;
+-    homeVisualCard.clipsToBounds = YES;
+-    homeVisualCard.backgroundColor = UIColor.secondarySystemGroupedBackgroundColor;
+-
+-    UILabel *albumStyleLabel = [UILabel new];
+-    albumStyleLabel.text = @"原生液态底栏";
+-    albumStyleLabel.font =
+-        [UIFont systemFontOfSize:14.0 weight:UIFontWeightSemibold];
+-    UIStackView *albumStyleRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[albumStyleLabel]];
+-    albumStyleRow.axis = UILayoutConstraintAxisHorizontal;
+-    albumStyleRow.alignment = UIStackViewAlignmentCenter;
+-
+-    UIButton *newBarIconCenterButton = AWECreateGlassTextButton(
+-        @"打开新底栏图标中心", AWEStoredAccentColor(), YES);
+-    [newBarIconCenterButton addTarget:self
+-                               action:@selector(openNewBarIconCenter:)
+-                     forControlEvents:UIControlEventTouchUpInside];
+-
+-    UILabel *internalFullscreenLabel = [UILabel new];
+-    internalFullscreenLabel.text = @"全屏播放";
+-    internalFullscreenLabel.font =
+-        [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UISwitch *internalFullscreenSwitch = [UISwitch new];
+-    internalFullscreenSwitch.on = AWEInternalFullscreenEnabled();
+-    internalFullscreenSwitch.onTintColor = AWEStoredAccentColor();
+-    [internalFullscreenSwitch addTarget:self
+-        action:@selector(internalFullscreenSwitchChanged:)
+-        forControlEvents:UIControlEventValueChanged];
+-    self.internalFullscreenSwitch = internalFullscreenSwitch;
+-    UIStackView *internalFullscreenRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[internalFullscreenLabel, internalFullscreenSwitch]];
+-    internalFullscreenRow.axis = UILayoutConstraintAxisHorizontal;
+-    internalFullscreenRow.alignment = UIStackViewAlignmentCenter;
+-    internalFullscreenRow.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UILabel *bottomBarDisplayLabel = [UILabel new];
+-    bottomBarDisplayLabel.text = @"显示液态底栏";
+-    bottomBarDisplayLabel.font =
+-        [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UISwitch *bottomBarDisplaySwitch = [UISwitch new];
+-    bottomBarDisplaySwitch.on = AWEBottomBarDisplayEnabled();
+-    bottomBarDisplaySwitch.onTintColor = AWEStoredAccentColor();
+-    [bottomBarDisplaySwitch addTarget:self
+-        action:@selector(bottomBarDisplaySwitchChanged:)
+-        forControlEvents:UIControlEventValueChanged];
+-    self.bottomBarDisplaySwitch = bottomBarDisplaySwitch;
+-    UIStackView *bottomBarDisplayRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[bottomBarDisplayLabel, bottomBarDisplaySwitch]];
+-    bottomBarDisplayRow.axis = UILayoutConstraintAxisHorizontal;
+-    bottomBarDisplayRow.alignment = UIStackViewAlignmentCenter;
+-    bottomBarDisplayRow.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UILabel *bottomBarDisplayHint = [UILabel new];
+-    bottomBarDisplayHint.text = @"关闭后会直接卸载 LiquidBar 底栏与搜索，并归还抖音原生底栏宿主；顶部/右侧液态按钮、头像菜单、设置手势等功能继续工作。";
+-    bottomBarDisplayHint.font =
+-        [UIFont systemFontOfSize:11.5 weight:UIFontWeightRegular];
+-    bottomBarDisplayHint.textColor = UIColor.tertiaryLabelColor;
+-    bottomBarDisplayHint.numberOfLines = 0;
+-
+-    UILabel *hideTitlesLabel = [UILabel new];
+-    hideTitlesLabel.text = @"隐藏底栏标题";
+-    hideTitlesLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UISwitch *hideTitlesSwitch = [UISwitch new];
+-    hideTitlesSwitch.on = AWEHideBottomTitlesEnabled();
+-    hideTitlesSwitch.onTintColor = AWEStoredAccentColor();
+-    [hideTitlesSwitch addTarget:self
+-                         action:@selector(hideBottomTitlesSwitchChanged:)
+-               forControlEvents:UIControlEventValueChanged];
+-    self.hideBottomTitlesSwitch = hideTitlesSwitch;
+-    UIStackView *hideTitlesRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[hideTitlesLabel, hideTitlesSwitch]];
+-    hideTitlesRow.axis = UILayoutConstraintAxisHorizontal;
+-    hideTitlesRow.alignment = UIStackViewAlignmentCenter;
+-    hideTitlesRow.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UILabel *messageBadgeLabel = [UILabel new];
+-    messageBadgeLabel.text = @"显示朋友/消息未读角标";
+-    messageBadgeLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UISwitch *messageBadgeSwitch = [UISwitch new];
+-    messageBadgeSwitch.on = AWEMessageBadgeEnabled();
+-    messageBadgeSwitch.onTintColor = AWEStoredAccentColor();
+-    [messageBadgeSwitch addTarget:self
+-        action:@selector(messageBadgeSwitchChanged:)
+-        forControlEvents:UIControlEventValueChanged];
+-    self.messageBadgeSwitch = messageBadgeSwitch;
+-    UIStackView *messageBadgeRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[messageBadgeLabel, messageBadgeSwitch]];
+-    messageBadgeRow.axis = UILayoutConstraintAxisHorizontal;
+-    messageBadgeRow.alignment = UIStackViewAlignmentCenter;
+-    messageBadgeRow.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UILabel *avatarMenuDownloadLabel = [UILabel new];
+-    avatarMenuDownloadLabel.text = @"头像菜单显示下载功能";
+-    avatarMenuDownloadLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UISwitch *avatarMenuDownloadSwitch = [UISwitch new];
+-    avatarMenuDownloadSwitch.on = AWEAvatarMenuDownloadEnabled();
+-    avatarMenuDownloadSwitch.onTintColor = AWEStoredAccentColor();
+-    [avatarMenuDownloadSwitch addTarget:self
+-        action:@selector(avatarMenuDownloadSwitchChanged:)
+-        forControlEvents:UIControlEventValueChanged];
+-    self.avatarMenuDownloadSwitch = avatarMenuDownloadSwitch;
+-    UIStackView *avatarMenuDownloadRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[avatarMenuDownloadLabel, avatarMenuDownloadSwitch]];
+-    avatarMenuDownloadRow.axis = UILayoutConstraintAxisHorizontal;
+-    avatarMenuDownloadRow.alignment = UIStackViewAlignmentCenter;
+-    avatarMenuDownloadRow.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UILabel *preferHighestPlaybackLabel = [UILabel new];
+-    preferHighestPlaybackLabel.text = @"优先最高画质播放（最高码率，可能增加流量）";
+-    preferHighestPlaybackLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UISwitch *preferHighestPlaybackSwitch = [UISwitch new];
+-    preferHighestPlaybackSwitch.on = AWEPreferHighestPlaybackEnabled();
+-    preferHighestPlaybackSwitch.onTintColor = AWEStoredAccentColor();
+-    [preferHighestPlaybackSwitch addTarget:self
+-        action:@selector(preferHighestPlaybackSwitchChanged:)
+-        forControlEvents:UIControlEventValueChanged];
+-    self.preferHighestPlaybackSwitch = preferHighestPlaybackSwitch;
+-    UIStackView *preferHighestPlaybackRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[preferHighestPlaybackLabel, preferHighestPlaybackSwitch]];
+-    preferHighestPlaybackRow.axis = UILayoutConstraintAxisHorizontal;
+-    preferHighestPlaybackRow.alignment = UIStackViewAlignmentCenter;
+-    preferHighestPlaybackRow.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UILabel *forceDarkBottomBarLabel = [UILabel new];
+-    forceDarkBottomBarLabel.text = @"iOS 27 清透底栏（首页 + 朋友 + 个人页）";
+-    forceDarkBottomBarLabel.font =
+-        [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UISwitch *forceDarkBottomBarSwitch = [UISwitch new];
+-    forceDarkBottomBarSwitch.on = AWEIOS27ClearBottomGlassEnabled();
+-    forceDarkBottomBarSwitch.enabled = AWEIsIOS27OrLater();
+-    forceDarkBottomBarSwitch.onTintColor = AWEStoredAccentColor();
+-    [forceDarkBottomBarSwitch addTarget:self
+-        action:@selector(forceDarkBottomBarSwitchChanged:)
+-        forControlEvents:UIControlEventValueChanged];
+-    self.forceDarkBottomBarSwitch = forceDarkBottomBarSwitch;
+-    UIStackView *forceDarkBottomBarRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[
+-            forceDarkBottomBarLabel, forceDarkBottomBarSwitch
+-        ]];
+-    forceDarkBottomBarRow.axis = UILayoutConstraintAxisHorizontal;
+-    forceDarkBottomBarRow.alignment = UIStackViewAlignmentCenter;
+-    forceDarkBottomBarRow.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UILabel *topLabel = [UILabel new];
+-    topLabel.text = @"顶部菜单/分类液态玻璃（搜索独立保留）";
+-    topLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UISwitch *topSwitch = [UISwitch new];
+-    topSwitch.on = AWETopGlassEnabled();
+-    topSwitch.onTintColor = AWEStoredAccentColor();
+-    [topSwitch addTarget:self action:@selector(topGlassSwitchChanged:) forControlEvents:UIControlEventValueChanged];
+-    self.topGlassSwitch = topSwitch;
+-    UIStackView *topRow = [[UIStackView alloc] initWithArrangedSubviews:@[topLabel, topSwitch]];
+-    topRow.axis = UILayoutConstraintAxisHorizontal;
+-    topRow.alignment = UIStackViewAlignmentCenter;
+-    topRow.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UILabel *hideTopLeftButtonLabel = [UILabel new];
+-    hideTopLeftButtonLabel.text = @"完全隐藏左上角按钮";
+-    hideTopLeftButtonLabel.font =
+-        [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UISwitch *hideTopLeftButtonSwitch = [UISwitch new];
+-    hideTopLeftButtonSwitch.on = AWEHideTopLeftButtonEnabled();
+-    hideTopLeftButtonSwitch.onTintColor = AWEStoredAccentColor();
+-    [hideTopLeftButtonSwitch addTarget:self
+-        action:@selector(hideTopLeftButtonSwitchChanged:)
+-        forControlEvents:UIControlEventValueChanged];
+-    self.hideTopLeftButtonSwitch = hideTopLeftButtonSwitch;
+-    UIStackView *hideTopLeftButtonRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[hideTopLeftButtonLabel,
+-                                  hideTopLeftButtonSwitch]];
+-    hideTopLeftButtonRow.axis = UILayoutConstraintAxisHorizontal;
+-    hideTopLeftButtonRow.alignment = UIStackViewAlignmentCenter;
+-    hideTopLeftButtonRow.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UILabel *hideTopSearchButtonLabel = [UILabel new];
+-    hideTopSearchButtonLabel.text = @"完全隐藏右上角搜索按钮";
+-    hideTopSearchButtonLabel.font =
+-        [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UISwitch *hideTopSearchButtonSwitch = [UISwitch new];
+-    hideTopSearchButtonSwitch.on = AWEHideTopSearchButtonEnabled();
+-    hideTopSearchButtonSwitch.onTintColor = AWEStoredAccentColor();
+-    [hideTopSearchButtonSwitch addTarget:self
+-        action:@selector(hideTopSearchButtonSwitchChanged:)
+-        forControlEvents:UIControlEventValueChanged];
+-    self.hideTopSearchButtonSwitch = hideTopSearchButtonSwitch;
+-    UIStackView *hideTopSearchButtonRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[hideTopSearchButtonLabel,
+-                                  hideTopSearchButtonSwitch]];
+-    hideTopSearchButtonRow.axis = UILayoutConstraintAxisHorizontal;
+-    hideTopSearchButtonRow.alignment = UIStackViewAlignmentCenter;
+-    hideTopSearchButtonRow.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UILabel *topCategoryGroupLabel = [UILabel new];
+-    topCategoryGroupLabel.text = @"顶部分类液态分组";
+-    topCategoryGroupLabel.font = [UIFont systemFontOfSize:14.0
+-                                                   weight:UIFontWeightMedium];
+-    UISwitch *topCategoryGroupSwitch = [UISwitch new];
+-    topCategoryGroupSwitch.on = AWETopTelegramSwitcherEnabled();
+-    topCategoryGroupSwitch.onTintColor = AWEStoredAccentColor();
+-    [topCategoryGroupSwitch addTarget:self
+-                               action:@selector(topCategoryGroupSwitchChanged:)
+-                     forControlEvents:UIControlEventValueChanged];
+-    self.topCategoryGroupSwitch = topCategoryGroupSwitch;
+-    UIStackView *topCategoryGroupRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[topCategoryGroupLabel,
+-                                  topCategoryGroupSwitch]];
+-    topCategoryGroupRow.axis = UILayoutConstraintAxisHorizontal;
+-    topCategoryGroupRow.alignment = UIStackViewAlignmentCenter;
+-    topCategoryGroupRow.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UILabel *topCategoryCountLabel = [UILabel new];
+-    topCategoryCountLabel.text = @"顶部分组同时显示数量";
+-    topCategoryCountLabel.font = [UIFont systemFontOfSize:14.0
+-                                                  weight:UIFontWeightMedium];
+-    UISegmentedControl *topCategoryCountControl =
+-        [[UISegmentedControl alloc] initWithItems:@[@"1", @"2", @"3", @"4"]];
+-    topCategoryCountControl.selectedSegmentIndex =
+-        AWETopTelegramVisibleCount() - 1;
+-    [topCategoryCountControl addTarget:self
+-        action:@selector(topCategoryVisibleCountChanged:)
+-        forControlEvents:UIControlEventValueChanged];
+-    self.topCategoryVisibleCountControl = topCategoryCountControl;
+-    UIStackView *topCategoryCountRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[topCategoryCountLabel,
+-                                  topCategoryCountControl]];
+-    topCategoryCountRow.axis = UILayoutConstraintAxisHorizontal;
+-    topCategoryCountRow.alignment = UIStackViewAlignmentCenter;
+-    topCategoryCountRow.spacing = 10.0;
+-    [topCategoryCountLabel setContentCompressionResistancePriority:UILayoutPriorityDefaultLow
+-                                                           forAxis:UILayoutConstraintAxisHorizontal];
+-    [topCategoryCountControl.widthAnchor constraintEqualToConstant:168.0].active = YES;
+-
+-    UILabel *topMenuMorphLabel = [UILabel new];
+-    topMenuMorphLabel.text = @"左上按钮展开分类菜单（可与分组并存）";
+-    topMenuMorphLabel.font = [UIFont systemFontOfSize:14.0
+-                                               weight:UIFontWeightMedium];
+-    UISwitch *topMenuMorphSwitch = [UISwitch new];
+-    topMenuMorphSwitch.on = AWETopMenuMorphEnabled();
+-    topMenuMorphSwitch.onTintColor = AWEStoredAccentColor();
+-    [topMenuMorphSwitch addTarget:self
+-                           action:@selector(topMenuMorphSwitchChanged:)
+-                 forControlEvents:UIControlEventValueChanged];
+-    self.topMenuMorphSwitch = topMenuMorphSwitch;
+-    UIStackView *topMenuMorphRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[topMenuMorphLabel, topMenuMorphSwitch]];
+-    topMenuMorphRow.axis = UILayoutConstraintAxisHorizontal;
+-    topMenuMorphRow.alignment = UIStackViewAlignmentCenter;
+-    topMenuMorphRow.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UILabel *messageTopBlurDistanceLabel = [UILabel new];
+-    messageTopBlurDistanceLabel.text = @"消息页顶部模糊距离";
+-    messageTopBlurDistanceLabel.font =
+-        [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UILabel *messageTopBlurDistanceValueLabel = [UILabel new];
+-    messageTopBlurDistanceValueLabel.font =
+-        [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
+-    messageTopBlurDistanceValueLabel.textColor = UIColor.secondaryLabelColor;
+-    messageTopBlurDistanceValueLabel.textAlignment = NSTextAlignmentRight;
+-    messageTopBlurDistanceValueLabel.text =
+-        [NSString stringWithFormat:@"%.0f pt", AWEMessageTopEdgeBlurDistance()];
+-    self.messageTopBlurDistanceValueLabel = messageTopBlurDistanceValueLabel;
+-    UIStackView *messageTopBlurDistanceHeader = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[messageTopBlurDistanceLabel,
+-                                  messageTopBlurDistanceValueLabel]];
+-    messageTopBlurDistanceHeader.axis = UILayoutConstraintAxisHorizontal;
+-    messageTopBlurDistanceHeader.alignment = UIStackViewAlignmentCenter;
+-    messageTopBlurDistanceHeader.distribution = UIStackViewDistributionEqualSpacing;
+-    UISlider *messageTopBlurDistanceSlider = [UISlider new];
+-    messageTopBlurDistanceSlider.minimumValue = 40.0;
+-    messageTopBlurDistanceSlider.maximumValue = 188.0;
+-    messageTopBlurDistanceSlider.value = AWEMessageTopEdgeBlurDistance();
+-    messageTopBlurDistanceSlider.minimumTrackTintColor = AWEStoredAccentColor();
+-    [messageTopBlurDistanceSlider addTarget:self
+-        action:@selector(messageTopBlurDistanceChanged:)
+-        forControlEvents:UIControlEventValueChanged];
+-    self.messageTopBlurDistanceSlider = messageTopBlurDistanceSlider;
+-    UIStackView *messageTopBlurDistanceRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[messageTopBlurDistanceHeader,
+-                                  messageTopBlurDistanceSlider]];
+-    messageTopBlurDistanceRow.axis = UILayoutConstraintAxisVertical;
+-    messageTopBlurDistanceRow.spacing = 5.0;
+-
+-    UILabel *messageBottomBlurDistanceLabel = [UILabel new];
+-    messageBottomBlurDistanceLabel.text = @"消息页底部模糊距离";
+-    messageBottomBlurDistanceLabel.font =
+-        [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UILabel *messageBottomBlurDistanceValueLabel = [UILabel new];
+-    messageBottomBlurDistanceValueLabel.font =
+-        [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
+-    messageBottomBlurDistanceValueLabel.textColor = UIColor.secondaryLabelColor;
+-    messageBottomBlurDistanceValueLabel.textAlignment = NSTextAlignmentRight;
+-    messageBottomBlurDistanceValueLabel.text =
+-        [NSString stringWithFormat:@"%.0f pt", AWEMessageBottomEdgeBlurDistance()];
+-    self.messageBottomBlurDistanceValueLabel = messageBottomBlurDistanceValueLabel;
+-    UIStackView *messageBottomBlurDistanceHeader = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[messageBottomBlurDistanceLabel,
+-                                  messageBottomBlurDistanceValueLabel]];
+-    messageBottomBlurDistanceHeader.axis = UILayoutConstraintAxisHorizontal;
+-    messageBottomBlurDistanceHeader.alignment = UIStackViewAlignmentCenter;
+-    messageBottomBlurDistanceHeader.distribution = UIStackViewDistributionEqualSpacing;
+-    UISlider *messageBottomBlurDistanceSlider = [UISlider new];
+-    messageBottomBlurDistanceSlider.minimumValue = 40.0;
+-    messageBottomBlurDistanceSlider.maximumValue = 188.0;
+-    messageBottomBlurDistanceSlider.value = AWEMessageBottomEdgeBlurDistance();
+-    messageBottomBlurDistanceSlider.minimumTrackTintColor = AWEStoredAccentColor();
+-    [messageBottomBlurDistanceSlider addTarget:self
+-        action:@selector(messageBottomBlurDistanceChanged:)
+-        forControlEvents:UIControlEventValueChanged];
+-    self.messageBottomBlurDistanceSlider = messageBottomBlurDistanceSlider;
+-    UIStackView *messageBottomBlurDistanceRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[messageBottomBlurDistanceHeader,
+-                                  messageBottomBlurDistanceSlider]];
+-    messageBottomBlurDistanceRow.axis = UILayoutConstraintAxisVertical;
+-    messageBottomBlurDistanceRow.spacing = 5.0;
+-
+-    UILabel *adaptiveGlassHint = [UILabel new];
+-    adaptiveGlassHint.text = @"iOS 26/27：首页顶部与右侧按钮使用无固定色调的原生液态玻璃并跟随系统透明度；iOS 27 可单独开启首页/朋友/个人页清透底栏。";
+-    adaptiveGlassHint.font =
+-        [UIFont systemFontOfSize:11.5 weight:UIFontWeightRegular];
+-    adaptiveGlassHint.textColor = UIColor.tertiaryLabelColor;
+-    adaptiveGlassHint.numberOfLines = 0;
+-
+-    UILabel *transparentGlassLabel = [UILabel new];
+-    transparentGlassLabel.text = @"纯透明材质（无额外描边，局部黑白自适应）";
+-    transparentGlassLabel.font =
+-        [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UISwitch *transparentGlassSwitch = [UISwitch new];
+-    transparentGlassSwitch.on = AWEHomeTransparentGlassEnabled();
+-    transparentGlassSwitch.onTintColor = AWEStoredAccentColor();
+-    [transparentGlassSwitch addTarget:self
+-                               action:@selector(transparentGlassSwitchChanged:)
+-                     forControlEvents:UIControlEventValueChanged];
+-    self.transparentGlassSwitch = transparentGlassSwitch;
+-    UIStackView *transparentGlassRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[transparentGlassLabel, transparentGlassSwitch]];
+-    transparentGlassRow.axis = UILayoutConstraintAxisHorizontal;
+-    transparentGlassRow.alignment = UIStackViewAlignmentCenter;
+-    transparentGlassRow.distribution = UIStackViewDistributionEqualSpacing;
+-
++    UISwitch *mineOnly = [UISwitch new];
++    mineOnly.on = AWESettingsGestureMineOnlyEnabled();
++    mineOnly.onTintColor = accent;
++    [mineOnly addTarget:self action:@selector(settingsGestureMineOnlySwitchChanged:) forControlEvents:UIControlEventValueChanged];
++    self.settingsGestureMineOnlySwitch = mineOnly;
++    UIStackView *mineOnlyRow = AWESettingsSwitchRow(@"双指长按仅在“我”页面触发", mineOnly);
++    UIView *gestureCard = AWESettingsCard(@"手势", @[tapModeRow, splitRow, mineOnlyRow]);
++
++    /* 顶部与右侧 */
++    UISwitch *topGlass = [UISwitch new];
++    topGlass.on = AWETopGlassEnabled();
++    topGlass.onTintColor = accent;
++    [topGlass addTarget:self action:@selector(topGlassSwitchChanged:) forControlEvents:UIControlEventValueChanged];
++    self.topGlassSwitch = topGlass;
++    UISwitch *categoryGroup = [UISwitch new];
++    categoryGroup.on = AWETopTelegramSwitcherEnabled();
++    categoryGroup.onTintColor = accent;
++    [categoryGroup addTarget:self action:@selector(topCategoryGroupSwitchChanged:) forControlEvents:UIControlEventValueChanged];
++    self.topCategoryGroupSwitch = categoryGroup;
++    UISegmentedControl *categoryCount = [[UISegmentedControl alloc] initWithItems:@[@"1", @"2", @"3", @"4"]];
++    categoryCount.selectedSegmentIndex = AWETopTelegramVisibleCount() - 1;
++    [categoryCount addTarget:self action:@selector(topCategoryVisibleCountChanged:) forControlEvents:UIControlEventValueChanged];
++    self.topCategoryVisibleCountControl = categoryCount;
++    UISwitch *menuMorph = [UISwitch new];
++    menuMorph.on = AWETopMenuMorphEnabled();
++    menuMorph.onTintColor = accent;
++    [menuMorph addTarget:self action:@selector(topMenuMorphSwitchChanged:) forControlEvents:UIControlEventValueChanged];
++    self.topMenuMorphSwitch = menuMorph;
++    UISwitch *hideLeft = [UISwitch new];
++    hideLeft.on = AWEHideTopLeftButtonEnabled();
++    hideLeft.onTintColor = accent;
++    [hideLeft addTarget:self action:@selector(hideTopLeftButtonSwitchChanged:) forControlEvents:UIControlEventValueChanged];
++    self.hideTopLeftButtonSwitch = hideLeft;
++    UISwitch *hideSearch = [UISwitch new];
++    hideSearch.on = AWEHideTopSearchButtonEnabled();
++    hideSearch.onTintColor = accent;
++    [hideSearch addTarget:self action:@selector(hideTopSearchButtonSwitchChanged:) forControlEvents:UIControlEventValueChanged];
++    self.hideTopSearchButtonSwitch = hideSearch;
++    UISwitch *transparent = [UISwitch new];
++    transparent.on = AWEHomeTransparentGlassEnabled();
++    transparent.onTintColor = accent;
++    [transparent addTarget:self action:@selector(transparentGlassSwitchChanged:) forControlEvents:UIControlEventValueChanged];
++    self.transparentGlassSwitch = transparent;
++    UISwitch *download = [UISwitch new];
++    download.on = AWEAvatarMenuDownloadEnabled();
++    download.onTintColor = accent;
++    [download addTarget:self action:@selector(avatarMenuDownloadSwitchChanged:) forControlEvents:UIControlEventValueChanged];
++    self.avatarMenuDownloadSwitch = download;
++    UIView *topCard = AWESettingsCard(@"顶部与右侧", @[
++        AWESettingsSwitchRow(@"顶部菜单/分类液态玻璃", topGlass),
++        AWESettingsSwitchRow(@"顶部分类液态分组", categoryGroup),
++        AWESettingsSegmentedRow(@"同时显示分类数量", categoryCount),
++        AWESettingsSwitchRow(@"左上按钮展开分类菜单", menuMorph),
++        AWESettingsSwitchRow(@"隐藏左上角按钮", hideLeft),
++        AWESettingsSwitchRow(@"隐藏右上角搜索按钮", hideSearch),
++        AWESettingsSwitchRow(@"首页/朋友按钮纯透明", transparent),
++        AWESettingsSwitchRow(@"头像菜单显示下载功能", download)
++    ]);
++
++    /* 消息与评论 */
++    UILabel *topBlurValue = [UILabel new];
++    topBlurValue.font = [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
++    self.messageTopBlurDistanceValueLabel = topBlurValue;
++    UISlider *topBlurSlider = [UISlider new];
++    topBlurSlider.minimumValue = 40.0; topBlurSlider.maximumValue = 188.0;
++    topBlurSlider.value = AWEMessageTopEdgeBlurDistance();
++    topBlurSlider.minimumTrackTintColor = accent;
++    [topBlurSlider addTarget:self action:@selector(messageTopBlurDistanceChanged:) forControlEvents:UIControlEventValueChanged];
++    self.messageTopBlurDistanceSlider = topBlurSlider;
++    UILabel *bottomBlurValue = [UILabel new];
++    bottomBlurValue.font = [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
++    self.messageBottomBlurDistanceValueLabel = bottomBlurValue;
++    UISlider *bottomBlurSlider = [UISlider new];
++    bottomBlurSlider.minimumValue = 40.0; bottomBlurSlider.maximumValue = 188.0;
++    bottomBlurSlider.value = AWEMessageBottomEdgeBlurDistance();
++    bottomBlurSlider.minimumTrackTintColor = accent;
++    [bottomBlurSlider addTarget:self action:@selector(messageBottomBlurDistanceChanged:) forControlEvents:UIControlEventValueChanged];
++    self.messageBottomBlurDistanceSlider = bottomBlurSlider;
++
++    UISwitch *commentSwitch = [UISwitch new];
++    commentSwitch.on = AWECommentGlassEnabledSetting();
++    commentSwitch.onTintColor = accent;
++    [commentSwitch addTarget:self action:@selector(commentGlassSwitchChanged:) forControlEvents:UIControlEventValueChanged];
++    self.commentGlassSwitch = commentSwitch;
++    UISegmentedControl *commentMode = [[UISegmentedControl alloc] initWithItems:@[@"纯透明", @"色调"]];
++    commentMode.selectedSegmentIndex = AWECommentGlassModeSetting();
++    commentMode.enabled = commentSwitch.isOn;
++    [commentMode addTarget:self action:@selector(commentGlassModeChanged:) forControlEvents:UIControlEventValueChanged];
++    self.commentGlassModeControl = commentMode;
++    UILabel *cornerValue = [UILabel new];
++    cornerValue.font = [UIFont monospacedDigitSystemFontOfSize:12.5 weight:UIFontWeightMedium];
++    self.commentGlassCornerValueLabel = cornerValue;
++    UISlider *cornerSlider = [UISlider new];
++    cornerSlider.minimumValue = 16.0; cornerSlider.maximumValue = 40.0;
++    cornerSlider.value = AWECommentGlassCornerRadiusSetting();
++    cornerSlider.minimumTrackTintColor = accent;
++    cornerSlider.enabled = commentSwitch.isOn;
++    [cornerSlider addTarget:self action:@selector(commentGlassCornerRadiusChanged:) forControlEvents:UIControlEventValueChanged];
++    self.commentGlassCornerSlider = cornerSlider;
++    UIView *messageCard = AWESettingsCard(@"消息与评论", @[
++        AWESettingsSliderRow(@"消息页顶部模糊距离", topBlurValue, topBlurSlider),
++        AWESettingsSliderRow(@"消息页底部模糊距离", bottomBlurValue, bottomBlurSlider),
++        AWESettingsSwitchRow(@"评论区液态玻璃", commentSwitch),
++        AWESettingsSegmentedRow(@"评论区材质", commentMode),
++        AWESettingsSliderRow(@"评论面板圆角", cornerValue, cornerSlider)
++    ]);
+ 
++    /* 图标：唯一入口 */
+     AWEEnsureHomeCustomIconsDirectory();
+-    UILabel *pngLabel = [UILabel new];
+-    pngLabel.text = @"自定义 PNG 图标";
+-    pngLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+     UISwitch *pngSwitch = [UISwitch new];
+     pngSwitch.on = AWEHomeCustomPNGModeEnabled();
+-    pngSwitch.onTintColor = AWEStoredAccentColor();
++    pngSwitch.onTintColor = accent;
+     [pngSwitch addTarget:self action:@selector(customPNGModeSwitchChanged:) forControlEvents:UIControlEventValueChanged];
+     self.customPNGModeSwitch = pngSwitch;
+-    UIStackView *pngRow = [[UIStackView alloc] initWithArrangedSubviews:@[pngLabel, pngSwitch]];
+-    pngRow.axis = UILayoutConstraintAxisHorizontal;
+-    pngRow.alignment = UIStackViewAlignmentCenter;
+-    pngRow.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UILabel *pngHint = [UILabel new];
+-    pngHint.text = @"玻璃按钮本体固定为 46×46 pt。PNG 按源文件像素以 @3x 显示：30×30 px 约为 10×10 pt，100×100 px 约为 33.3×33.3 pt；小图不放大，任一边超过 100 px 时才等比例缩小。透明留白也会计入尺寸。";
+-    pngHint.font = [UIFont systemFontOfSize:11.5 weight:UIFontWeightRegular];
+-    pngHint.textColor = UIColor.tertiaryLabelColor;
+-    pngHint.numberOfLines = 0;
+-
+     UIButton *reloadPNG = AWECreateGlassTextButton(@"重新读取 PNG", UIColor.systemGrayColor, NO);
+     [reloadPNG addTarget:self action:@selector(reloadCustomPNGIcons:) forControlEvents:UIControlEventTouchUpInside];
++    UIButton *iconCenter = AWECreateGlassTextButton(@"图标中心", accent, YES);
++    [iconCenter addTarget:self action:@selector(openIconCenter:) forControlEvents:UIControlEventTouchUpInside];
++    UIView *iconCard = AWESettingsCard(@"图标", @[
++        AWESettingsSwitchRow(@"自定义 PNG 图标", pngSwitch), reloadPNG, iconCenter
++    ]);
+ 
+-    UIButton *iconCenterButton = AWECreateGlassTextButton(@"打开顶部与右侧图标中心", AWEStoredAccentColor(), YES);
+-    [iconCenterButton addTarget:self action:@selector(openIconCenter:) forControlEvents:UIControlEventTouchUpInside];
+-
+-    UILabel *diagnosticLabel = [UILabel new];
+-    diagnosticLabel.text = @"交互诊断日志（反馈用）";
+-    diagnosticLabel.font = [UIFont systemFontOfSize:11.5 weight:UIFontWeightMedium];
+-    diagnosticLabel.numberOfLines = 1;
+-    UISwitch *diagnosticSwitch = [UISwitch new];
+-    diagnosticSwitch.on = AWEInteractionDiagnosticsEnabled();
+-    diagnosticSwitch.onTintColor = AWEStoredAccentColor();
+-    [diagnosticSwitch addTarget:self
+-                         action:@selector(interactionDiagnosticSwitchChanged:)
+-               forControlEvents:UIControlEventValueChanged];
+-    self.interactionDiagnosticSwitch = diagnosticSwitch;
+-    UIStackView *diagnosticRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[diagnosticLabel, diagnosticSwitch]];
+-    diagnosticRow.axis = UILayoutConstraintAxisHorizontal;
+-    diagnosticRow.alignment = UIStackViewAlignmentCenter;
+-    diagnosticRow.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UIButton *snapshotButton = AWECreateGlassTextButton(@"写入当前交互/底栏状态", UIColor.systemGrayColor, NO);
+-    [snapshotButton addTarget:self action:@selector(writeInteractionSnapshot:)
+-             forControlEvents:UIControlEventTouchUpInside];
+-    UIButton *clearLogButton = AWECreateGlassTextButton(@"清空全部日志", UIColor.systemGrayColor, NO);
+-    [clearLogButton addTarget:self action:@selector(clearInteractionDiagnosticLog:)
+-              forControlEvents:UIControlEventTouchUpInside];
+-    UIStackView *diagnosticButtons = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[snapshotButton, clearLogButton]];
+-    diagnosticButtons.axis = UILayoutConstraintAxisHorizontal;
+-    diagnosticButtons.distribution = UIStackViewDistributionFillEqually;
+-    diagnosticButtons.spacing = 8.0;
+-
+-    UIButton *exportLogButton = AWECreateGlassTextButton(@"导出全部诊断日志", AWEStoredAccentColor(), YES);
+-    [exportLogButton addTarget:self action:@selector(exportProbeLogs:)
+-              forControlEvents:UIControlEventTouchUpInside];
++    /* 其他 */
++    UISwitch *wanSwitch = [UISwitch new];
++    wanSwitch.on = AWEWanToWEnabled();
++    wanSwitch.onTintColor = accent;
++    [wanSwitch addTarget:self action:@selector(wanToWSwitchChanged:) forControlEvents:UIControlEventValueChanged];
++    self.wanToWSwitch = wanSwitch;
++    UIView *otherCard = AWESettingsCard(@"其他", @[AWESettingsSwitchRow(@"数字计数：万 → W", wanSwitch)]);
+ 
+-    UILabel *settingsGlassModeLabel = [UILabel new];
+-    settingsGlassModeLabel.text = @"设置页背景材质";
+-    settingsGlassModeLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UISegmentedControl *settingsGlassModeControl = [[UISegmentedControl alloc]
+-        initWithItems:@[@"系统", @"玻璃", @"清透"]];
+-    settingsGlassModeControl.selectedSegmentIndex = AWESettingsGlassBackgroundMode();
+-    [settingsGlassModeControl addTarget:self action:@selector(settingsGlassModeChanged:)
+-        forControlEvents:UIControlEventValueChanged];
+-    self.settingsGlassModeControl = settingsGlassModeControl;
+-    UIStackView *settingsGlassModeRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[settingsGlassModeLabel, settingsGlassModeControl]];
+-    settingsGlassModeRow.axis = UILayoutConstraintAxisHorizontal;
+-    settingsGlassModeRow.alignment = UIStackViewAlignmentCenter;
+-    settingsGlassModeRow.spacing = 8.0;
+-
+-    UILabel *bottomContentStyleLabel = [UILabel new];
+-    bottomContentStyleLabel.text = @"底栏内容样式";
+-    bottomContentStyleLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UISegmentedControl *bottomContentStyleControl = [[UISegmentedControl alloc]
+-        initWithItems:@[@"图标", @"原生文字"]];
+-    bottomContentStyleControl.selectedSegmentIndex = AWEBottomContentStyle();
+-    [bottomContentStyleControl addTarget:self action:@selector(bottomContentStyleChanged:)
+-        forControlEvents:UIControlEventValueChanged];
+-    self.bottomContentStyleControl = bottomContentStyleControl;
+-    UIStackView *bottomContentStyleRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[bottomContentStyleLabel, bottomContentStyleControl]];
+-    bottomContentStyleRow.axis = UILayoutConstraintAxisHorizontal;
+-    bottomContentStyleRow.alignment = UIStackViewAlignmentCenter;
+-    bottomContentStyleRow.spacing = 8.0;
+-
+-    UILabel *shareGlassLabel = [UILabel new];
+-    shareGlassLabel.text = @"转发页液态玻璃";
+-    shareGlassLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UISwitch *shareGlassSwitch = [UISwitch new];
+-    shareGlassSwitch.on = AWEShareGlassEnabled();
+-    shareGlassSwitch.onTintColor = AWEStoredAccentColor();
+-    [shareGlassSwitch addTarget:self action:@selector(shareGlassSwitchChanged:)
+-        forControlEvents:UIControlEventValueChanged];
+-    self.shareGlassSwitch = shareGlassSwitch;
+-    UIStackView *shareGlassRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[shareGlassLabel, shareGlassSwitch]];
+-    shareGlassRow.axis = UILayoutConstraintAxisHorizontal;
+-    shareGlassRow.alignment = UIStackViewAlignmentCenter;
+-    shareGlassRow.distribution = UIStackViewDistributionEqualSpacing;
+-
+-    UILabel *shareGlassModeLabel = [UILabel new];
+-    shareGlassModeLabel.text = @"转发页玻璃材质";
+-    shareGlassModeLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightMedium];
+-    UISegmentedControl *shareGlassModeControl = [[UISegmentedControl alloc]
+-        initWithItems:@[@"磨砂", @"清透"]];
+-    shareGlassModeControl.selectedSegmentIndex = AWEShareGlassMode();
+-    shareGlassModeControl.enabled = shareGlassSwitch.isOn;
+-    [shareGlassModeControl addTarget:self action:@selector(shareGlassModeChanged:)
+-        forControlEvents:UIControlEventValueChanged];
+-    self.shareGlassModeControl = shareGlassModeControl;
+-    UIStackView *shareGlassModeRow = [[UIStackView alloc]
+-        initWithArrangedSubviews:@[shareGlassModeLabel, shareGlassModeControl]];
+-    shareGlassModeRow.axis = UILayoutConstraintAxisHorizontal;
+-    shareGlassModeRow.alignment = UIStackViewAlignmentCenter;
+-    shareGlassModeRow.spacing = 8.0;
+-
+-    NSMutableArray<UIView *> *visualItems = [NSMutableArray arrayWithObjects:
+-        settingsGlassModeRow, albumStyleRow, bottomContentStyleRow,
+-        newBarIconCenterButton, nil];
+-    if (AWECustomBottomBarReleaseAllowed()) {
+-        [visualItems addObject:bottomBarDisplayRow];
+-    }
+-    [visualItems addObjectsFromArray:@[
+-        /* Bottom bar */
+-        internalFullscreenRow, hideTitlesRow, messageBadgeRow, forceDarkBottomBarRow,
+-        /* Top controls: group/menu first, visibility switches after them. */
+-        topRow, topCategoryGroupRow, topCategoryCountRow, topMenuMorphRow,
+-        hideTopLeftButtonRow, hideTopSearchButtonRow,
+-        /* Message page */
+-        messageTopBlurDistanceRow, messageBottomBlurDistanceRow,
+-        /* Global material / auxiliary behavior */
+-        transparentGlassRow, shareGlassRow, shareGlassModeRow,
+-        avatarMenuDownloadRow, preferHighestPlaybackRow,
+-        pngRow, reloadPNG, iconCenterButton,
+-        diagnosticRow, diagnosticButtons, exportLogButton
+-    ]];
+-    UIStackView *visualStack = [[UIStackView alloc] initWithArrangedSubviews:visualItems];
+-    visualStack.translatesAutoresizingMaskIntoConstraints = NO;
+-    visualStack.axis = UILayoutConstraintAxisVertical;
+-    visualStack.spacing = 10.0;
+-    [homeVisualCard addSubview:visualStack];
+-    [NSLayoutConstraint activateConstraints:@[
+-        [visualStack.leadingAnchor constraintEqualToAnchor:homeVisualCard.leadingAnchor constant:14.0],
+-        [visualStack.trailingAnchor constraintEqualToAnchor:homeVisualCard.trailingAnchor constant:-14.0],
+-        [visualStack.topAnchor constraintEqualToAnchor:homeVisualCard.topAnchor constant:14.0],
+-        [visualStack.bottomAnchor constraintEqualToAnchor:homeVisualCard.bottomAnchor constant:-14.0]
+-    ]];
++    /* 诊断 */
++    UISwitch *diagSwitch = [UISwitch new];
++    diagSwitch.on = AWEInteractionDiagnosticsEnabled();
++    diagSwitch.onTintColor = accent;
++    [diagSwitch addTarget:self action:@selector(interactionDiagnosticSwitchChanged:) forControlEvents:UIControlEventValueChanged];
++    self.interactionDiagnosticSwitch = diagSwitch;
++    UIButton *snapshot = AWECreateGlassTextButton(@"采集当前状态", UIColor.systemGrayColor, NO);
++    [snapshot addTarget:self action:@selector(writeInteractionSnapshot:) forControlEvents:UIControlEventTouchUpInside];
++    UIButton *clear = AWECreateGlassTextButton(@"清空全部日志", UIColor.systemGrayColor, NO);
++    [clear addTarget:self action:@selector(clearInteractionDiagnosticLog:) forControlEvents:UIControlEventTouchUpInside];
++    UIStackView *diagButtons = [[UIStackView alloc] initWithArrangedSubviews:@[snapshot, clear]];
++    diagButtons.axis = UILayoutConstraintAxisHorizontal;
++    diagButtons.distribution = UIStackViewDistributionFillEqually;
++    diagButtons.spacing = 8.0;
++    UIButton *exportLog = AWECreateGlassTextButton(@"导出诊断日志", accent, YES);
++    [exportLog addTarget:self action:@selector(exportProbeLogs:) forControlEvents:UIControlEventTouchUpInside];
++    UIView *diagCard = AWESettingsCard(@"诊断", @[
++        AWESettingsSwitchRow(@"交互诊断日志", diagSwitch), diagButtons, exportLog
++    ]);
+ 
++    UIButton *authorizationCheck = AWECreateGlassTextButton(@"重新检测授权", UIColor.systemGrayColor, NO);
++    [authorizationCheck addTarget:self action:@selector(manualAuthorizationCheck:) forControlEvents:UIControlEventTouchUpInside];
+     UILabel *authorizationFooter = [UILabel new];
+-    authorizationFooter.font = [UIFont systemFontOfSize:11.0 weight:UIFontWeightRegular];
++    authorizationFooter.font = [UIFont systemFontOfSize:11.5 weight:UIFontWeightRegular];
+     authorizationFooter.textColor = UIColor.tertiaryLabelColor;
+     authorizationFooter.textAlignment = NSTextAlignmentCenter;
+     self.authorizationFooter = authorizationFooter;
+ 
+-    UIStackView *stack =
+-        [[UIStackView alloc] initWithArrangedSubviews:@[
+-            masterCard, accentCard, positionCard, gestureCard, chatCard, wanCard,
+-            commentGlassCard, homeVisualCard, authorizationCheckButton, authorizationFooter
+-        ]];
++    UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[
++        basicCard, bottomCard, gestureCard, topCard, messageCard, iconCard,
++        otherCard, diagCard, authorizationCheck, authorizationFooter
++    ]];
+     stack.translatesAutoresizingMaskIntoConstraints = NO;
+     stack.axis = UILayoutConstraintAxisVertical;
+     stack.spacing = 14.0;
+     stack.alignment = UIStackViewAlignmentFill;
+ 
+-    UIScrollView *scrollView = [UIScrollView new];
+-    scrollView.translatesAutoresizingMaskIntoConstraints = NO;
+-    scrollView.alwaysBounceVertical = YES;
+-    scrollView.keyboardDismissMode =
+-        UIScrollViewKeyboardDismissModeInteractive;
+-
+-    [self.view addSubview:scrollView];
+-    [scrollView addSubview:stack];
+-
++    UIScrollView *scroll = [UIScrollView new];
++    scroll.translatesAutoresizingMaskIntoConstraints = NO;
++    scroll.alwaysBounceVertical = YES;
++    scroll.keyboardDismissMode = UIScrollViewKeyboardDismissModeInteractive;
++    [self.view addSubview:scroll];
++    [scroll addSubview:stack];
+     UILayoutGuide *guide = self.view.safeAreaLayoutGuide;
+     [NSLayoutConstraint activateConstraints:@[
+-        [scrollView.leadingAnchor constraintEqualToAnchor:guide.leadingAnchor],
+-        [scrollView.trailingAnchor constraintEqualToAnchor:guide.trailingAnchor],
+-        [scrollView.topAnchor constraintEqualToAnchor:guide.topAnchor],
+-        [scrollView.bottomAnchor constraintEqualToAnchor:guide.bottomAnchor],
+-
+-        [stack.leadingAnchor
+-            constraintEqualToAnchor:scrollView.contentLayoutGuide.leadingAnchor
+-                           constant:22.0],
+-        [stack.trailingAnchor
+-            constraintEqualToAnchor:scrollView.contentLayoutGuide.trailingAnchor
+-                           constant:-22.0],
+-        [stack.topAnchor
+-            constraintEqualToAnchor:scrollView.contentLayoutGuide.topAnchor
+-                           constant:22.0],
+-        [stack.bottomAnchor
+-            constraintEqualToAnchor:scrollView.contentLayoutGuide.bottomAnchor
+-                           constant:-22.0],
+-        [stack.widthAnchor
+-            constraintEqualToAnchor:scrollView.frameLayoutGuide.widthAnchor
+-                           constant:-44.0]
++        [scroll.leadingAnchor constraintEqualToAnchor:guide.leadingAnchor],
++        [scroll.trailingAnchor constraintEqualToAnchor:guide.trailingAnchor],
++        [scroll.topAnchor constraintEqualToAnchor:guide.topAnchor],
++        [scroll.bottomAnchor constraintEqualToAnchor:guide.bottomAnchor],
++        [stack.leadingAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.leadingAnchor constant:18.0],
++        [stack.trailingAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.trailingAnchor constant:-18.0],
++        [stack.topAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.topAnchor constant:18.0],
++        [stack.bottomAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.bottomAnchor constant:-18.0],
++        [stack.widthAnchor constraintEqualToAnchor:scroll.frameLayoutGuide.widthAnchor constant:-36.0]
+     ]];
+ 
+-    self.themeCards = @[
+-        masterCard, accentCard, positionCard, gestureCard, chatCard, wanCard,
+-        commentGlassCard, homeVisualCard
+-    ];
+-    self.themePrimaryLabels = @[
+-        masterTitle, headline, positionTitle, gestureTitle, chatTitle,
+-        capsuleLabel, separateLabel, wanTitle, settingsGestureMineOnlyLabel,
+-        commentGlassTitle, commentGlassModeLabel, commentGlassCornerLabel,
+-        settingsGlassModeLabel, albumStyleLabel, bottomContentStyleLabel,
+-        hideTitlesLabel, messageBadgeLabel, preferHighestPlaybackLabel,
+-        messageTopBlurDistanceLabel, messageBottomBlurDistanceLabel,
+-        forceDarkBottomBarLabel, topLabel, topCategoryGroupLabel,
+-        topMenuMorphLabel, shareGlassLabel, shareGlassModeLabel,
+-        pngLabel, diagnosticLabel
+-    ];
+-    self.themeSecondaryLabels = @[
+-        positionValue, splitValue, commentGlassCornerValueLabel,
+-        messageTopBlurDistanceValueLabel, messageBottomBlurDistanceValueLabel,
+-        authorizationFooter
+-    ];
+-
+     [[NSNotificationCenter defaultCenter] addObserver:self
+         selector:@selector(authorizationStateChanged:)
+         name:AWEAuthorizationNotificationName() object:nil];
+     [self updateVerticalOffsetLabel];
+     [self updateDoubleTapSplitLabel];
++    [self updateTapGestureModeUI];
++    self.messageTopBlurDistanceValueLabel.text = [NSString stringWithFormat:@"%.0f pt", AWEMessageTopEdgeBlurDistance()];
++    self.messageBottomBlurDistanceValueLabel.text = [NSString stringWithFormat:@"%.0f pt", AWEMessageBottomEdgeBlurDistance()];
++    self.commentGlassCornerValueLabel.text = [NSString stringWithFormat:@"%.0f pt", AWECommentGlassCornerRadiusSetting()];
+     [self refreshAuthorizationUI];
+     [self applyCurrentTheme];
+ }
+@@ -20022,8 +18671,7 @@
+     if (width <= 1.0) width = CGRectGetWidth(self.view.bounds);
+     if (fabs(width - self.lastResponsiveWidth) <= 0.5) return;
+     self.lastResponsiveWidth = width;
+-    AWEApplyResponsiveSettingsTypography(
+-        self.view, AWESettingsResponsiveScaleForWidth(width));
++    AWEApplyResponsiveSettingsTypography(self.view, AWESettingsResponsiveScaleForWidth(width));
+ }
+ 
+ - (void)viewWillAppear:(BOOL)animated {
+@@ -20032,14 +18680,8 @@
+     AWETrySilentAuthorization(self);
+     [self refreshAuthorizationUI];
+     [self updateVerticalOffsetLabel];
++    [self updateTapGestureModeUI];
+     [self applyCurrentTheme];
+-    self.lastAppliedSystemStyle = AWESystemInterfaceStyle();
+-    [self.systemThemeTimer invalidate];
+-    self.systemThemeTimer = [NSTimer scheduledTimerWithTimeInterval:0.50
+-                                                            target:self
+-                                                          selector:@selector(pollSystemTheme:)
+-                                                          userInfo:nil
+-                                                           repeats:YES];
+ }
+ 
+ - (void)viewWillDisappear:(BOOL)animated {
+@@ -20063,8 +18705,6 @@
+     }
+     [super viewWillDisappear:animated];
+     gAWESettingsVisible = NO;
+-    [self.systemThemeTimer invalidate];
+-    self.systemThemeTimer = nil;
+ 
+     dispatch_async(dispatch_get_main_queue(), ^{
+         AWERefreshAllConfiguredIcons();
+@@ -20074,15 +18714,6 @@
+     });
+ }
+ 
+-- (void)pollSystemTheme:(NSTimer *)timer {
+-    (void)timer;
+-    UIUserInterfaceStyle style = AWESystemInterfaceStyle();
+-    if (style == UIUserInterfaceStyleUnspecified) style = UIUserInterfaceStyleLight;
+-    if (style == self.lastAppliedSystemStyle) return;
+-    self.lastAppliedSystemStyle = style;
+-    [self applyCurrentTheme];
+-}
+-
+ - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
+     [super traitCollectionDidChange:previousTraitCollection];
+     if (@available(iOS 13.0, *)) {
+@@ -20091,74 +18722,33 @@
+ }
+ 
+ - (void)applyCurrentTheme {
+-    UIUserInterfaceStyle style = AWESystemInterfaceStyle();
+-    if (style == UIUserInterfaceStyleUnspecified) style = UIUserInterfaceStyleLight;
+-    BOOL dark = style == UIUserInterfaceStyleDark;
+-    UIColor *background = dark ? [UIColor colorWithWhite:0.055 alpha:1.0] : [UIColor colorWithWhite:0.965 alpha:1.0];
+-    UIColor *card = dark ? [UIColor colorWithWhite:0.115 alpha:1.0] : UIColor.whiteColor;
+-    UIColor *primary = dark ? UIColor.whiteColor : UIColor.blackColor;
+-    UIColor *secondary = dark ? [UIColor colorWithWhite:1.0 alpha:0.56] : [UIColor colorWithWhite:0.0 alpha:0.46];
++    BOOL nativeSettingsPush =
++        [objc_getAssociatedObject(self, &kAWELiquidSettingsNativePushKey) boolValue];
+     if (@available(iOS 13.0, *)) {
+-        self.overrideUserInterfaceStyle = style;
+-        self.navigationController.overrideUserInterfaceStyle = style;
+-    }
+-    NSInteger settingsGlassMode = AWESettingsGlassBackgroundMode();
+-    if (settingsGlassMode > 0 && AWEOperatingSystemMajorVersion() >= 26) {
+-        UIVisualEffect *effect = nil;
+-        if (settingsGlassMode == 2) {
+-            Class glassClass = NSClassFromString(@"UIGlassEffect");
+-            SEL maker = NSSelectorFromString(@"effectWithStyle:");
+-            id glass = (glassClass && [glassClass respondsToSelector:maker])
+-                ? ((id (*)(id, SEL, NSInteger))objc_msgSend)(glassClass, maker, 1)
+-                : nil;
+-            if ([glass respondsToSelector:NSSelectorFromString(@"setInteractive:")])
+-                ((void (*)(id, SEL, BOOL))objc_msgSend)(glass,
+-                    NSSelectorFromString(@"setInteractive:"), NO);
+-            if ([glass respondsToSelector:NSSelectorFromString(@"setTintColor:")])
+-                ((void (*)(id, SEL, id))objc_msgSend)(glass,
+-                    NSSelectorFromString(@"setTintColor:"), nil);
+-            if ([glass isKindOfClass:UIVisualEffect.class]) effect = glass;
++        if (nativeSettingsPush) {
++            self.overrideUserInterfaceStyle = UIUserInterfaceStyleUnspecified;
+         } else {
+-            effect = AWECreateHomeAdaptiveGlassEffect();
++            UIWindow *window = self.presentingViewController.viewIfLoaded.window ?: self.view.window ?: AWEActiveMainWindow();
++            UIUserInterfaceStyle style = AWEAppResolvedAppearanceStyle(window);
++            self.overrideUserInterfaceStyle = style;
++            self.navigationController.overrideUserInterfaceStyle = style;
+         }
+-        self.settingsGlassBackgroundView.effect = effect;
+-        self.settingsGlassBackgroundView.hidden = NO;
+-        self.view.backgroundColor = UIColor.clearColor;
+-        self.navigationController.view.backgroundColor = UIColor.clearColor;
+-        card = dark ? [UIColor colorWithWhite:0.10 alpha:0.52]
+-                    : [UIColor colorWithWhite:1.0 alpha:0.52];
+-        background = UIColor.clearColor;
+-    } else {
+-        self.settingsGlassBackgroundView.effect = nil;
+-        self.settingsGlassBackgroundView.hidden = YES;
+-        self.view.backgroundColor = background;
+-        self.navigationController.view.backgroundColor = background;
+-    }
+-    for (UIView *themeCard in self.themeCards) themeCard.backgroundColor = card;
+-    for (UILabel *label in self.themePrimaryLabels) label.textColor = primary;
+-    for (UILabel *label in self.themeSecondaryLabels) label.textColor = secondary;
+-    UINavigationBarAppearance *appearance = [UINavigationBarAppearance new];
+-    [appearance configureWithTransparentBackground];
+-    appearance.backgroundColor = (AWESettingsGlassBackgroundMode() > 0 &&
+-        AWEOperatingSystemMajorVersion() >= 26) ? UIColor.clearColor : background;
+-    appearance.titleTextAttributes = @{NSForegroundColorAttributeName: primary};
+-    UINavigationBar *navigationBar = self.navigationController.navigationBar;
+-    navigationBar.standardAppearance = appearance;
+-    navigationBar.scrollEdgeAppearance = appearance;
+-    navigationBar.compactAppearance = appearance;
+-    navigationBar.tintColor = primary;
+-    navigationBar.barStyle = dark ? UIBarStyleBlack : UIBarStyleDefault;
++    }
++    UIColor *pageBackground = nativeSettingsPush
++        ? objc_getAssociatedObject(self, &kAWELiquidSettingsNativeBackgroundKey)
++        : nil;
++    UIColor *cardBackground = nativeSettingsPush
++        ? objc_getAssociatedObject(self, &kAWELiquidSettingsNativeCardBackgroundKey)
++        : nil;
++    self.view.backgroundColor = pageBackground ?: UIColor.systemGroupedBackgroundColor;
++    AWEApplySettingsCardBackground(self.view,
++        cardBackground ?: UIColor.secondarySystemGroupedBackgroundColor);
+     UIColor *accent = self.pendingAccentColor ?: AWEStoredAccentColor();
+     self.previewView.backgroundColor = accent;
+-    self.lowerHalfCommentSwitch.onTintColor = accent;
+     self.settingsGestureMineOnlySwitch.onTintColor = accent;
+     self.verticalOffsetSlider.minimumTrackTintColor = accent;
+-    self.collapseSwitch.onTintColor = accent;
+     self.doubleTapSplitSlider.minimumTrackTintColor = accent;
+     self.wanToWSwitch.onTintColor = accent;
+-    self.shareGlassSwitch.onTintColor = accent;
+-    self.chatCapsuleSwitch.onTintColor = accent;
+-    self.chatSeparateLeftSwitch.onTintColor = accent;
+     self.customPNGModeSwitch.onTintColor = accent;
+     self.topGlassSwitch.onTintColor = accent;
+     self.hideTopLeftButtonSwitch.onTintColor = accent;
+@@ -20172,8 +18762,9 @@
+     self.hideBottomTitlesSwitch.onTintColor = accent;
+     self.messageBadgeSwitch.onTintColor = accent;
+     self.avatarMenuDownloadSwitch.onTintColor = accent;
+-    self.preferHighestPlaybackSwitch.onTintColor = accent;
+-    self.albumMorphStyleSwitch.onTintColor = accent;
++    self.forceDarkBottomBarSwitch.onTintColor = accent;
++    self.bottomBarDisplaySwitch.onTintColor = accent;
++    self.internalFullscreenSwitch.onTintColor = accent;
+     self.masterSwitch.onTintColor = accent;
+     self.interactionDiagnosticSwitch.onTintColor = accent;
+     self.commentGlassSwitch.onTintColor = accent;
+@@ -20181,7 +18772,7 @@
+ }
+ 
+ - (void)updateApplyButtonTint:(UIColor *)colour {
+-    AWEConfigureGlassTextButton(self.applyButton, @"确认并应用", colour ?: AWEStoredAccentColor(), YES);
++    AWEConfigureGlassTextButton(self.applyButton, @"应用强调色", colour ?: AWEStoredAccentColor(), YES);
+ }
+ 
+ - (void)manualAuthorizationCheck:(UIButton *)sender {
+@@ -20231,7 +18822,6 @@
+ }
+ 
+ - (void)dealloc {
+-    [self.systemThemeTimer invalidate];
+     [[NSNotificationCenter defaultCenter] removeObserver:self];
+ }
+ 
+@@ -20307,6 +18897,25 @@
+                                    (long)commentPercent];
+ }
+ 
++- (void)updateTapGestureModeUI {
++    NSInteger mode = self.tapGestureModeControl ? self.tapGestureModeControl.selectedSegmentIndex
++                                                 : AWEStoredTapGestureMode();
++    BOOL split = mode == 1;
++    self.doubleTapSplitSlider.enabled = split;
++    self.doubleTapSplitSlider.hidden = !split;
++    self.doubleTapSplitValueLabel.hidden = !split;
++}
++
++- (void)tapGestureModeChanged:(UISegmentedControl *)sender {
++    NSInteger mode = MIN(2, MAX(0, sender.selectedSegmentIndex));
++    [NSUserDefaults.standardUserDefaults setInteger:mode forKey:kAWETapGestureModeDefaultsKey];
++    /* Keep the legacy boolean coherent for downgrade/migration only. */
++    [NSUserDefaults.standardUserDefaults setBool:(mode == 1) forKey:kAWELowerHalfDoubleTapCommentDefaultsKey];
++    [NSUserDefaults.standardUserDefaults synchronize];
++    [self updateTapGestureModeUI];
++    [[[UISelectionFeedbackGenerator alloc] init] selectionChanged];
++}
++
+ - (void)verticalOffsetSliderChanged:(UISlider *)sender {
+     CGFloat snapped = round(sender.value * 2.0) / 2.0;
+     sender.value = snapped;
+@@ -20330,20 +18939,6 @@
+     AWERefreshCurrentBarLayout();
+ }
+ 
+-- (void)collapseSwitchChanged:(UISwitch *)sender {
+-    [NSUserDefaults.standardUserDefaults setBool:sender.isOn
+-        forKey:kAWEAlbumMorphCollapseEnabledDefaultsKey];
+-    [NSUserDefaults.standardUserDefaults synchronize];
+-    if (sender.isOn) {
+-        UIWindow *window = gAWEAlbumMorphSuppressedOriginalBar.window ?:
+-            AWEActiveMainWindow();
+-        AWEInstallAlbumMorphCollapseGesture(window);
+-    } else {
+-        AWEExpandAlbumMorphBarWithoutAnimation();
+-    }
+-    [[[UISelectionFeedbackGenerator alloc] init] selectionChanged];
+-}
+-
+ - (void)doubleTapSplitSliderChanged:(UISlider *)sender {
+     [[NSUserDefaults standardUserDefaults]
+         setDouble:sender.value
+@@ -20372,56 +18967,6 @@
+     if (window) AWEScheduleHomeActionStacksInView(window);
+ }
+ 
+-- (void)preferHighestPlaybackSwitchChanged:(UISwitch *)sender {
+-    [NSUserDefaults.standardUserDefaults setBool:sender.isOn
+-        forKey:kAWEPreferHighestPlaybackDefaultsKey];
+-    [NSUserDefaults.standardUserDefaults synchronize];
+-    /* The preference is consumed on the next native AWEVideoModel selection.
+-       Do not refresh feed UI or touch a live player when toggling it. */
+-}
+-
+-- (void)lowerHalfCommentSwitchChanged:(UISwitch *)sender {
+-    [[NSUserDefaults standardUserDefaults]
+-        setBool:sender.isOn
+-         forKey:kAWELowerHalfDoubleTapCommentDefaultsKey];
+-    self.doubleTapSplitSlider.enabled = sender.isOn;
+-    [[NSUserDefaults standardUserDefaults] synchronize];
+-
+-    UIImpactFeedbackGenerator *feedback =
+-        [[UIImpactFeedbackGenerator alloc]
+-            initWithStyle:UIImpactFeedbackStyleLight];
+-    [feedback prepare];
+-    [feedback impactOccurred];
+-}
+-
+-- (void)chatCapsuleSwitchChanged:(UISwitch *)sender {
+-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+-    [defaults setBool:sender.isOn
+-               forKey:kAWEChatCapsuleEnabledDefaultsKey];
+-    [defaults synchronize];
+-
+-    self.chatSeparateLeftSwitch.enabled = sender.isOn;
+-
+-    UISelectionFeedbackGenerator *feedback =
+-        [[UISelectionFeedbackGenerator alloc] init];
+-    [feedback prepare];
+-    [feedback selectionChanged];
+-}
+-
+-- (void)chatSeparateLeftSwitchChanged:(UISwitch *)sender {
+-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+-    [defaults setBool:sender.isOn
+-               forKey:kAWEChatSeparateLeftDefaultsKey];
+-    [defaults synchronize];
+-
+-    UISelectionFeedbackGenerator *feedback =
+-        [[UISelectionFeedbackGenerator alloc] init];
+-    [feedback prepare];
+-    [feedback selectionChanged];
+-}
+-
+-
+-
+ - (void)forceDarkBottomBarSwitchChanged:(UISwitch *)sender {
+     if (!AWEIsIOS27OrLater()) { sender.on = NO; return; }
+     [NSUserDefaults.standardUserDefaults setBool:sender.isOn
+@@ -20640,54 +19185,6 @@
+ }
+ 
+ 
+-- (void)settingsGlassModeChanged:(UISegmentedControl *)sender {
+-    NSInteger mode = MIN(2, MAX(0, sender.selectedSegmentIndex));
+-    [NSUserDefaults.standardUserDefaults setInteger:mode
+-        forKey:kAWESettingsGlassBackgroundModeDefaultsKey];
+-    [NSUserDefaults.standardUserDefaults synchronize];
+-    [self applyCurrentTheme];
+-    [[[UISelectionFeedbackGenerator alloc] init] selectionChanged];
+-}
+-
+-- (void)bottomContentStyleChanged:(UISegmentedControl *)sender {
+-    NSInteger mode = sender.selectedSegmentIndex == 1 ? 1 : 0;
+-    [NSUserDefaults.standardUserDefaults setInteger:mode
+-        forKey:kAWEBottomContentStyleDefaultsKey];
+-    [NSUserDefaults.standardUserDefaults synchronize];
+-    if (gAWEAlbumMorphController) {
+-        [gAWEAlbumMorphController reloadConfiguredImages];
+-        [gAWEAlbumMorphController configureVisibleItemIdentifiers:
+-            AWEAlbumMorphVisibleItemIdentifiers()];
+-    }
+-    if (gAWELastTabBar && AWEAlbumMorphStyleEnabled()) {
+-        AWEInstallOrUpdateAlbumMorphBar((UIView *)gAWELastTabBar, NO);
+-    }
+-    [[[UISelectionFeedbackGenerator alloc] init] selectionChanged];
+-}
+-
+-- (void)shareGlassSwitchChanged:(UISwitch *)sender {
+-    [NSUserDefaults.standardUserDefaults setBool:sender.isOn
+-        forKey:kAWEShareGlassEnabledDefaultsKey];
+-    [NSUserDefaults.standardUserDefaults synchronize];
+-    self.shareGlassModeControl.enabled = sender.isOn;
+-    [[[UISelectionFeedbackGenerator alloc] init] selectionChanged];
+-}
+-
+-- (void)shareGlassModeChanged:(UISegmentedControl *)sender {
+-    NSInteger mode = sender.selectedSegmentIndex == 1 ? 1 : 0;
+-    [NSUserDefaults.standardUserDefaults setInteger:mode
+-        forKey:kAWEShareGlassModeDefaultsKey];
+-    [NSUserDefaults.standardUserDefaults synchronize];
+-    [[[UISelectionFeedbackGenerator alloc] init] selectionChanged];
+-}
+-
+-- (void)openNewBarIconCenter:(UIButton *)sender {
+-    (void)sender;
+-    AWEIconCenterController *controller =
+-        [[AWEIconCenterController alloc] initWithNewBarOnly:YES];
+-    [self.navigationController pushViewController:controller animated:YES];
+-}
+-
+ - (void)openAlbumMorphButtonSettings:(UIButton *)sender {
+     (void)sender;
+     AWEAlbumMorphButtonSettingsController *controller =
+@@ -20726,7 +19223,7 @@
+     [NSUserDefaults.standardUserDefaults synchronize];
+     if (sender.isOn) {
+         AWEInteractionDiagnosticWrite(
+-            @"========== START build=1.0.58 image=%@ ==========" ,
++            @"========== START build=2.0 image=%@ ==========" ,
+             AWEHomeDiagnosticLoadedImagePath());
+     }
+ }
+@@ -20772,7 +19269,7 @@
+     NSString *documents = NSSearchPathForDirectoriesInDomains(
+         NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+     NSString *commentMessagePath = [documents stringByAppendingPathComponent:
+-        @"AwemeLiquidBar_comment_message_probe_1.0.58.log"];
++        @"AwemeLiquidBar_comment_message_probe_2.0.log"];
+     @synchronized(NSFileManager.class) {
+         [NSFileManager.defaultManager removeItemAtPath:commentMessagePath error:nil];
+     }
+@@ -20807,13 +19304,13 @@
+             NSString *documents = NSSearchPathForDirectoriesInDomains(
+                 NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+             NSString *commentMessagePath = [documents stringByAppendingPathComponent:
+-                @"AwemeLiquidBar_comment_message_probe_1.0.58.log"];
++                @"AwemeLiquidBar_comment_message_probe_2.0.log"];
+             NSString *commentMessageText = [NSString stringWithContentsOfFile:commentMessagePath
+                                                                       encoding:NSUTF8StringEncoding
+                                                                          error:nil] ?: @"<comment/message probe empty>\n";
+ 
+             NSString *header = [NSString stringWithFormat:
+-                @"AwemeLiquidBar 1.0.58 auth47 release diagnostic export\n"
++                @"AwemeLiquidBar 2.0 auth47 release diagnostic export\n"
+                  "System: %@\n"
+                  "Device: %@\n"
+                  "Generated: %@\n\n",
+@@ -20829,7 +19326,7 @@
+                 interactionText, commentMessageText];
+ 
+             NSString *exportPath = [documents stringByAppendingPathComponent:
+-                @"AwemeLiquidBar_1.0.58_auth47_diagnostic_export.txt"];
++                @"AwemeLiquidBar_2.0_auth47_diagnostic_export.txt"];
+             NSError *writeError = nil;
+             BOOL wrote = [combined writeToFile:exportPath
+                                     atomically:YES
+@@ -20916,9 +19413,19 @@
+     [feedback impactOccurred];
+ 
+     AWELiquidSettingsController *settings = [AWELiquidSettingsController new];
+-    if (@available(iOS 13.0, *)) {
+-        settings.overrideUserInterfaceStyle = AWESystemInterfaceStyle();
++    UIView *nativeSettingsView = host.viewIfLoaded ?: top.viewIfLoaded;
++    UIColor *nativePageBackground = AWENativeSettingsPageBackground(nativeSettingsView);
++    UIColor *nativeCardBackground = AWENativeSettingsCardBackground(nativeSettingsView);
++    if (nativePageBackground) {
++        objc_setAssociatedObject(settings, &kAWELiquidSettingsNativeBackgroundKey,
++                                 nativePageBackground, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++    }
++    if (nativeCardBackground) {
++        objc_setAssociatedObject(settings, &kAWELiquidSettingsNativeCardBackgroundKey,
++                                 nativeCardBackground, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+     }
++    /* Native Settings owns appearance. Do not force the physical device theme;
++       inherit Douyin's current app-local Light/Dark trait and source colours. */
+ 
+     /* Follow DYKiller's stable Settings integration: when the entry is tapped
+        from Douyin Settings, push the plugin controller onto the existing native
+@@ -20944,7 +19451,9 @@
+         [[UINavigationController alloc] initWithRootViewController:settings];
+     navigation.modalPresentationStyle = UIModalPresentationFullScreen;
+     if (@available(iOS 13.0, *)) {
+-        navigation.overrideUserInterfaceStyle = AWESystemInterfaceStyle();
++        UIUserInterfaceStyle appStyle = AWEAppResolvedAppearanceStyle(top.viewIfLoaded.window ?: window);
++        navigation.overrideUserInterfaceStyle = appStyle;
++        settings.overrideUserInterfaceStyle = appStyle;
+     }
+     AWELogBarSnapshot(@"plugin-settings.native-fullscreen-fallback", top, YES);
+     [top presentViewController:navigation animated:YES completion:nil];
+@@ -21000,13 +19509,11 @@
+         [[UINavigationController alloc] initWithRootViewController:settings];
+     navigation.modalPresentationStyle = UIModalPresentationPageSheet;
+     if (@available(iOS 13.0, *)) {
+-        /*
+-         Do not inherit Douyin's app-local appearance. Seed the sheet from the
+-         device-level screen trait, then keep it updated while it is visible.
+-        */
+-        UIUserInterfaceStyle systemStyle = AWESystemInterfaceStyle();
+-        navigation.overrideUserInterfaceStyle = systemStyle;
+-        settings.overrideUserInterfaceStyle = systemStyle;
++        /* Match Douyin's own Settings appearance, including its app-local
++           dark-mode override, instead of the physical device appearance. */
++        UIUserInterfaceStyle appStyle = AWEAppResolvedAppearanceStyle(window);
++        navigation.overrideUserInterfaceStyle = appStyle;
++        settings.overrideUserInterfaceStyle = appStyle;
+     }
+ 
+     if (@available(iOS 15.0, *)) {
+@@ -21929,42 +20436,6 @@
+ %end
+ %end
+ 
+-static BOOL AWEPlaybackPreferenceCanBiasNow(void) {
+-    UIApplication *application = UIApplication.sharedApplication;
+-    if (application.applicationState != UIApplicationStateActive) return NO;
+-    return CACurrentMediaTime() >= gAWEPlaybackPreferenceResumeGraceUntil;
+-}
+-
+-/* Highest-quality preference is now advisory rather than destructive: preserve
+-   Douyin's complete adaptive set, order the best advertised bitrate first, and
+-   never rewrite playURL or force-switch a live private player. */
+-%hook AWEVideoModel
+-- (NSArray *)bitrateModels {
+-    NSArray *originalModels = %orig;
+-    if (!AWEPreferHighestPlaybackEnabled() || !AWEPlaybackPreferenceCanBiasNow() ||
+-        originalModels.count < 2) {
+-        return originalModels;
+-    }
+-
+-    /* Stability-first highest-quality preference. Older builds replaced the
+-       whole adaptive set with a single model (and overrode playURL). After an
+-       app background/foreground cycle Douyin may need the previously selected
+-       adaptive model to reconcile playback; removing it can produce a second
+-       native pause immediately after the user's tap. Preserve every model and
+-       only bias native selection by ordering the highest bitrate first. */
+-    return [originalModels sortedArrayUsingComparator:^NSComparisonResult(id lhs, id rhs) {
+-        long long left = AWEInteger64FromValue(
+-            AWEFirstSafeValue(lhs, @[@"bitrate", @"bitRate", @"videoBitrate",
+-                                    @"avgBitrate", @"bitrateInBps", @"bitRateInBps"]));
+-        long long right = AWEInteger64FromValue(
+-            AWEFirstSafeValue(rhs, @[@"bitrate", @"bitRate", @"videoBitrate",
+-                                    @"avgBitrate", @"bitrateInBps", @"bitRateInBps"]));
+-        if (left > right) return NSOrderedAscending;
+-        if (left < right) return NSOrderedDescending;
+-        return NSOrderedSame;
+-    }];
+-}
+-%end
+ 
+ /* Clean-screen status-bar ownership follows the same feed/detail/live roots
+    used by Douyin/DYYY.  Outside clean mode every controller returns its exact
+@@ -22502,7 +20973,7 @@
+     AWESettingItemModel *entry = [[%c(AWESettingItemModel) alloc] init];
+     entry.identifier = @"AwemeLiquidBar.Settings";
+     entry.title = @"LiquidBar";
+-    entry.detail = @"1.0.58";
++    entry.detail = @"2.0";
+     entry.type = 0;
+     entry.svgIconImageName = @"ic_gearsimplify_outlined_20";
+     entry.cellType = 26;
+@@ -22692,12 +21163,99 @@
+ 
+ %end
+ 
++static BOOL gAWETapModeNativeLikeFallback = NO;
++
++static BOOL AWEInteractionControllerLikeSelected(AWEPlayInteractionViewController *controller,
++                                                  BOOL *knownOut) {
++    if (knownOut) *knownOut = NO;
++    if (!controller.view) return NO;
++    NSMutableArray<UIView *> *buttons = [NSMutableArray array];
++    AWECollectFeedActionButtons(controller.view, buttons, 0);
++    for (UIView *button in buttons) {
++        if (AWEHomeActionKindForButton(button, buttons) != AWEHomeActionKindLike) continue;
++        UIImageView *source = objc_getAssociatedObject(
++            button, &kAWEHomeActionOriginalImageViewKey);
++        if (knownOut) *knownOut = YES;
++        return AWEHomeActionIsSelected(button, AWEHomeActionKindLike, source);
++    }
++    return NO;
++}
++
+ %hook AWEPlayInteractionViewController
+ 
++%new
++- (void)alb_installOrRefreshTripleTapMode {
++    UITapGestureRecognizer *triple = objc_getAssociatedObject(
++        self, &kAWETapModeTripleRecognizerKey);
++    if (!triple) {
++        triple = [[UITapGestureRecognizer alloc]
++            initWithTarget:self action:@selector(alb_handleTripleTapLike:)];
++        triple.numberOfTapsRequired = 3;
++        triple.numberOfTouchesRequired = 1;
++        triple.cancelsTouchesInView = NO;
++        triple.delaysTouchesBegan = NO;
++        triple.delaysTouchesEnded = NO;
++        [self.view addGestureRecognizer:triple];
++        objc_setAssociatedObject(self, &kAWETapModeTripleRecognizerKey, triple,
++                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++    }
++    triple.enabled = AWEPluginFeaturesEnabled() && AWEStoredTapGestureMode() == 2;
++}
++
++%new
++- (void)alb_handleTripleTapLike:(UITapGestureRecognizer *)recognizer {
++    if (recognizer.state != UIGestureRecognizerStateRecognized ||
++        !AWEPluginFeaturesEnabled() || AWEStoredTapGestureMode() != 2) return;
++
++    NSUInteger generation = [objc_getAssociatedObject(
++        self, &kAWETapModeDoubleGenerationKey) unsignedIntegerValue] + 1;
++    objc_setAssociatedObject(self, &kAWETapModeDoubleGenerationKey, @(generation),
++                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++
++    /* Douyin exposes a dedicated interaction-controller action for the heart.
++       Use that instead of fabricating a right-rail touch or re-entering the
++       double-tap recognizer.  It follows the same toggle path as the native
++       like button, so a later triple-tap can remove an existing like. */
++    BOOL knownBefore = NO;
++    BOOL selectedBefore = AWEInteractionControllerLikeSelected(self, &knownBefore);
++    BOOL invoked = NO;
++    if ([self respondsToSelector:@selector(performLikeAction)]) {
++        [self performLikeAction];
++        invoked = YES;
++    } else {
++        /* Compatibility fallback for an older/newer Aweme build that removes
++           performLikeAction.  Re-enter the native double-tap implementation
++           through a tiny guard so this fallback is not converted to comment. */
++        gAWETapModeNativeLikeFallback = YES;
++        [self onVideoPlayerViewDoubleClicked:recognizer];
++        gAWETapModeNativeLikeFallback = NO;
++        invoked = YES;
++    }
++    AWEInteractionDiagnosticWrite(
++        @"TAP_MODE triple_like generation=%lu invoked=%d selectedBefore=%@",
++        (unsigned long)generation, invoked,
++        knownBefore ? (selectedBefore ? @"1" : @"0") : @"unknown");
++
++    __weak AWEPlayInteractionViewController *weakSelf = self;
++    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.14 * NSEC_PER_SEC)),
++                   dispatch_get_main_queue(), ^{
++        AWEPlayInteractionViewController *strongSelf = weakSelf;
++        if (!strongSelf) return;
++        BOOL knownAfter = NO;
++        BOOL selectedAfter = AWEInteractionControllerLikeSelected(strongSelf, &knownAfter);
++        AWEInteractionDiagnosticWrite(
++            @"TAP_MODE triple_like_result generation=%lu selectedAfter=%@ toggled=%@",
++            (unsigned long)generation,
++            knownAfter ? (selectedAfter ? @"1" : @"0") : @"unknown",
++            (knownBefore && knownAfter) ? ((selectedBefore != selectedAfter) ? @"1" : @"0") : @"unknown");
++    });
++}
++
+ - (void)viewDidAppear:(BOOL)animated {
+     %orig(animated);
+     AWEScheduleHomeActionStacksInView(self.view);
+     AWERefreshVisibleSameStyleAnchors(self.view);
++    [self alb_installOrRefreshTripleTapMode];
+ }
+ 
+ - (void)viewDidLayoutSubviews {
+@@ -22705,6 +21263,7 @@
+     AWEInternalFSLayoutInteractionController((UIViewController *)self);
+     AWEScheduleHomeActionStacksInView(self.view);
+     AWERefreshVisibleSameStyleAnchors(self.view);
++    [self alb_installOrRefreshTripleTapMode];
+     if (gAWEStableCleanScreenEnabled) {
+         AWEScheduleCleanScreenReapply(@"interaction.layout");
+     }
+@@ -22713,253 +21272,90 @@
+ - (void)viewWillAppear:(BOOL)animated {
+     %orig(animated);
+     AWEScheduleHomeActionStacksInView(self.view);
++    [self alb_installOrRefreshTripleTapMode];
+ }
+ 
+ - (void)onVideoPlayerViewDoubleClicked:(id)sender {
++    if (gAWETapModeNativeLikeFallback) {
++        %orig(sender);
++        return;
++    }
+     if (!AWEPluginFeaturesEnabled()) {
+         %orig(sender);
+         return;
+     }
+-    BOOL enabled =
+-        [[NSUserDefaults standardUserDefaults]
+-            boolForKey:kAWELowerHalfDoubleTapCommentDefaultsKey];
+ 
+-    if (!enabled) {
++    NSInteger mode = AWEStoredTapGestureMode();
++    if (mode == 0) {
+         %orig(sender);
+         return;
+     }
+ 
++    if (mode == 2) {
++        /* Delay double-tap comment just long enough to distinguish a third tap.
++           The third tap increments the generation and cancels this work item,
++           then routes to Douyin's original like/unlike implementation. */
++        NSUInteger generation = [objc_getAssociatedObject(
++            self, &kAWETapModeDoubleGenerationKey) unsignedIntegerValue] + 1;
++        objc_setAssociatedObject(self, &kAWETapModeDoubleGenerationKey,
++                                 @(generation), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++        __weak AWEPlayInteractionViewController *weakSelf = self;
++        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
++            (int64_t)(0.30 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
++            AWEPlayInteractionViewController *strongSelf = weakSelf;
++            if (!strongSelf || !AWEPluginFeaturesEnabled() ||
++                AWEStoredTapGestureMode() != 2) return;
++            NSUInteger current = [objc_getAssociatedObject(
++                strongSelf, &kAWETapModeDoubleGenerationKey) unsignedIntegerValue];
++            if (current != generation) return;
++            BOOL commentShowing = NO;
++            @try {
++                commentShowing = [[strongSelf valueForKey:@"isCommentVCShowing"] boolValue];
++            } @catch (__unused NSException *exception) {}
++            if (!commentShowing &&
++                [strongSelf respondsToSelector:@selector(performCommentAction)]) {
++                [strongSelf performCommentAction];
++                AWEInteractionDiagnosticWrite(@"TAP_MODE double_comment generation=%lu",
++                    (unsigned long)generation);
++            }
++        });
++        return;
++    }
++
++    /* Mode 1: retain the proven split-double-tap behavior. */
+     CGPoint location = CGPointZero;
+     UIView *coordinateView = nil;
+-    if (!AWEGetDoubleTapLocation(sender, self.view,
+-                                 &location, &coordinateView) ||
++    if (!AWEGetDoubleTapLocation(sender, self.view, &location, &coordinateView) ||
+         !coordinateView) {
+-        /*
+-         Unknown sender type in an untested Douyin build: preserve the native
+-         action rather than swallowing double-tap.
+-        */
+         %orig(sender);
+         return;
+     }
+-
+     CGFloat splitY = CGRectGetMinY(coordinateView.bounds) +
+-                     CGRectGetHeight(coordinateView.bounds) *
+-                         AWEStoredDoubleTapLikeFraction();
++        CGRectGetHeight(coordinateView.bounds) * AWEStoredDoubleTapLikeFraction();
+     if (location.y < splitY) {
+-        /* Upper configured region: preserve native like and animation. */
+         %orig(sender);
+         return;
+     }
+-
+     BOOL commentShowing = NO;
+     @try {
+-        commentShowing =
+-            [[self valueForKey:@"isCommentVCShowing"] boolValue];
+-    } @catch (__unused NSException *exception) {
+-        commentShowing = NO;
+-    }
+-
+-    if (!commentShowing &&
+-        [self respondsToSelector:@selector(performCommentAction)]) {
++        commentShowing = [[self valueForKey:@"isCommentVCShowing"] boolValue];
++    } @catch (__unused NSException *exception) {}
++    if (!commentShowing && [self respondsToSelector:@selector(performCommentAction)]) {
+         [self performCommentAction];
+         return;
+     }
+-
+-    /*
+-     If the private comment route is unavailable, fall back to the original
+-     double-tap so the gesture never becomes a dead zone.
+-    */
+-    if (![self respondsToSelector:@selector(performCommentAction)]) {
+-        %orig(sender);
+-    }
+-}
+-
+-%end
+-
+-/*
+- FLEX identified this exact hierarchy:
+-
+- IESIMGrowingTextView
+-   └─ IESIMTextViewInternal  frame {{39, 3.5}, {251, 44}}
+-        └─ _UITextContainerView
+-             └─ _UITextLayoutCanvasView
+-
+- Moving IESIMTextViewInternal therefore moves the placeholder, cursor and
+- entered text together. Douyin reapplies the original frame after the input
+- controller's layout pass, so enforce the offset at the class's own frame
+- boundary rather than trying to patch it from the controller.
+-*/
+-%hook IESIMTextViewInternal
+-
+-- (void)setFrame:(CGRect)frame {
+-    UIView *internalView = (UIView *)self;
+-    BOOL shouldShift =
+-        AWEChatCapsuleEnabled() && AWEChatSeparateLeftEnabled();
+-
+-    NSValue *baseValue =
+-        objc_getAssociatedObject(internalView, &kAWEChatTextBaseFrameKey);
+-    NSValue *appliedValue =
+-        objc_getAssociatedObject(internalView, &kAWEChatTextAppliedFrameKey);
+-
+-    CGRect baseFrame = frame;
+-
+-    if (shouldShift) {
+-        /*
+-         When UIKit/Douyin passes our already-adjusted frame back through the
+-         setter, retain the stored original instead of adding another 10 pt.
+-         Any genuinely new layout frame becomes the new base.
+-        */
+-        if (baseValue && appliedValue &&
+-            AWEFrameNearEqual(frame, appliedValue.CGRectValue)) {
+-            baseFrame = baseValue.CGRectValue;
+-        } else {
+-            objc_setAssociatedObject(internalView,
+-                                     &kAWEChatTextBaseFrameKey,
+-                                     [NSValue valueWithCGRect:frame],
+-                                     OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-        }
+-
+-        CGRect adjustedFrame = baseFrame;
+-        CGFloat shift = MIN(10.0,
+-                            MAX(0.0,
+-                                CGRectGetWidth(baseFrame) - 20.0));
+-        adjustedFrame.origin.x += shift;
+-        adjustedFrame.size.width =
+-            MAX(20.0, adjustedFrame.size.width - shift);
+-
+-        objc_setAssociatedObject(internalView,
+-                                 &kAWEChatTextAppliedFrameKey,
+-                                 [NSValue valueWithCGRect:adjustedFrame],
+-                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-
+-        %orig(adjustedFrame);
+-        return;
+-    }
+-
+-    /*
+-     When separation is disabled, restore the pre-adjustment frame if the
+-     current incoming value is our last adjusted result.
+-    */
+-    if (baseValue && appliedValue &&
+-        AWEFrameNearEqual(frame, appliedValue.CGRectValue)) {
+-        frame = baseValue.CGRectValue;
+-    }
+-
+-    objc_setAssociatedObject(internalView,
+-                             &kAWEChatTextAppliedFrameKey,
+-                             nil,
+-                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-    %orig(frame);
+-}
+-
+-- (void)layoutSubviews {
+-    %orig;
+-
+-    UIView *internalView = (UIView *)self;
+-    BOOL shouldShift =
+-        AWEChatCapsuleEnabled() && AWEChatSeparateLeftEnabled();
+-
+-    NSValue *baseValue =
+-        objc_getAssociatedObject(internalView, &kAWEChatTextBaseFrameKey);
+-    NSValue *appliedValue =
+-        objc_getAssociatedObject(internalView, &kAWEChatTextAppliedFrameKey);
+-
+-    CGRect current = internalView.frame;
+-
+-    if (shouldShift) {
+-        if (!appliedValue ||
+-            !AWEFrameNearEqual(current, appliedValue.CGRectValue)) {
+-            /*
+-             A late Auto Layout pass has restored x=39/width=251. Re-enter the
+-             intercepted setter once; it will store that frame as the new base
+-             and publish x+10/width-10 without cumulative drift.
+-            */
+-            internalView.frame = current;
+-        }
+-        return;
+-    }
+-
+-    if (baseValue && appliedValue &&
+-        AWEFrameNearEqual(current, appliedValue.CGRectValue)) {
+-        internalView.frame = baseValue.CGRectValue;
+-    }
++    if (![self respondsToSelector:@selector(performCommentAction)]) %orig(sender);
+ }
+ 
+ %end
+ 
+ %hook IESIMGrowingTextView
+ 
+-- (void)layoutSubviews {
+-    if (!AWEPluginFeaturesEnabled()) {
+-        %orig;
+-        return;
+-    }
+-    UIView *composerView = (UIView *)self;
+-
+-    NSNumber *countValue = objc_getAssociatedObject(
+-        composerView, &kAWEComposerProbeCountKey);
+-    NSUInteger count = countValue.unsignedIntegerValue;
+-    BOOL detailed = count < 8;
+-
+-    if (count < 32) {
+-        AWELogComposerSnapshot(
+-            [NSString stringWithFormat:@"composer.layout.before[%lu]",
+-                                       (unsigned long)count],
+-            composerView, detailed && count == 0, YES);
+-    }
+-
+-    %orig;
+-
+-    /* Re-resolve the painted sibling from the growing text view itself.  This
+-       survives the multiline hierarchy used by newer Douyin builds where the
+-       input controller no longer exposes the background as a direct child. */
+-    AWEApplyChatPillNearGrowingTextView(composerView,
+-                                        @"growingText.layout");
+-
+-    /*
+-     The probe proved this view is transparent. The visible gray fill is a
+-     separate sibling container, so do not clip the text/cursor hierarchy.
+-    */
+-
+-    if (count < 32) {
+-        AWELogComposerSnapshot(
+-            [NSString stringWithFormat:@"composer.layout.after[%lu]",
+-                                       (unsigned long)count],
+-            composerView, detailed, YES);
+-    }
+-
+-    objc_setAssociatedObject(composerView,
+-                             &kAWEComposerProbeCountKey,
+-                             @(count + 1),
+-                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-
+-    if (count < 6) {
+-        __weak UIView *weakComposer = composerView;
+-        for (NSNumber *delayValue in @[@0.05, @0.25, @0.75]) {
+-            NSTimeInterval delay = delayValue.doubleValue;
+-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
+-                                          (int64_t)(delay * NSEC_PER_SEC)),
+-                           dispatch_get_main_queue(), ^{
+-                UIView *strongComposer = weakComposer;
+-                if (!strongComposer) return;
+-                AWELogComposerSnapshot(
+-                    [NSString stringWithFormat:
+-                        @"composer.delayed+%.2f[%lu]",
+-                        delay, (unsigned long)count],
+-                    strongComposer, delay >= 0.75, YES);
+-            });
+-        }
+-    }
+-}
+-
+ - (void)didMoveToWindow {
+     %orig;
+     UIView *composerView = (UIView *)self;
+     AWETrackMessagingComposer(composerView);
+     if (!AWEPluginFeaturesEnabled()) return;
+-    AWELogComposerSnapshot(@"composer.didMoveToWindow",
+-                           composerView, YES, YES);
+-    [composerView setNeedsLayout];
+     if (composerView.window && AWEAlbumMorphStyleEnabled() &&
+         gAWEAlbumMorphController) {
+         AWEApplyAlbumMorphVisibleFraction(0.0, @"im.composer.visible", NO);
+@@ -22969,210 +21365,22 @@
+     AWEStartBarVisibilityDriver();
+ }
+ 
+-- (void)didMoveToSuperview {
+-    %orig;
+-    if (!AWEPluginFeaturesEnabled()) return;
+-    UIView *composerView = (UIView *)self;
+-    AWELogComposerSnapshot(@"composer.didMoveToSuperview",
+-                           composerView, YES, YES);
+-}
+-
+-- (void)setFrame:(CGRect)frame {
+-    if (!AWEPluginFeaturesEnabled()) {
+-        %orig(frame);
+-        return;
+-    }
+-    UIView *composerView = (UIView *)self;
+-    CGRect previous = composerView.frame;
+-    %orig(frame);
+-    if (!CGRectEqualToRect(previous, frame)) {
+-        AWEComposerLog(@"composer.setFrame old=%@ new=%@ %@",
+-                       NSStringFromCGRect(previous),
+-                       NSStringFromCGRect(frame),
+-                       AWEComposerViewSignature(composerView));
+-    }
+-}
+-
+-- (void)setBounds:(CGRect)bounds {
+-    if (!AWEPluginFeaturesEnabled()) {
+-        %orig(bounds);
+-        return;
+-    }
+-    UIView *composerView = (UIView *)self;
+-    CGRect previous = composerView.bounds;
+-    %orig(bounds);
+-    if (!CGRectEqualToRect(previous, bounds)) {
+-        AWEComposerLog(@"composer.setBounds old=%@ new=%@ %@",
+-                       NSStringFromCGRect(previous),
+-                       NSStringFromCGRect(bounds),
+-                       AWEComposerViewSignature(composerView));
+-    }
+-    [composerView setNeedsLayout];
+-    __weak UIView *weakComposer = composerView;
+-    dispatch_async(dispatch_get_main_queue(), ^{
+-        AWEApplyChatPillNearGrowingTextView(weakComposer,
+-                                            @"growingText.bounds");
+-    });
+-}
+-
+-- (void)setBackgroundColor:(UIColor *)backgroundColor {
+-    if (!AWEPluginFeaturesEnabled()) {
+-        %orig(backgroundColor);
+-        return;
+-    }
+-    UIView *composerView = (UIView *)self;
+-    NSString *oldColor =
+-        AWEComposerColorDescription(composerView.backgroundColor);
+-    %orig(backgroundColor);
+-    AWEComposerLog(@"composer.setBackgroundColor old={%@} new={%@} %@",
+-                   oldColor,
+-                   AWEComposerColorDescription(backgroundColor),
+-                   AWEComposerViewSignature(composerView));
+-}
+-
+ %end
+ 
+ %hook AWEIMOptimizeAudioInputTouchView
+ 
+-- (void)layoutSubviews {
+-    %orig;
+-    if (!AWEPluginFeaturesEnabled()) return;
+-    UIView *voiceView = (UIView *)self;
+-    NSNumber *countValue = objc_getAssociatedObject(
+-        voiceView, &kAWEComposerProbeCountKey);
+-    NSUInteger count = countValue.unsignedIntegerValue;
+-    AWEApplyChatCornerToView(
+-        voiceView,
+-        [NSString stringWithFormat:@"voiceTouch.layout[%lu]",
+-                                   (unsigned long)count],
+-        count < 20);
+-    objc_setAssociatedObject(voiceView,
+-                             &kAWEComposerProbeCountKey,
+-                             @(count + 1),
+-                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-}
+-
+ - (void)didMoveToWindow {
+     %orig;
+     UIView *voiceView = (UIView *)self;
+     AWETrackMessagingComposer(voiceView);
+-    AWEApplyChatCornerToView(voiceView,
+-                             @"voiceTouch.didMoveToWindow",
+-                             YES);
+-    if (AWEPluginFeaturesEnabled()) {
+-        if (voiceView.window && AWEAlbumMorphStyleEnabled() &&
+-            gAWEAlbumMorphController) {
+-            AWEApplyAlbumMorphVisibleFraction(0.0, @"im.voiceComposer.visible", NO);
+-        } else {
+-            AWEScheduleTransitionRecovery();
+-        }
+-        AWEStartBarVisibilityDriver();
+-    }
+-}
+-
+-- (void)setFrame:(CGRect)frame {
+-    %orig(frame);
+-    UIView *voiceView = (UIView *)self;
+-    AWEApplyChatCornerToView(voiceView,
+-                             @"voiceTouch.setFrame",
+-                             NO);
+-}
+-
+-- (void)setBounds:(CGRect)bounds {
+-    %orig(bounds);
+-    UIView *voiceView = (UIView *)self;
+-    AWEApplyChatCornerToView(voiceView,
+-                             @"voiceTouch.setBounds",
+-                             NO);
+-}
+-
+-%end
+-
+-%hook IESIMInputViewController
+-
+-- (void)viewDidLoad {
+-    %orig;
+-    if (!AWEPluginFeaturesEnabled()) return;
+-    UIViewController *controller = (UIViewController *)self;
+-    AWEComposerLog(@"inputVC.viewDidLoad class=%@ ptr=%p view=%@",
+-                   NSStringFromClass(controller.class),
+-                   (__bridge void *)controller,
+-                   AWEComposerViewSignature(controller.view));
+-    AWELogComposerTree(@"inputVC.viewDidLoad.tree", controller.view, 4);
+-}
+-
+-- (void)viewDidLayoutSubviews {
+-    %orig;
+     if (!AWEPluginFeaturesEnabled()) return;
+-    UIViewController *controller = (UIViewController *)self;
+-    NSNumber *countValue = objc_getAssociatedObject(
+-        controller, &kAWEInputControllerProbeCountKey);
+-    NSUInteger count = countValue.unsignedIntegerValue;
+-
+-    NSString *event = [NSString
+-        stringWithFormat:@"inputVC.paintedPill[%lu]",
+-                         (unsigned long)count];
+-    BOOL applied =
+-        AWEApplyPaintedChatInputPill(controller, event, count < 20);
+-    AWEApplyChatTextGeometry(controller.view);
+-
+-    UIView *voiceTouch = AWEFindViewByRuntimeClassName(
+-        controller.view, @"AWEIMOptimizeAudioInputTouchView");
+-    if (voiceTouch) {
+-        AWEApplyChatCornerToView(
+-            voiceTouch,
+-            [NSString stringWithFormat:@"inputVC.voiceCorner[%lu]",
+-                                       (unsigned long)count],
+-            count < 20);
+-    }
+-
+-    if (count < 20) {
+-        AWEComposerLog(@"inputVC.viewDidLayout[%lu] applied=%d class=%@ view=%@",
+-                       (unsigned long)count,
+-                       applied,
+-                       NSStringFromClass(controller.class),
+-                       AWEComposerViewSignature(controller.view));
+-        if (count < 5) {
+-            AWELogComposerTree(
+-                [NSString stringWithFormat:@"inputVC.layout.tree[%lu]",
+-                                           (unsigned long)count],
+-                controller.view, 4);
+-        }
+-    }
+-
+-    /*
+-     Some input configurations add the painted sibling one run-loop later.
+-     Retry only during the first few layouts; this is bounded and main-thread
+-     only, not a permanent timer.
+-    */
+-    if (count < 6) {
+-        __weak UIViewController *weakController = controller;
+-        dispatch_async(dispatch_get_main_queue(), ^{
+-            UIViewController *strongController = weakController;
+-            if (!strongController) return;
+-            AWEApplyPaintedChatInputPill(
+-                strongController,
+-                [NSString stringWithFormat:@"inputVC.asyncPill[%lu]",
+-                                           (unsigned long)count],
+-                YES);
+-            AWEApplyChatTextGeometry(strongController.view);
+-            UIView *voiceTouch = AWEFindViewByRuntimeClassName(
+-                strongController.view,
+-                @"AWEIMOptimizeAudioInputTouchView");
+-            if (voiceTouch) {
+-                AWEApplyChatCornerToView(
+-                    voiceTouch,
+-                    [NSString stringWithFormat:@"inputVC.asyncVoice[%lu]",
+-                                               (unsigned long)count],
+-                    YES);
+-            }
+-        });
++    if (voiceView.window && AWEAlbumMorphStyleEnabled() &&
++        gAWEAlbumMorphController) {
++        AWEApplyAlbumMorphVisibleFraction(0.0, @"im.voiceComposer.visible", NO);
++    } else {
++        AWEScheduleTransitionRecovery();
+     }
+-
+-    objc_setAssociatedObject(controller,
+-                             &kAWEInputControllerProbeCountKey,
+-                             @(count + 1),
+-                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
++    AWEStartBarVisibilityDriver();
+ }
+ 
+ %end
+@@ -23888,139 +22096,6 @@
+ }
+ 
+ 
+-static BOOL AWEClassNameLooksLikeShareForwardDestinationV19(NSString *className) {
+-    NSString *lower = className.lowercaseString;
+-    return [lower containsString:@"share"] || [lower containsString:@"forward"] ||
+-           [lower containsString:@"transpond"] || [lower containsString:@"sendpanel"];
+-}
+-
+-static UIVisualEffect *AWEShareGlassEffectV19(void) {
+-    if (AWEShareGlassMode() == 0) return AWECreateHomeAdaptiveGlassEffect();
+-    Class glassClass = NSClassFromString(@"UIGlassEffect");
+-    SEL maker = NSSelectorFromString(@"effectWithStyle:");
+-    id effect = (glassClass && [glassClass respondsToSelector:maker])
+-        ? ((id (*)(id, SEL, NSInteger))objc_msgSend)(glassClass, maker, 1) : nil;
+-    if ([effect respondsToSelector:NSSelectorFromString(@"setInteractive:")])
+-        ((void (*)(id, SEL, BOOL))objc_msgSend)(effect,
+-            NSSelectorFromString(@"setInteractive:"), NO);
+-    if ([effect respondsToSelector:NSSelectorFromString(@"setTintColor:")])
+-        ((void (*)(id, SEL, id))objc_msgSend)(effect,
+-            NSSelectorFromString(@"setTintColor:"), nil);
+-    return [effect isKindOfClass:UIVisualEffect.class]
+-        ? (UIVisualEffect *)effect : AWECreateHomeAdaptiveGlassEffect();
+-}
+-
+-static BOOL AWEShareCandidateLooksLikeAvatarV19(UIView *view) {
+-    if (![view isKindOfClass:UIImageView.class]) return NO;
+-    CGFloat w = CGRectGetWidth(view.bounds), h = CGRectGetHeight(view.bounds);
+-    if (w < 32.0 || w > 86.0 || h < 32.0 || h > 86.0) return NO;
+-    CGFloat ratio = MIN(w,h) / MAX(MAX(w,h), 1.0);
+-    return ratio > 0.82 && (view.layer.cornerRadius >= MIN(w,h) * 0.28 || view.clipsToBounds);
+-}
+-
+-static BOOL AWEShareCandidateLooksLikeActionV19(UIView *view) {
+-    CGFloat w = CGRectGetWidth(view.bounds), h = CGRectGetHeight(view.bounds);
+-    if (w < 34.0 || w > 110.0 || h < 34.0 || h > 100.0) return NO;
+-    if ([view isKindOfClass:UIControl.class]) return YES;
+-    NSString *lower = NSStringFromClass(view.class).lowercaseString;
+-    return [lower containsString:@"button"] || [lower containsString:@"action"] ||
+-           [lower containsString:@"item"];
+-}
+-
+-static void AWEInstallShareGlassPlateV19(UIView *candidate, BOOL circle) {
+-    if (!candidate.superview || candidate.hidden || candidate.alpha < 0.01) return;
+-    UIVisualEffectView *plate = objc_getAssociatedObject(candidate, &kAWEShareGlassPlateKey);
+-    if (!plate) {
+-        plate = [[UIVisualEffectView alloc] initWithEffect:AWEShareGlassEffectV19()];
+-        plate.userInteractionEnabled = NO;
+-        plate.clipsToBounds = YES;
+-        objc_setAssociatedObject(candidate, &kAWEShareGlassPlateKey, plate,
+-                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-        [candidate.superview insertSubview:plate belowSubview:candidate];
+-    } else if (plate.superview != candidate.superview) {
+-        [plate removeFromSuperview];
+-        [candidate.superview insertSubview:plate belowSubview:candidate];
+-    }
+-    plate.effect = AWEShareGlassEffectV19();
+-    CGRect frame = candidate.frame;
+-    CGFloat pad = circle ? 3.0 : 2.0;
+-    frame = CGRectInset(frame, -pad, -pad);
+-    plate.frame = frame;
+-    plate.layer.cornerCurve = kCACornerCurveContinuous;
+-    plate.layer.cornerRadius = circle ? CGRectGetHeight(frame) * 0.5
+-                                      : MIN(18.0, CGRectGetHeight(frame) * 0.42);
+-}
+-
+-static void AWEApplyShareSheetGlassV19(UIViewController *controller,
+-                                       NSString *reason) {
+-    if (!controller || !controller.viewIfLoaded.window || !AWEShareGlassEnabled() ||
+-        AWEOperatingSystemMajorVersion() < 26) return;
+-    UIView *root = controller.view;
+-    root.backgroundColor = UIColor.clearColor;
+-    UIVisualEffectView *background = objc_getAssociatedObject(
+-        controller, &kAWEShareGlassBackgroundKey);
+-    if (!background) {
+-        background = [[UIVisualEffectView alloc] initWithEffect:AWEShareGlassEffectV19()];
+-        background.userInteractionEnabled = NO;
+-        background.autoresizingMask = UIViewAutoresizingFlexibleWidth |
+-                                      UIViewAutoresizingFlexibleHeight;
+-        background.frame = root.bounds;
+-        [root insertSubview:background atIndex:0];
+-        objc_setAssociatedObject(controller, &kAWEShareGlassBackgroundKey,
+-                                 background, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+-    }
+-    background.effect = AWEShareGlassEffectV19();
+-    background.frame = root.bounds;
+-    [root sendSubviewToBack:background];
+-
+-    NSMutableArray<NSArray *> *queue = [NSMutableArray arrayWithObject:@[root,@0]];
+-    NSUInteger index = 0, buttons = 0, avatars = 0;
+-    while (index < queue.count && index < 520) {
+-        NSArray *entry = queue[index++]; UIView *view = entry[0];
+-        NSUInteger depth = [entry[1] unsignedIntegerValue];
+-        if (depth < 12) for (UIView *child in view.subviews)
+-            if (child != background) [queue addObject:@[child,@(depth+1)]];
+-        if (view == root || view == background) continue;
+-        CGRect frame = [view convertRect:view.bounds toView:root];
+-        BOOL largeBackdrop = CGRectGetWidth(frame) >= CGRectGetWidth(root.bounds) * 0.86 &&
+-                             CGRectGetHeight(frame) >= CGRectGetHeight(root.bounds) * 0.30;
+-        if (largeBackdrop && ![view isKindOfClass:UIControl.class] &&
+-            ![view isKindOfClass:UILabel.class] && ![view isKindOfClass:UIImageView.class]) {
+-            view.backgroundColor = UIColor.clearColor;
+-            view.layer.backgroundColor = UIColor.clearColor.CGColor;
+-            view.opaque = NO;
+-        }
+-        if (AWEShareCandidateLooksLikeAvatarV19(view)) {
+-            AWEInstallShareGlassPlateV19(view, YES); avatars++;
+-        } else if (AWEShareCandidateLooksLikeActionV19(view)) {
+-            AWEInstallShareGlassPlateV19(view, NO); buttons++;
+-        }
+-    }
+-    if (AWEInteractionDiagnosticsEnabled()) {
+-        AWEInteractionDiagnosticWrite(@"SHARE_GLASS_V19 reason=%@ class=%@ buttons=%lu avatars=%lu mode=%ld",
+-            reason ?: @"unknown", NSStringFromClass(controller.class),
+-            (unsigned long)buttons, (unsigned long)avatars, (long)AWEShareGlassMode());
+-    }
+-}
+-
+-static void AWEScheduleShareSheetGlassV19(UIViewController *controller,
+-                                          NSString *reason) {
+-    if (!AWEShareGlassEnabled() || !controller) return;
+-    __weak UIViewController *weakController = controller;
+-    for (NSNumber *delay in @[@0.0,@0.08,@0.24]) {
+-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
+-            (int64_t)(delay.doubleValue*NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+-            UIViewController *live = weakController;
+-            if (live.viewIfLoaded.window) AWEApplyShareSheetGlassV19(live, reason);
+-        });
+-    }
+-}
+-
+-/*
+- Every completed page appearance is a useful, low-frequency recovery signal.
+- Unlike the old global UIView layout hook, this runs only on navigation/
+- presentation transitions and therefore does not create a per-frame workload.
+-*/
+ %hook UIViewController
+ 
+ - (void)presentViewController:(UIViewController *)controller
+@@ -24106,9 +22181,6 @@
+     }
+ 
+     %orig(animated);
+-    if (AWEClassNameLooksLikeShareForwardDestinationV19(className)) {
+-        AWEScheduleShareSheetGlassV19(self, @"viewWillAppear");
+-    }
+     if (friendsFeedContent && !AWESecondTabIsShop() &&
+         (AWECurrentOriginalMainTabIndex() == 1 || gAWEFriendsTabLatched)) {
+         AWEApplyFriendsCaptionBottomReserve(self, YES, @"viewWillAppear.after");
+@@ -24151,9 +22223,6 @@
+     AWELogBarSnapshot(@"vc.viewDidAppear", self, YES);
+ 
+     NSString *className = NSStringFromClass(self.class);
+-    if (AWEClassNameLooksLikeShareForwardDestinationV19(className)) {
+-        AWEScheduleShareSheetGlassV19(self, @"viewDidAppear");
+-    }
+     if (AWEClassNameLooksLikeFriendsRootController(className)) {
+         gAWEFriendsTabLatched = YES;
+     }
+@@ -24385,7 +22454,7 @@
+         }
+ 
+         AWEAlbumMorphProbeClear();
+-        AWEAlbumMorphProbeWrite(@"SESSION_START build=1.0.58 os=%@",
++        AWEAlbumMorphProbeWrite(@"SESSION_START build=2.0 os=%@",
+             NSProcessInfo.processInfo.operatingSystemVersionString);
+         /* Preserve the user's grouped-top and iOS 27 force-dark choices
+            across upgrades. Defaults are resolved lazily by their getters. */
+@@ -24405,7 +22474,6 @@
+                    window state. Those operations used to run in the same
+                    lifecycle window as Douyin's native resume decision and can
+                    provoke a second visibility/pause reconciliation. */
+-                gAWEPlaybackPreferenceResumeGraceUntil = CACurrentMediaTime() + 5.0;
+ 
+                 if (AWEPluginFeaturesEnabled()) {
+                     if (!AWEAlbumMorphStyleEnabled()) {

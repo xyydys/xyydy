@@ -1,0 +1,82 @@
+AwemeLiquidBar 1.0.58 auth47 — Clear Glass Policy v11
+=====================================================
+
+Purpose
+-------
+Keep the successful iOS 27 Clear floating tab-bar material from v10 while
+rolling back the interaction/layout regressions and limiting Clear to the
+screens where it is actually useful.
+
+Bottom-bar policy
+-----------------
+A new iOS 27 switch controls Clear bottom glass.
+
+ON (default):
+- Home: Clear bottom bar.
+- Full-screen playable feed entered from the Profile tab (the path used by
+  liked/favourites works): Clear bottom bar.
+- Messages, profile grid, shop and other secondary pages: native Regular glass
+  following Douyin's app Light/Dark appearance.
+
+OFF:
+- Home: native Regular glass forced to the dark content/material branch.
+- All secondary pages: native Regular glass following Douyin Light/Dark.
+
+The switch changes only the bottom bar. Home action/top buttons keep their
+existing Clear-button material policy.
+
+Native glass merge/attraction
+-----------------------------
+- Clear material is now applied to both nearby Platter/Search glassEffect
+  owners in the system floating tab-bar hierarchy instead of only the main
+  _UITabBarItemPlatterView.
+- UIKit's existing UIGlassContainerEffect near the bottom bar is preserved and
+  its spacing is set to 24 pt while Clear is active. The original spacing is
+  restored outside Clear mode.
+- No private UITabBar view is reparented. This is deliberate: reparenting can
+  destroy tab/search hit ownership. The implementation therefore uses UIKit's
+  own shared container as the merge renderer.
+
+Touch fixes
+-----------
+- Like/Comment/Favourite/Share: restore the v9-proven action forwarding path
+  first; the v10 hit-region experiment is fallback only.
+- Top Search and bottom UISearchTab now share a dedicated search dispatcher.
+  It prioritises the live AWEHPDiscoverFeedEntranceView /
+  AWEHPSearchBubbleEntranceView inside the current top-bar container and
+  invokes its real Control or tap recognizer without moving that recognizer.
+- The original top-search owner is no longer geometrically moved; only the
+  visible glass replacement is positioned.
+
+Avatar / music layout
+---------------------
+- Restore the proven 54 pt profile glass plate and 50.16 pt music/same-style
+  plate geometry.
+- Do not use UIButtonConfiguration.image for the avatar or album artwork.
+  UIKit's configuration layout caused the v10 square/nested/offset appearance.
+- The live artwork is mirrored as a fixed circular UIImageView child inside the
+  actual interactive glass UIButton; the source artwork is hidden while bound.
+  It therefore follows the button's press/stretch transform without changing
+  plate geometry.
+
+Message page
+------------
+- Menu/Search/Add use standard glassButtonConfiguration on both iOS 26 and 27.
+- Their Light/Dark trait comes from the exported Douyin app/window appearance
+  resolver. Message buttons are no longer forced Clear on iOS 27.
+- Source controls remain at native geometry.
+
+Favourites snap-to-top
+----------------------
+- All Profile/Favourites bottom-extension frame/inset mutations are disabled.
+  v10 only skipped them while dragging; a delayed pass after the drag could
+  still change the nested pager geometry and jump to the first item.
+- Shop-specific bottom cleanup remains unchanged.
+
+Validation in this environment
+------------------------------
+- scripts/preflight.sh: PASS
+- swiftc -frontend -parse AwemeAlbumMorphBar.swift: PASS
+- Source brace/parenthesis balance: PASS
+- Full arm64/arm64e Theos/Xcode 27 link is still performed by the user's GitHub
+  Actions builder.

@@ -1,0 +1,15 @@
+{
+  "baseline": "TEST17 source archive",
+  "expected_unchanged_sha256": {
+    "ALB5Options.h": "1ebdc5f9789cb2f5993c8c9ea9ffbfc59ae2bffc89b4635ef877a321fa323fcb",
+    "ALB5RightLayout.h": "6794e5db8aeea6689d5d6438cfc06f2c4ca0c2fc245f697fc850bd4dfe2c435c",
+    "ALBTopNative/ALBTopNativeGroup.m": "dfca42745766e17d418d6171d061c5e982d5eff164fb69b9fe7c190fb9214c2b",
+    "ALBTopNative/ALBTopNativeGroup.h": "1b06353f3bffc98c697d804d22b446394eca79087a6baf0a9d219807dc69855d",
+    "ALBTopNative/ALBNativeBarSurface.h": "cf040bb4a537f761744b2aa9dc4c0f2c3b389a2a325deb302d1407c656646dab",
+    "ALBNativeInteraction.h": "3667b60fd60152987cc2421350a3f9b410050e211c5b69734acc2506be3c73ae",
+    "AwemeAlbumMorphBar.swift": "c5c7ba9657e421bfce0f5d7f37a3335ac5446a2ab27f7a8db90121ca024e744d",
+    "ALBNativeMinimize.h": "c547b6751944467b324aeacbe1f5479c517046377444e613768b59f7ab9296b3",
+    "ALB5BottomGeometry.m": "df35dfaa0b9b0990502e4383b74922d29b4f7dba29f27d14c45baf72054fc6a7"
+  },
+  "note": "Source preservation does not establish visual or runtime correctness on iOS."
+}

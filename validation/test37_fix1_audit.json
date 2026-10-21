@@ -1,0 +1,116 @@
+{
+  "baseline": "2.0.10 TEST37 REPAIR",
+  "revision": "2.0.10 TEST37 FIX1",
+  "runtime_logic_changes": [
+    "ALBCenterMorphGeometry.swift"
+  ],
+  "metadata_only_sources": [
+    "Tweak.x",
+    "ALB5Settings.h"
+  ],
+  "changed_files": {
+    ".github/workflows/build.yml": {
+      "before": "2ed380f7bc942698f2070d10059614e835dba388895be11919b06fa947e05adf",
+      "after": "cbe525b50c9c5fce8808607ea0358d65795bb6e5da63ea46c95a597ca965da11"
+    },
+    "ALB5Settings.h": {
+      "before": "eade9d2373ca71a0f0f107340f5563724fc8b0dac7bee3f4bbf23319f62c89fc",
+      "after": "bf1a36cb293c26296a8c51933e43ad1ee412d4125c6cab852412a03b03b64096"
+    },
+    "ALBCenterMorphGeometry.swift": {
+      "before": "2fe07e892e729a4a51549b17baa63273da4adee1a0ce3503ed6207ae93b074e5",
+      "after": "7172b1fa094b6bb0f8e808ec9f7aba622612a69f75dc63786aa877a3b6b7faa0"
+    },
+    "README.md": {
+      "before": "ccfb0dcdc93cbd5461925f758212566257077de4952883b4373849bcf2cdc46a",
+      "after": "c744c52a4f50c89486d1c8a37ec9d5ac28b0e27dbcfb2a71ee4b3bddb3e90b79"
+    },
+    "Tests/center_morph_geometry_test.swift": {
+      "before": "6dc190ecba967b8e28ce1958d68d3908e891c907b15125f450501ad9e5bb3baf",
+      "after": "5fb819305e732a068a145bd5c4e2edce3e9f485413cbb5c35faa9646cc4f1904"
+    },
+    "Tweak.x": {
+      "before": "e5fc30a3eaa5ee05924d2139ed26b35c90131a31e7787a017721ceb88eeb5b35",
+      "after": "dad569d4e53acfdaae2e2f2562b947742a58f4e606151ad9e1b2e20451c9fa05"
+    },
+    "control": {
+      "before": "960736f55dc1981dae775bcf0ed35bced8af743837ef013559c96561aafb3d14",
+      "after": "bb2d4f6b7740e1b87d440b46bfdf307804d5cf34320583a66d6fefa9b47d7268"
+    },
+    "push_to_github.sh": {
+      "before": "4978598a770df9f09a23b942fee5dae47d5b6181ab3159c2219d501a65ced478",
+      "after": "00c7c83ad2d4460136ffcf2b050cfffcbce8238eaefff04d87a37dd468da677a"
+    },
+    "scripts/check_native_contract.py": {
+      "before": "9960cdb5799c51666e3b50190507b0baf803b336ef010a3a82dd46e6b6b3e470",
+      "after": "d30312a5b7d54526973a7f6e09405728c19dfe2ed56b495680303e945538d285"
+    },
+    "scripts/check_repro_capture.py": {
+      "before": "2ea0ff722fc0c4dcdc741c56e71ef5f8c0510bb9a83d9e6aca62fe47dd7a3939",
+      "after": "c71a610a6533c228cdc4eb86548af2b62bb2570246521c2a6f1fd890007709af"
+    },
+    "scripts/check_test37.py": {
+      "before": "5a98751cd9401da715d3ed3a0eed7d5072060219add234826d24ed9c4beba2ab",
+      "after": "905eab00a8053a9a3ca3597186a97bfa984a67315df094b0db39e167684ef3f1"
+    },
+    "scripts/preflight.sh": {
+      "before": "dfa157ff7fdeab773687d7c891ab53e6f79f3e276d6eb01039080433d4405875",
+      "after": "b4424ffa13e79cffd284de5eaa88faad854d46534925e38b410108c5481996a0"
+    }
+  },
+  "unchanged_source_sha256": {
+    "ALB22NativeEndpoint.h": "6958b429375912dc94fbad1157960815cd0fdca7ea64127ee90cce092fc97f37",
+    "ALB22NativeMethodPolicy.h": "c200f8a715c0bbce5846c84996270f110a246bddb0c0806037a92d3f8b2bcab1",
+    "ALB5BottomGeometry.m": "a31a1bc33b42cf1ef79b0bb304891a611e6a30a05c25f106c76a032a4aba294f",
+    "ALB5Options.h": "47bd64af9ff8db32a2a353583d39c12c3c5e091e44ad84292e35a91a7a12f83b",
+    "ALB5RightLayout.h": "ebaf9c0c69674d0218bb67c1beed3d00f4e22c1449f77716a9bb235d0d1c43a3",
+    "ALB7BottomMath.h": "5dae13ed134eedaac6d4f931f96c11cd4afe5f54a074aa84f846212fed022dce",
+    "ALB8Profile.h": "b66a199bc853ca163edf7236b72fb4d2bf0262b9cb351a705a3d4eb02a41d9c4",
+    "ALBAlbumVideoExporter.h": "8e0af908bdc29259981a1127da018a227ef0857e4375214924ccb70d4c02b476",
+    "ALBAvatarMenuTouch.h": "beb56766a44d705dc5af1ca2356f3be8f74615b8d3dfba3f98ab7f2e1978f138",
+    "ALBCenterMorphSurface.swift": "57a8cbd3093cc245c6a81238261aa74c6041dd5576f9ba30c4122a7c3c910843",
+    "ALBClearContrast.h": "9e7794d0ae580af0367746761d5a4935e92743c4c8efbd97f931ba484a3c83ee",
+    "ALBDanmakuGlass.h": "c1e0ee1ee2bd24d3011330590d108e19c3f25de6081a03ed19ed48eb8b2c3143",
+    "ALBDownloadJob.h": "994615b02723162eae8ebbcc2fa8e74f46b0711c53bfc3dba0ac73e883788cc5",
+    "ALBDownloadState.h": "3988f4b2d718e8ab696018cdfd51a4f837351b5f084a576bcae2eedac9abde63",
+    "ALBGlassMaterials.h": "6f028f675525b46f19bb1227800e375708e2e6496c9252abbf8d59a279fe1e64",
+    "ALBNativeInteraction.h": "7f71eaf3254c1b1a69008a181a81b58b1057c3dda0c14f86d9940ea02d593304",
+    "ALBNativeMinimize.h": "1d4d503f958c9ed208fffab6cf0d42478ad305b243b36a55771b2bd6d8e1c360",
+    "ALBNativeState.h": "e303f7a464ff1a0856db6c509e98ca6bf2e96bf86f1fad720e50dc12c49284f3",
+    "ALBReproCapture.h": "b1dc4ee848c21e6c116b767308c61f29182ddffc104b16c19a95b506d18300ea",
+    "ALBReproCaptureSignal.h": "e88003bda9c2e327e455ae5b448882f77f2702664ec1e82728545841ff8fabaf",
+    "ALBRootScroll.h": "b849799dad933e9c72a4ce7b80a256151eccf8f814e0600d9cceece472013353",
+    "ALBScrollIntent.h": "ff46ae61dec0a7846cdcdd94b6d327afc15122800bedc81a0be1380fd9b1067e",
+    "ALBSettingsGlass.h": "9fa23447e09556f45cdb521e4cd31d417726f388fa49ad7cc980cfe794194e5c",
+    "ALBSidePalette.h": "5027df049086d8b6a1219561a11d90899758c91f924c8065c9c116356f7fc855",
+    "ALBTopNative/ALB23LensPolicy.h": "8706e99844884e928c54d661a07fcf31b799df642e86a6b801f50f795dc00db2",
+    "ALBTopNative/ALBCompactGeometry.h": "cda1ed80b1e8d98cf63165efcb27b8dce0e5bc06085f9b42863e712b25fddf09",
+    "ALBTopNative/ALBNativeBarSurface.h": "cf040bb4a537f761744b2aa9dc4c0f2c3b389a2a325deb302d1407c656646dab",
+    "ALBTopNative/ALBTopNativeGroup.h": "b3a3d7acd0c800352a278025a0ca865a9d6ffa06c2ed90184edfc991d2d89c7f",
+    "ALBTopNative/ALBTopNativeGroup.m": "83fb03d3a14f6170ec1e51c243a92268bb12a5976faebb30c08ab5cd1663b304",
+    "ALBTopNative/Tests/window_geometry_test.c": "0442e53629cc05996285189ea744ad17333210bfc294d872591c8abd0fabe58e",
+    "AwemeAlbumMorphBar.swift": "2968e7300bfeead68c7cd5968246a3c92715295a71797f76f0992c9b53a7c3cd",
+    "AwemeLiquidBar-Bridging-Header.h": "38ee4f9d384d59247568eec6e6dac118b64a4bee2650d6fe277d5bc3e5053100",
+    "CommentGlassDYKiller.xm": "8f238e0ffae26c4bd4be258ce4c4653e5cbda28985c26cac9912484949e8d176",
+    "MessageTopGlassV3.xm": "d123b22e9b238ce9f06d939d02b3f96e3183af7363dead4759784321bc0dad5c",
+    "Tests/Support/math.h": "45e623e3904e2d16bfb914d4bec62e3c2b929acf86510505a390cac1c2021fd8",
+    "Tests/Support/right_layout_declarations.m": "3da43334513fd9d223ab18e1910c224fa3d5277db6adda713ea4e370b799f757",
+    "Tests/bottom_geometry_test.c": "84d6b9ba648ea3b8265b0b0baab40cd65e85020d9fecb1c826c156a5c32e25eb",
+    "Tests/download_state_test.c": "ffc6d39ed841b08c98abb228610aba3bb875b5d750fcfe67012bf0d8c2958ddf",
+    "Tests/native_endpoint_policy_test.c": "6baee37855bd1b7b004a079bd70806e30dc9ad59d4cb555f17e963fbd1f7a9a9",
+    "Tests/native_state_test.c": "29dd4d841fab933246f7d00ee2296057f7830ef02b6b388b301c5f1b621f1915",
+    "Tests/right_layout_test.c": "afa2ce55da7352abe53f6f35aeb41603e31573c223e1a32aa9599a8bb8147b31",
+    "Tests/right_persistence_test.c": "2cd23c35cb29a86b07cb9d51934c9a2a30b80132df92f65a3849ffbede4e6494",
+    "Tests/right_tail_anchor_test.c": "f1da3f2cb669fd6e85298b5b4849e9da0c1e1b08d9b84920d39f53b8df98a002",
+    "Tests/scroll_intent_test.c": "09ff72cbd9b1e709067d5f65da598256027ecec89a3b93a746be45f8443a0d01",
+    "Tests/test23_regression_test.c": "14da0f3f9f7b95e09194884050d4354b81e30860088825f2fe9b66c9e069f208",
+    "WCLGBackdropLayer.h": "92567c67756429bbc9514fc6c407af786eb84b7d7efcea66c29c4b9c2f8975d0",
+    "WCLGBackdropLayer.m": "f84ddc951556a126035206069a0fc0f298f5effaf279f26ac3de9a347c52987e",
+    "WCLGEdgeEffect.h": "938b609230f8cc08f2577690a294f0c9d4ef1f1b6b3b0d3481b746b50eb2fabd",
+    "WCLGEdgeEffect.m": "b22253f1e354257eb97a415a3e902949c733e13be89aca00bbc4d82f9fa572c2",
+    "WCLGEdgeGradientTables.h": "93e3b224f6741d2da504c7a62b77eaeec177f5f6131cdb82fc219f0b8de474bd",
+    "WCLGEdgeGradientTables.m": "b79150689859d87497e9bdd446e0a22985e52c57427d72f7ced72beaee6d9b6e"
+  },
+  "retained_swift_and_sdk_gates": true,
+  "note": "Fingerprints show source preservation, not runtime correctness."
+}

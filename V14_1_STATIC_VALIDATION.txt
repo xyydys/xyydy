@@ -1,0 +1,10 @@
+V14.1 COMPILEFIX STATIC VALIDATION
+
+removed live AWERegisterNativeGlassTrackingMirror references: PASS
+Message press driver uses passive long press recognizer: PASS
+foreign beginTracking calls absent: PASS
+UIApplication sendEvent hook absent: PASS
+Tweak.x brace balance: PASS
+Tweak.x paren balance: PASS
+MessageTopGlassV3.xm brace balance: PASS
+MessageTopGlassV3.xm paren balance: PASS

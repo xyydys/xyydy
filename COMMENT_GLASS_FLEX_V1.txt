@@ -1,0 +1,23 @@
+Fresh comment-glass implementation based only on the supplied FLEX hierarchy
+and AwemeCommentGlass_0.0.9 reference project.
+
+Baseline:
+- AwemeLiquidBar 1.0.56c16 auth44
+- No 57-series avatar/search/minimize experiments
+- No prior integrated comment-glass implementation
+
+FLEX geometry used:
+- outer panel UICollectionView: 440 x 650.08
+- header region: 40 pt
+- AWEListKitMagicCollectionView: 440 x 527.08
+- bottom input container: 83 pt
+- native inner input pill: x=12, y=6, w=416, h=36
+
+v1 behavior:
+- Forces the existing validated internal-fullscreen geometry only while the
+  comment controller is alive, even if the global fullscreen switch is off.
+- Clears the structural comment backgrounds.
+- Clears only the outer 83 pt CommentInputContainerView backgrounds.
+- Does not alter the inner 416x36 native input pill.
+- Adds clear UIGlassEffect behind the 40 pt header and 527 pt list body.
+- No corner radius, no tint, no adaptive style override yet.

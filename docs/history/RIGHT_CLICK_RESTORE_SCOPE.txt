@@ -1,0 +1,10 @@
+AwemeLiquidBar 2.0 auth47 — right-side native click restore
+
+Scope is deliberately narrow:
+- Keeps the visible iOS 26/27 system Liquid Glass UIButton as the real touch owner.
+- Does not change right-side geometry, sizing, spacing, visibility, material, settings layout, bottom bar, top controls, comments, download menu or gestures.
+- On TouchUpInside, temporarily removes only the glass slot from hit testing and resolves the live AWEFeedVideoButton physically underneath it.
+- Forwards through the existing v17 exact-native recognizer/target/action path first.
+- Falls back to the live native control/recognizer traversal only if exact forwarding reports failure.
+- Retains the stored-owner and kind-based rebind paths only as last-resort transition compatibility.
+- Delays the post-action visual refresh by 80 ms so it cannot race the native business action/state update.

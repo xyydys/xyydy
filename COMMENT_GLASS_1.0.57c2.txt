@@ -1,0 +1,25 @@
+1.0.57c2 is rebuilt from the verified 1.0.57c interaction baseline.
+
+Interaction baseline retained:
+- profile tab remains present;
+- ordinary page switches only refresh the 5 s idle timer;
+- avatar tap toggles expand/collapse only;
+- Home upward feed gesture may still collapse immediately.
+
+Comment glass:
+- follows DYKiller's real-slot strategy (AWECommentContainerViewController ->
+  CommentContainerInnerViewController.view, plus CommentInputContainerView),
+  not the entire comment controller root;
+- never clears UILabel/UIControl/UIImageView backgrounds;
+- uses an iOS 26 UIGlassEffect shell inserted behind the real slot content;
+- reads UIUserInterfaceStyle from UIWindowScene to bypass Douyin's window-level
+  forced-light override;
+- panel glass is inset 12-18 pt from both screen edges with 30 pt continuous
+  corners; input glass is a detached capsule;
+- main panel stops above the input glass when the two overlap.
+
+Search material research:
+- no new fake Search and no minimize experiment;
+- logs only the verified native chain:
+  _UITabBarAuxiliaryView -> _UITabBarPlatterView -> _UILiquidLensView -> ClearGlassView,
+  plus _visualProvider and __glassGroupContainer, whenever that signature changes.

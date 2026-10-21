@@ -1,0 +1,71 @@
+--- AwemeAlbumMorphBar.swift.before_layoutcontrols	2026-09-06 06:23:22.693387289 +0000
++++ AwemeAlbumMorphBar.swift	2026-09-06 06:27:44.122261165 +0000
+@@ -213,6 +213,13 @@
+ @_silgen_name("AWEAlbumMorphHideTitlesEnabled")
+ private func AWEAlbumMorphHideTitlesEnabled() -> Int32
+ 
++@_silgen_name("AWEAlbumMorphCreateConfiguredImage")
++private func AWEAlbumMorphCreateConfiguredImage(
++    _ keyCString: UnsafePointer<CChar>,
++    _ fallbackCString: UnsafePointer<CChar>,
++    _ pointSize: Double
++) -> UnsafeMutableRawPointer?
++
+ private var albumMorphHideTitles: Bool {
+     AWEAlbumMorphHideTitlesEnabled() != 0
+ }
+@@ -383,6 +390,7 @@
+     private var pendingSelectionUntil: CFTimeInterval = 0
+     private var compactMode = false
+     private var verticalOffset: CGFloat = 0
++    private var userScale: CGFloat = 1
+     private var fallbackCompactScale: CGFloat = 1
+     private var morphVisibleFraction: CGFloat = 1
+     private let visibilityMaskView = UIView(frame: .zero)
+@@ -702,8 +710,8 @@
+         setVisibleFraction(morphVisibleFraction, animated: false)
+         if compactMode {
+             compactMode = false
+-            tabBar.transform = .identity
+         }
++        applyFallbackCompactTransform(animated: false)
+         applyCompactUnreadBadgeScale(in: tabBar)
+     }
+ 
+@@ -726,10 +734,11 @@
+     }
+ 
+     private func applyFallbackCompactTransform(animated: Bool) {
+-        let scale = compactMode ? currentFallbackCompactScale() : 1
+-        fallbackCompactScale = scale
++        let compactScale = compactMode ? currentFallbackCompactScale() : 1
++        fallbackCompactScale = compactScale
++        let scale = userScale * compactScale
+         let liveHeight = max(tabBar.bounds.height, tabBar.frame.height)
+-        let keepBottomAligned = compactMode ? (1 - scale) * liveHeight * 0.5 : 0
++        let keepBottomAligned = (1 - scale) * liveHeight * 0.5
+         let target = CGAffineTransform(translationX: 0, y: keepBottomAligned)
+             .scaledBy(x: scale, y: scale)
+         let changes = {
+@@ -768,6 +777,21 @@
+         )
+     }
+ 
++    @objc(setUserScale:)
++    func setUserScale(_ scale: CGFloat) {
++        let clamped = min(max(scale, 0.70), 1.30)
++        guard abs(userScale - clamped) > 0.001 else {
++            applyFallbackCompactTransform(animated: false)
++            return
++        }
++        userScale = clamped
++        applyFallbackCompactTransform(animated: false)
++        applyUnreadBadges()
++        albumMorphProbe(
++            "USER_SCALE value=\(String(format: "%.3f", clamped)) tabFrame=\(tabBar.frame)"
++        )
++    }
++
+     @objc(configureSecondTabAsShop:)
+     func configureSecondTab(asShop shop: Bool) {
+         let newTitle = shop ? "商城" : "朋友"

@@ -1,0 +1,8 @@
+AwemeLiquidBar 1.0.56c16 — authorization-only auth45 rebuild
+
+- Preserves all 44 previously authorized digest entries unchanged.
+- Adds 1 additional authorized account as a salted SHA-256 digest split into a fresh random XOR mask/value pair.
+- The plaintext identifier for the additional account is not stored in the project.
+- Adds the matching fast digest tag for the additional entry.
+- Updates preflight uniqueness/count checks from 44 to 45.
+- No functional UI, gesture, fullscreen, IM, comment, playback, or compatibility-release logic is changed.

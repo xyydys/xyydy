@@ -1,0 +1,3 @@
+AwemeLiquidBar 1.0.58 auth47 release.
+Baseline: validated v22 shop/message/same-style behavior.
+Release changes: comment glass follows Douyin app appearance without probes or text/icon rewrites; message edge effect is blur-only with adjustable distance; top controls/search/group behavior is refactored for coexistence and native text colors.

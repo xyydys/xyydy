@@ -1,0 +1,18 @@
+Glass27Probe diagnostic derivative of 1.0.56c16 auth46.
+
+No Liquid Glass material/layout settings are written by this probe.
+It records only changed system/material signatures on iOS 27.
+
+Log:
+Documents/AwemeLiquidBar_Glass27Probe.log
+
+Useful markers:
+GLASS27_BASELINE
+GLASS27_CHANGE
+DEFAULT_CHANGE
+NATIVE_TABBAR
+UIGLASSEFFECT_REFERENCE
+SWIFTUI_GLASS_HOST
+UIBUTTON_GLASS
+CONTROLLED_UIGLASSEFFECT also records an 8x8 controlled-backdrop pixel signature.
+This helps detect compositor-level system changes even when UIKit object properties stay identical.

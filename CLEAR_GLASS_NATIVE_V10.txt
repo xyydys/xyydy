@@ -1,0 +1,64 @@
+AwemeLiquidBar 1.0.58 auth47 — Clear Glass Native v10
+=====================================================
+
+Goal
+----
+Retire the per-video luminance-adaptive experiment and keep UIKit as the owner
+of Liquid Glass material/interaction wherever possible.
+
+Core material changes
+---------------------
+1. iOS 27 Home buttons use clearGlassButtonConfiguration with no synthetic
+   Light/Dark material pin and no per-video screenshot/luminance sampling.
+2. iOS 27 Message Menu/Search/Add use the same Clear configuration and remain
+   at Douyin's native source positions.
+3. iOS 27 bottom bar follows DYKiller's floating UITabBar finding: the floating
+   capsule material is changed on _UITabBarItemPlatterView.glassEffect rather
+   than UITabBarAppearance.backgroundEffect. The existing interactive flag is
+   preserved and repeated writes are skipped while our installed effect remains.
+4. iOS 26 stays on native UIKit Regular/Clear configuration and follows the
+   app/page appearance and system transparency behavior.
+
+Interaction fixes
+-----------------
+- Right Like/Comment/Favorite/Share glass buttons are real interactive UIButtons;
+  TouchUp is forwarded to the live AWEFeedVideoButton action path, preferring
+  the same centre/lower hit regions where Douyin's numeric/count target works.
+- Top Search is a real interactive glass UIButton. Douyin's private recognizer
+  is left on its original owner; completed taps are forwarded programmatically.
+  Bottom UISearchTab remains independent.
+- Avatar is rendered as the content of the real glass UIButton and the UIMenu
+  is attached directly to that same button. The old separate invisible menu hit
+  target is disabled.
+- Same-style/music base is a real interactive glass UIButton, mirrors the live
+  original artwork into that UIButton, hides the duplicate source while bound,
+  and forwards to the current bottom action owner. Material and artwork therefore
+  participate in the same UIKit press/stretch state.
+- Message top proxies remain true interactive native-glass UIButtons so press /
+  stretch comes from UIKit rather than a synthetic scale animation.
+
+Profile/Favourites scroll stability
+-----------------------------------
+Profile/Favourites routes no longer schedule global bottom-geometry refreshes
+from setContentOffset, and bottom adjustments are skipped while the route's
+scroll view is tracking/dragging/decelerating. This is intended to stop a small
+pull-down after deep scrolling from resetting a nested profile pager to top.
+
+Validation performed here
+-------------------------
+- scripts/preflight.sh passes, including Swift frontend parse and Logos
+  structure/token checks.
+- No full Theos/Xcode27 arm64/arm64e build is available in this environment;
+  the GitHub builder remains the compile authority.
+
+Primary device checks
+---------------------
+1. iOS 27: bottom capsule is visibly Clear and follows system transparency.
+2. Direct taps on the four right-side glass icons open their actions (not only
+   taps on the numeric labels below).
+3. Top Search and bottom Search can both open Search independently.
+4. Avatar/menu and same-style/music glass bases show native press/stretch and
+   remain responsive.
+5. iOS 27 Message top buttons are Clear rather than permanently light.
+6. Deep-scroll Favourites/Profile, then slightly pull down: list must not jump
+   to its first video.

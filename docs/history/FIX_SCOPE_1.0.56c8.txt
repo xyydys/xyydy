@@ -1,0 +1,16 @@
+AwemeLiquidBar 1.0.56c10 — playback lifecycle isolation
+
+Base: 1.0.56c7.
+
+Narrow changes only:
+1. Friends feed: remove AWEPrimeFriendsNativeLayoutFootprint and stop vetoing
+   AWENormalModeTabBar hidden transitions. Keep only the logical Friends latch
+   and the existing one-time additionalSafeAreaInsets caption reserve.
+2. Foreground restore: UIApplicationDidBecomeActive no longer calls
+   AWEScheduleHomeChromeRecovery, AWEAttachNativeBarWithForce,
+   AWEForceAlbumMorphRouteRecovery, makeKeyWindow, or feed/root relayout paths.
+   LiquidBar mode performs a delayed overlay-only visibility/badge/glass sync.
+3. Keep the c7 full-screen native Settings push and all other c7 features.
+4. No forced play/pause calls were added.
+5. No chat-return, fullscreen geometry, progress, clean-screen, badge or auth
+   logic was otherwise modified.
