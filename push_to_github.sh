@@ -26,6 +26,7 @@ if git show-ref --verify --quiet "refs/remotes/origin/$branch_name"; then
   git merge --ff-only "origin/$branch_name"
 fi
 files=(
+  AUTH_UPDATE_2.3_auth53.txt
   CHANGELOG_TEST42_FIX6.md CHANGELOG_TEST42_FIX7.md CHANGELOG_TEST42_FIX8.md CHANGELOG_TEST42_FIX9.md CHANGELOG_2.2.md AUTH_UPDATE_2.2_auth50.txt ALBNativeCarrierState.m scripts/check_native_state.py
   CHANGELOG_TEST42_FIX5.md CHANGELOG_TEST42_FIX4.md CHANGELOG_TEST42_FIX3.md scripts/check_test43.py
   CHANGELOG_TEST42_FIX2.md
@@ -63,7 +64,7 @@ files=(
   ALBNativeInteraction.h ALBSettingsGlass.h ALBSidePalette.h ALBAlbumVideoExporter.h ALBScrollIntent.h ALBNativeMinimize.h ALBGlassMaterials.h ALBRootScroll.h ALBClearContrast.h ALBAvatarMenuTouch.h
   WCLGEdgeEffect.h WCLGEdgeEffect.m WCLGBackdropLayer.h WCLGBackdropLayer.m WCLGEdgeGradientTables.h WCLGEdgeGradientTables.m
   THIRD_PARTY_TEST5.md Makefile control AwemeLiquidBar.plist build.sh build_no_install.sh
-  scripts/check_logos_boundaries.py scripts/test_logos_boundary.py scripts/preflight.sh scripts/check_native_contract.py scripts/check_primary_action_availability.py scripts/check_runtime_guards.py scripts/check_watchdog_guards.py scripts/check_right_persistence.py scripts/check_right_header_syntax.sh scripts/symbolicate_linkmap.py scripts/collect_build.py Tests/native_state_test.c Tests/scroll_intent_test.c Tests/right_layout_test.c Tests/right_persistence_test.c Tests/Support/right_layout_declarations.m Tests/Support/math.h Tests/bottom_geometry_test.c Tests/download_state_test.c ALBTopNative/Tests/window_geometry_test.c
+  scripts/check_logos_boundaries.py scripts/test_logos_boundary.py scripts/preflight.sh scripts/check_native_contract.py scripts/check_auth51.py validation/auth51_changes.json scripts/check_primary_action_availability.py scripts/check_runtime_guards.py scripts/check_watchdog_guards.py scripts/check_right_persistence.py scripts/check_right_header_syntax.sh scripts/symbolicate_linkmap.py scripts/collect_build.py Tests/native_state_test.c Tests/scroll_intent_test.c Tests/right_layout_test.c Tests/right_persistence_test.c Tests/Support/right_layout_declarations.m Tests/Support/math.h Tests/bottom_geometry_test.c Tests/download_state_test.c ALBTopNative/Tests/window_geometry_test.c
   layout/DEBIAN/postinst .github/workflows/build.yml
   CHANGELOG_TEST22.md DIAGNOSIS_TEST22.md
   scripts/check_test22.py scripts/test_native_endpoint_syntax.py Tests/native_endpoint_policy_test.c validation/test22_preservation_audit.json validation/test22_results.json
@@ -95,7 +96,7 @@ fi
 git rm -r --ignore-unmatch -- AudioMeter
 git add -- "${files[@]}"
 if ! git diff --cached --quiet; then
-  git commit -m "2.0.10 TEST42 FIX2: remove misplaced nested Swift background method"
+  git commit -m "2.3 auth53: add two ordinary account authorizations (51 -> 53 normal rows); special table unchanged"
 fi
 git push -u origin "$branch_name"
-echo "推送完成：original-fixes-test42-fix2。到 Actions 下载 AwemeLiquidBar-2.0.10-TEST42-FIX2-Xcode27-rootless。"
+echo "推送完成：2.3 auth53。到 Actions 下载编译好的 AwemeLiquidBar-2.3 rootless deb。"

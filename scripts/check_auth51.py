@@ -54,18 +54,25 @@ special_body = function_body(SOURCE,'static BOOL AWECustomBottomBarReleaseAllowe
 special_pairs = table(special_body,'allowed')
 decode = lambda pairs: [bytes(a^b for a,b in zip(mask,value)) for mask,value in pairs]
 normal, special = decode(normal_pairs), decode(special_pairs)
-need(len(normal)==51 and len(set(normal))==51, 'normal count/uniqueness')
+need(len(normal)==53 and len(set(normal))==53, 'normal count/uniqueness')
 need(len(special)==3 and len(set(special))==3, 'special count/uniqueness')
 pair_hash = lambda pairs: hashlib.sha256(b''.join(a+b for a,b in pairs)).hexdigest()
+# auth53: all 51 prior normal rows and both prior special entitlements are byte-preserved.
 need(pair_hash(normal_pairs[:50])==AUDIT['preserved_normal_pairs_sha256'],
      'a prior normal authorization changed')
+need(pair_hash(normal_pairs[:51])==AUDIT['preserved_normal_51_sha256'],
+     'the auth51 ordinary row was not preserved')
 need(pair_hash(special_pairs[:2])==AUDIT['preserved_special_pairs_sha256'],
      'a prior special entitlement changed')
-need(normal[-1].hex()==AUDIT['ordinary_added_digest'], 'wrong new ordinary digest')
+need(normal[50].hex()==AUDIT['ordinary_added_digest'], 'auth51 ordinary digest changed')
+# auth53: two new ordinary authorizations appended as rows 51 and 52.
+new_rows = [normal[51].hex(), normal[52].hex()]
+need(new_rows==AUDIT['ordinary_added_digests_auth53'], 'wrong new ordinary digests')
 need(normal[28].hex()==AUDIT['promoted_existing_digest']==special[-1].hex(),
      'existing row 29 was not promoted')
 need(special[:2]==[normal[36],normal[21]], 'old special rows were not preserved')
-need(normal[-1] not in special and set(special)<=set(normal), 'permission leakage')
+need(normal[51] not in special and normal[52] not in special and set(special)<=set(normal),
+     'permission leakage: a new ordinary account reached the special table')
 need(canonical_authorization_logic(SOURCE)==AUDIT['authorization_logic_sha256'],
      'authorization normalization/proof/binding logic changed')
 for name, wanted in AUDIT['rollback_runtime_sha256'].items():
@@ -156,7 +163,7 @@ for index, fixture in enumerate(AUDIT['hash_vectors']):
         assert(AWEAuthorizationDigestAllowedBytes(actual,32));
         assert(AWECustomBottomBarReleaseAllowedBytes(actual,32,YES)==%s);
     }''' % (hex_array(bytes.fromhex(fixture['payload_hex'])),
-             hex_array(bytes.fromhex(fixture['digest_hex'])), 'YES' if index else 'NO'))
+             hex_array(bytes.fromhex(fixture['digest_hex'])), 'YES' if fixture['special'] else 'NO'))
 c_code = '''#include <stdint.h>
 #include <stddef.h>
 #include <string.h>
@@ -175,7 +182,7 @@ static BOOL AWECustomBottomBarReleaseAllowedBytes(const uint8_t *candidate,
 '''+special_gate+'''
 }
 int main(void) {
-    assert(AWE_AUTHORIZATION_DIGEST_COUNT==51);
+    assert(AWE_AUTHORIZATION_DIGEST_COUNT==53);
     size_t granted=0, rejected=0;
     for (size_t row=0; row<AWE_AUTHORIZATION_DIGEST_COUNT; row++) {
         uint8_t value[32];
@@ -199,9 +206,9 @@ int main(void) {
             value[i]^=1;
         }
     }
-    assert(granted==3 && rejected==1632);
+    assert(granted==3 && rejected==1696);
 '''+ '\n'.join(fixtures)+'''
-    puts("Auth51: 51 authorized rows, 3 special grants, 1632 altered digests rejected; production hash/tag/compare code passed.");
+    puts("Auth53: 53 authorized rows, 3 special grants, 1696 altered digests rejected; production hash/tag/compare code passed.");
     return 0;
 }
 '''

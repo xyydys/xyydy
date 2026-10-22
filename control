@@ -2,7 +2,7 @@ Package: com.xyy.awemeliquidbar
 Name: AwemeLiquidBar
 Version: 2.3
 Architecture: iphoneos-arm
-Description: AwemeLiquidBar 2.3 MATERIAL2 rollback with auth51 and three special bottom ownership-release entitlements.
+Description: AwemeLiquidBar 2.3 MATERIAL2 rollback with auth53 (two new ordinary authorizations) and three special bottom ownership-release entitlements.
 Maintainer: xyy
 Author: xyy
 Section: Tweaks

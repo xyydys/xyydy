@@ -1,0 +1,12 @@
+AwemeLiquidBar 2.3 auth53 — add two ordinary account authorizations
+
+- Baseline: the 2.3 auth51 MATERIAL2 project (51 normal records, 3 special bottom-release entitlements).
+- Preserves all 51 previous authorization mask/value pairs and all previous digest tags byte for byte.
+- Preserves all 3 special bottom ownership-release entitlements unchanged (rows 21, 28, 36).
+- Appends two ordinary salted SHA-256 digests, each split into a fresh random XOR mask/value pair with its matching fast digest tag.
+- Authorization rows: 51 -> 53. Special entitlements: unchanged at 3.
+- The two new accounts receive ordinary authorization only; neither is added to the special bottom ownership-release table (verified: no permission leakage).
+- Account normalization, hash salts, device-bound proof, cache validation and profile binding are unchanged.
+- No plaintext account identifier is stored in source or documentation.
+- validation/auth51_changes.json and scripts/check_auth51.py rolled forward to the auth53 state (counts 53 / 1696; all prior-row preservation, promotion and special-set checks retained).
+- All other 2.3 material, geometry, button/menu, route, playback and download source files are retained byte for byte.
