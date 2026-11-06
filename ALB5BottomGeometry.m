@@ -71,9 +71,19 @@ static ALB15BottomState *ALB15State(UITabBar *bar) {
 // TEST42 FIX8: the centered-avatar compact scheme is removed; UIKit's native
 // minimize is the only compact style.
 NSInteger ALB15CompactStyle(void) { return 1; }
-CGFloat ALB15BottomScale(void) { return ALB5Number(@"bottom.scale",1,.55,1.15); }
 static BOOL ALB15Attached(UIView *v,UIView *host) {
     return v && host && v.window==host.window && [v isDescendantOfView:host];
+}
+// 3.0.1: the separate search capsule may sit beside the bar's own bounds (for
+// example while minimized, or with more regular tabs). Only the bottom row
+// decides, never the bar's width or the number of tabs in it.
+static BOOL ALB15InBottomRow(CGRect r,CGRect barRect) {
+    return CGRectGetMaxY(r)>=CGRectGetMinY(barRect)-64 && CGRectGetMinY(r)<=CGRectGetMaxY(barRect)+64;
+}
+static BOOL ALB15ChainInteractive(UIView *v,UIView *host) {
+    for (UIView *a=v;a && a!=host;a=a.superview)
+        if (a.hidden || a.alpha<=.01 || !a.userInteractionEnabled) return NO;
+    return ALB15Attached(v,host);
 }
 static void ALB15DiscoverNativeChrome(ALB15BottomState *s) {
     UIView *host=s.host; UITabBar *bar=s.bar;
@@ -98,8 +108,9 @@ static void ALB15DiscoverNativeChrome(ALB15BottomState *s) {
         NSString *n=NSStringFromClass(v.class);
         CGRect r=[v convertRect:v.bounds toView:host];
         BOOL nearby=CGRectIntersectsRect(CGRectInset(band,-64,-64),r);
+        if (!v.hidden && v.alpha>.01 && ALB15InBottomRow(r,band) &&
+            [n containsString:@"TabBarAuxiliaryView"]) aux=v;
         if (nearby && !v.hidden && v.alpha>.01) {
-            if ([n containsString:@"TabBarAuxiliaryView"]) aux=v;
             if ([n containsString:@"TabBarPlatterView"]) {
                 BOOL inAux=NO;
                 for (UIView *a=v.superview;a && a!=host;a=a.superview)
@@ -162,9 +173,23 @@ UIView *ALB15NativeBottomHitView(UITabBar *bar,CGPoint point,UIEvent *event) {
     // Test the real native subtrees and return their true hit, never the host.
     CGPoint inHost=[bar convertPoint:point toView:host];
     CGRect band=CGRectInset([bar convertRect:bar.bounds toView:host],-64,-36);
-    if (!CGRectContainsPoint(band,inHost) || s.hitTestInProgress) return nil;
+    // The search capsule is tested directly: an ancestor's bounds (the bar's)
+    // need not contain it, so its touch must not depend on the bar's width.
+    // Rediscover only for touches near the bottom row: this runs for every
+    // touch in the app while the bar's window is up.
+    BOOL nearBottomRow=inHost.y>=CGRectGetMinY(band)-120;
+    if (nearBottomRow && !ALB15ChainInteractive(s.auxiliary,host)) ALB15DiscoverNativeChrome(s); // bounded, throttled read
+    UIView *aux=s.auxiliary;
+    BOOL auxLive=ALB15ChainInteractive(aux,host);
+    CGPoint inAux=auxLive ? [host convertPoint:inHost toView:aux] : CGPointZero;
+    BOOL inAuxBounds=auxLive && CGRectContainsPoint(aux.bounds,inAux);
+    if ((!CGRectContainsPoint(band,inHost) && !inAuxBounds) || s.hitTestInProgress) return nil;
     s.hitTestInProgress=YES;
     @try {
+    if (inAuxBounds) {
+        UIView *hit=[aux hitTest:inAux withEvent:event];
+        if (hit && ALB15HitBelongsToChrome(hit,host)) return hit;
+    }
     for (UIView *branch in host.subviews.reverseObjectEnumerator) {
         if ([branch isKindOfClass:UIScrollView.class]) continue;
         UIView *hit=[branch hitTest:[host convertPoint:inHost toView:branch] withEvent:event];
@@ -221,4 +246,44 @@ void ALB5CaptureOwnAvatar(UIWindow *window) {
         if(avatar && rank>score) {score=rank;best=image;}
     }
     if(best)ALB5SetOwnAvatar(best);
+}
+
+// 3.5: UIKit's compact root-tab limit (five, then More) is the controller's
+// own (_effectiveMaxItems, set by _setMaximumNumberOfItems:). Raised, five
+// regular tabs and Search fit without More. Off with "bottom.sixTabs"
+// (takes effect on the next launch). A launch that ends within the first
+// seconds after the call skips it once, so an assertion on another OS
+// release can never turn into a crash on every launch.
+NSString *ALB35RaiseRootTabCapacity(UITabBarController *controller, NSInteger count) {
+    if (![controller isKindOfClass:UITabBarController.class]) return @"无控制器";
+    if (!ALB5Bool(@"bottom.sixTabs", YES)) return @"已关闭";
+    SEL getter = NSSelectorFromString(@"_effectiveMaxItems");
+    BOOL readable = [controller respondsToSelector:getter];
+    NSInteger effective = readable ? ((NSInteger (*)(id, SEL))objc_msgSend)(controller, getter) : -1;
+    if (effective >= count) return [NSString stringWithFormat:@"生效=%ld", (long)effective];
+    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+    NSString *pendingKey = ALB5Key(@"bottom.sixTabs.pending");
+    static BOOL checked, skip, armed;
+    if (!checked) {
+        checked = YES;
+        if ([defaults boolForKey:pendingKey]) { skip = YES; [defaults removeObjectForKey:pendingKey]; }
+    }
+    if (skip) return @"上次启动没有走完，本次跳过";
+    SEL setter = NSSelectorFromString(@"_setMaximumNumberOfItems:");
+    if (![controller respondsToSelector:setter]) return @"无接口";
+    if (!armed) {
+        armed = YES;
+        [defaults setBool:YES forKey:pendingKey];
+        [defaults synchronize];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(6.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [NSUserDefaults.standardUserDefaults removeObjectForKey:pendingKey];
+        });
+    }
+    @try {
+        ((void (*)(id, SEL, NSInteger))objc_msgSend)(controller, setter, count);
+    } @catch (NSException *exception) {
+        return [@"出错 " stringByAppendingString:exception.name ?: @"?"];
+    }
+    effective = readable ? ((NSInteger (*)(id, SEL))objc_msgSend)(controller, getter) : -1;
+    return [NSString stringWithFormat:@"设为%ld 生效=%ld", (long)count, (long)effective];
 }

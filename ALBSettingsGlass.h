@@ -225,7 +225,7 @@ static void ALBInstallSettingsGlass(UIViewController *controller) {
     controller.edgesForExtendedLayout = UIRectEdgeAll;
     // Douyin often pins its window to Light. The actual screen preference is
     // independent; floating content inherits the outer panel's system traits.
-    UIUserInterfaceStyle style = floating ? UIUserInterfaceStyleUnspecified : (ALBMaterialEnabled() ? ALBMaterialStyle(surface, NO) : AWESystemInterfaceStyle());
+    UIUserInterfaceStyle style = floating ? UIUserInterfaceStyleUnspecified : ALBMaterialStyle(surface, NO);
     if (controller.overrideUserInterfaceStyle != style) controller.overrideUserInterfaceStyle = style;
     if (!floating && navigation.overrideUserInterfaceStyle != style) navigation.overrideUserInterfaceStyle = style;
     UINavigationBar *bar = navigation.navigationBar;
@@ -322,11 +322,11 @@ static void ALBInstallSettingsGlass(UIViewController *controller) {
     [self refreshSystemAppearance];
     // Follow traits once per appearance change. Never screenshot the whole
     // live settings scroll or toggle the entire navigation tree on a timer.
-    navigation.overrideUserInterfaceStyle = ALBMaterialEnabled() ? ALBMaterialStyle(navigation.view, NO) : AWESystemInterfaceStyle();
+    navigation.overrideUserInterfaceStyle = ALBMaterialStyle(navigation.view, NO);
     ALB30SettingsRecord(@"settings.custom.viewDidLoad",self);
 }
 - (void)refreshSystemAppearance {
-    UIUserInterfaceStyle style = ALBMaterialEnabled() ? ALBMaterialStyle(self.view, NO) : AWESystemInterfaceStyle();
+    UIUserInterfaceStyle style = ALBMaterialStyle(self.view, NO);
     if (self.overrideUserInterfaceStyle != style) self.overrideUserInterfaceStyle = style;
     if (self.glassPanel.overrideUserInterfaceStyle != style) self.glassPanel.overrideUserInterfaceStyle = style;
     ALBRefreshClearGlass(self.glassPanel);
@@ -516,7 +516,7 @@ static UIViewController *ALBSettingsPresentation(UINavigationController *navigat
         return [[ALBSettingsFloatingController alloc] initWithNavigation:navigation];
     }
     navigation.modalPresentationStyle=UIModalPresentationPageSheet;
-    navigation.overrideUserInterfaceStyle=ALBMaterialEnabled() ? ALBMaterialStyle(navigation.view, NO) : AWESystemInterfaceStyle();
+    navigation.overrideUserInterfaceStyle=ALBMaterialStyle(navigation.view, NO);
     if (@available(iOS 15.0,*)) {
         UISheetPresentationController *sheet=navigation.sheetPresentationController;
         sheet.detents=@[UISheetPresentationControllerDetent.mediumDetent,

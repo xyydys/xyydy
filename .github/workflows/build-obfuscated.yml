@@ -1,0 +1,151 @@
+name: Build AwemeLiquidBar 3.11.53 (obfuscated)
+
+# Obfuscated build. Arkari (a modern OLLVM fork) ships only as a Linux
+# clang+lld Docker image — ghcr.io/xyydys/arkari-ios-toolchain:latest, built
+# by the xyydys/arkari-ios-toolchain repo — so this build cross-compiles the
+# tweak on a GitHub-hosted Ubuntu runner (free/unlimited minutes for public
+# repos) inside that image, rather than on the macOS `xcode-27` runner used
+# by build.yml. Arkari clang obfuscates the Objective-C / C / C++ / Logos
+# sources (the `-irobf*` flags, gated behind ALB_OBFUSCATE in the Makefile);
+# the Swift sources are compiled by the Swift toolchain and are not
+# IR-obfuscated.
+#
+# PREREQUISITE: build the toolchain image first — run the `build-image`
+# workflow in xyydys/arkari-ios-toolchain once (~1.5-3 h) and set the GHCR
+# package visibility to Public. Until that image exists this job fails at
+# the container-pull step.
+#
+# This is a new cross-compile path (Theos + iOS SDK + a Linux Swift
+# toolchain for iOS); expect to iterate on the toolchain/SDK versions below
+# from the first CI logs. The macOS build.yml remains the known-good build.
+
+on:
+  workflow_dispatch:
+    inputs:
+      arkari_image:
+        description: 'Arkari toolchain image'
+        type: string
+        default: ghcr.io/xyydys/arkari-ios-toolchain:latest
+      ios_sdk_url:
+        description: 'iOS SDK tarball (.sdk packaged as .tar.*)'
+        type: string
+        default: https://github.com/theos/sdks/archive/refs/heads/master.tar.gz
+      sdk_name:
+        description: 'SDK directory name to use from the sdks archive'
+        type: string
+        default: iPhoneOS16.5.sdk
+      swift_toolchain_url:
+        description: 'Linux Swift toolchain that can target iOS (Theos "Swift toolchain")'
+        type: string
+        default: https://github.com/kabiroberai/swift-toolchain-linux/releases/latest/download/swift-latest.tar.xz
+      archs:
+        description: 'Architectures (drop to "arm64" if arm64e Swift fails on Linux)'
+        type: string
+        default: arm64 arm64e
+      heavy:
+        description: 'Also enable flattening + indirect calls (slower runtime)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  build-obfuscated:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    container:
+      image: ${{ inputs.arkari_image || 'ghcr.io/xyydys/arkari-ios-toolchain:latest' }}
+      # If the GHCR package is Public no credentials are needed. If you keep
+      # it private, uncomment and the job will log in with the run token:
+      # credentials:
+      #   username: ${{ github.actor }}
+      #   password: ${{ secrets.GITHUB_TOKEN }}
+
+    env:
+      THEOS: ${{ github.workspace }}/.theos
+      ALB_OBFUSCATE: '1'
+      ALB_OBFUSCATE_HEAVY: ${{ (inputs.heavy && '1') || '0' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Confirm Arkari clang is on PATH
+        shell: bash
+        run: |
+          set -euo pipefail
+          which clang
+          clang --version
+          # Arkari advertises the -irobf framework in its help; fail loudly
+          # if we somehow landed on a stock clang with no obfuscation support.
+          clang --help-hidden 2>/dev/null | grep -qi 'irobf' \
+            || clang --help 2>/dev/null | grep -qi 'irobf' \
+            || echo "WARNING: this clang does not advertise -irobf; check the image."
+
+      - name: Install Theos
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --recursive https://github.com/theos/theos.git "$THEOS"
+
+      - name: Install iOS SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$THEOS/sdks"
+          curl -fsSL "${{ inputs.ios_sdk_url || 'https://github.com/theos/sdks/archive/refs/heads/master.tar.gz' }}" -o /tmp/sdks.tar.gz
+          tmp="$(mktemp -d)"
+          tar -xzf /tmp/sdks.tar.gz -C "$tmp"
+          SDK_NAME="${{ inputs.sdk_name || 'iPhoneOS16.5.sdk' }}"
+          SRC="$(find "$tmp" -maxdepth 2 -type d -name "$SDK_NAME" | head -1)"
+          if [ -z "$SRC" ]; then
+            echo "SDK $SDK_NAME not found in archive. Available SDKs:" >&2
+            find "$tmp" -maxdepth 2 -type d -name '*.sdk' -exec basename {} \; | sort >&2
+            exit 1
+          fi
+          cp -a "$SRC" "$THEOS/sdks/"
+          ls -la "$THEOS/sdks"
+
+      - name: Install a Linux Swift toolchain (targets iOS)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Theos uses swiftc from its toolchain dir for the .swift sources.
+          mkdir -p "$THEOS/toolchain/linux/iphone"
+          curl -fsSL "${{ inputs.swift_toolchain_url || 'https://github.com/kabiroberai/swift-toolchain-linux/releases/latest/download/swift-latest.tar.xz' }}" -o /tmp/swift.tar.xz
+          tar -xf /tmp/swift.tar.xz -C "$THEOS/toolchain/linux/iphone" --strip-components=1
+          ls "$THEOS/toolchain/linux/iphone/bin" | head
+          # Force the C-family compiler to be Arkari clang so the native
+          # sources get obfuscated, while swiftc stays the toolchain's own.
+          ln -sf "$(command -v clang)"   "$THEOS/toolchain/linux/iphone/bin/clang"
+          ln -sf "$(command -v clang++)" "$THEOS/toolchain/linux/iphone/bin/clang++"
+          [ -x "$(command -v ld64.lld)" ] && ln -sf "$(command -v ld64.lld)" "$THEOS/toolchain/linux/iphone/bin/ld" || true
+          echo "swiftc: $("$THEOS/toolchain/linux/iphone/bin/swiftc" --version 2>&1 | head -1 || true)"
+          echo "clang : $("$THEOS/toolchain/linux/iphone/bin/clang" --version | head -1)"
+
+      - name: Static preflight
+        shell: bash
+        run: python3 scripts/preflight.py
+
+      - name: Build obfuscated rootless package
+        shell: bash
+        run: |
+          set -euo pipefail
+          make clean
+          make package -j1 ARCHS="${{ inputs.archs || 'arm64 arm64e' }}" \
+            ALB_OBFUSCATE=1 ALB_OBFUSCATE_HEAVY="${ALB_OBFUSCATE_HEAVY}"
+          mkdir -p out
+          find packages -maxdepth 1 -type f -name '*.deb' -exec cp {} out/ \;
+          find .theos/obj -name 'AwemeLiquidBar*.linkmap' -exec cp {} out/ \; || true
+          ls -l out
+          test -n "$(find out -maxdepth 1 -type f -name '*.deb' -print -quit)"
+
+      - name: Upload obfuscated package
+        uses: actions/upload-artifact@v4
+        with:
+          name: AwemeLiquidBar-3.11.53-rootless-obfuscated
+          path: out/*
+          if-no-files-found: error
+          retention-days: 14

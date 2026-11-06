@@ -21,25 +21,6 @@ static UIColor *ALB5Color(NSString *name, UIColor *fallback) {
         blue:MIN(1,MAX(0,[v[2] doubleValue])) alpha:MIN(1,MAX(0,[v[3] doubleValue]))];
 }
 static UIColor *ALB5TopNativeInk;
-static UIColor *ALB5NativeTitleColor(UIView *root) {
-    if (!root) return nil;
-    if ([root isKindOfClass:UIButton.class]) {
-        UIButton *button=(UIButton *)root;NSAttributedString *text=button.currentAttributedTitle;
-        UIColor *ink=text.length?[text attribute:NSForegroundColorAttributeName atIndex:0 effectiveRange:NULL]:nil;
-        return [ink isKindOfClass:UIColor.class]?ink:button.currentTitleColor;
-    }
-    NSMutableArray *queue = [NSMutableArray arrayWithObject:root];
-    for (NSUInteger i=0;i<queue.count && i<24;i++) {
-        UIView *v=queue[i];
-        if ([v isKindOfClass:UILabel.class] && ((UILabel *)v).text.length) {
-            UILabel *label=(UILabel *)v;NSAttributedString *text=label.attributedText;
-            UIColor *ink=text.length?[text attribute:NSForegroundColorAttributeName atIndex:0 effectiveRange:NULL]:nil;
-            return [ink isKindOfClass:UIColor.class]?ink:label.textColor;
-        }
-        [queue addObjectsFromArray:v.subviews];
-    }
-    return nil;
-}
 // A controller-managed floating platter may be a sibling of UITabBar. Keep a
 // weak reference to the controller's resident root instead of searching the
 // whole application window. Selector keys are shared by all translation units.
@@ -95,13 +76,10 @@ static void ALB5ApplySharedBottomSurface(UITabBar *bar) {
     if (@available(iOS 15.0,*)) bar.scrollEdgeAppearance=a;
     objc_setAssociatedObject(bar,key,bar.standardAppearance,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
-// TEST6 retires both forced-Clear options. A hidden preference from TEST5 must
-// not silently replace the restored UIKit surface after its next layout.
-// Retained as a source-compatible no-op for the imported top component.
-static void ALB5ApplyPlatterClear(__unused UITabBar *bar, __unused BOOL enabled) {}
 
 static NSArray<NSNumber *> *ALB28PaletteActionOrder(void) {
-    NSArray *defaults=@[@0,@1,@9,@2,@3,@10,@11,@12,@4,@5,@6,@7,@8];
+    // 3.11.45: 13 一键清屏、14 保存当前实况、15 保存所有实况、16 保存所有类型图片
+    NSArray *defaults=@[@0,@1,@14,@9,@15,@16,@2,@3,@10,@11,@12,@13,@4,@5,@6,@7,@8];
     id saved=[NSUserDefaults.standardUserDefaults objectForKey:ALB5Key(@"panel.actionOrder")];
     NSMutableArray *order=[NSMutableArray arrayWithCapacity:defaults.count];
     for(id value in [saved isKindOfClass:NSArray.class]?saved:@[]) {

@@ -48,6 +48,11 @@ static NSString *ALB8ProfileURL(id value, NSUInteger depth) {
 static NSString *ALB8OwnName(void) {
     return [NSUserDefaults.standardUserDefaults stringForKey:ALB5Key(@"profile.ownName")] ?: @"我的抖音";
 }
+/* 3.11.46：简介（三段式底栏 ✦ 悬浮面板的头部用） */
+static NSString *ALB8OwnBio(void) {
+    NSString *bio = [NSUserDefaults.standardUserDefaults stringForKey:ALB5Key(@"profile.ownBio")];
+    return bio.length ? bio : @"这个人很懒，什么都没留下";
+}
 static void ALB8AcceptOwnProfile(id user) {
     NSString *identity=ALB8ProfileString(ALB8ProfileFirst(user,@[@"uid",@"userID",@"userId",@"secUID",@"secUid"]));
     if(!identity.length)return;
@@ -60,6 +65,9 @@ static void ALB8AcceptOwnProfile(id user) {
     NSString *name=ALB8ProfileString(ALB8ProfileFirst(user,@[@"nickname",@"nickName",@"name"]));
     if(name.length)[NSUserDefaults.standardUserDefaults setObject:name forKey:ALB5Key(@"profile.ownName")];
     else if(changed)[NSUserDefaults.standardUserDefaults removeObjectForKey:ALB5Key(@"profile.ownName")];
+    NSString *bio=ALB8ProfileString(ALB8ProfileFirst(user,@[@"signature",@"signatureText",@"bio",@"desc"]));
+    if(bio.length)[NSUserDefaults.standardUserDefaults setObject:bio forKey:ALB5Key(@"profile.ownBio")];
+    else if(changed)[NSUserDefaults.standardUserDefaults removeObjectForKey:ALB5Key(@"profile.ownBio")];
     id photo=ALB8ProfileFirst(user,@[@"avatarMedium",@"avatarLarger",@"avatarThumb",@"avatar",@"avatar_medium",@"avatar_thumb"]);
     if([photo isKindOfClass:UIImage.class]) { ALB5SetOwnAvatar(photo); }
     NSString *url=ALB8ProfileURL(photo,0);

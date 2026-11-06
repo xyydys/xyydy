@@ -1,6 +1,6 @@
 #pragma once
 #import <UIKit/UIKit.h>
-#include "ALBMaterialPolicy.h"
+#include "ALBBottomSettle.h"
 #include <stdint.h>
 #import "ALBReproCaptureSignal.h"
 
@@ -36,7 +36,8 @@ FOUNDATION_EXPORT int32_t ALB15NativeMinimizedState(UIViewController *controller
 FOUNDATION_EXPORT int32_t ALB15ObserveCompactGeometry(UITabBar *bar)
     NS_SWIFT_NAME(ALB15ObserveCompactGeometry(_:));
 FOUNDATION_EXPORT NSInteger ALB15CompactStyle(void) NS_SWIFT_NAME(ALB15CompactStyle());
-FOUNDATION_EXPORT CGFloat ALB15BottomScale(void) NS_SWIFT_NAME(ALB15BottomScale());
+FOUNDATION_EXPORT NSString *ALB35RaiseRootTabCapacity(UITabBarController *controller, NSInteger count)
+    NS_SWIFT_NAME(ALB35RaiseRootTabCapacity(_:_:));
 FOUNDATION_EXPORT UIImage * _Nullable ALB8OwnAvatar(void) NS_SWIFT_NAME(ALB8OwnAvatar());
 FOUNDATION_EXPORT void ALB5CompactStateChanged(BOOL compact)
     NS_SWIFT_NAME(ALB5CompactStateChanged(_:));
@@ -53,6 +54,4 @@ FOUNDATION_EXPORT void * _Nullable AWEAlbumMorphCreateConfiguredImage(
 
 FOUNDATION_EXPORT void ALB49TraceNativeScale(UITabBar *bar, const char *phase)
     NS_SWIFT_NAME(ALB49TraceNativeScale(_:_:));
-FOUNDATION_EXPORT void ALB50ApplyBottomClearFromController(UITabBar *bar)
-    NS_SWIFT_NAME(ALB50ApplyBottomClearFromController(_:));
 NS_ASSUME_NONNULL_END

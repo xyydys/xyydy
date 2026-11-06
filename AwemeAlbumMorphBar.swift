@@ -1,6 +1,5 @@
 import UIKit
 import QuartzCore
-import SwiftUI
 
 
 private extension CGAffineTransform {
@@ -14,185 +13,6 @@ private extension CGAffineTransform {
     }
 }
 
-
-@available(iOS 26.0, *)
-private struct AWEPhotosExactGlassIconButton: View {
-    let image: UIImage
-    let pointSize: CGFloat
-    let controlSize: CGFloat
-    let foregroundColor: UIColor?
-    let preserveOriginalImage: Bool
-    let tintedGlass: Bool
-
-    private var resolvedIconSize: CGSize {
-        guard preserveOriginalImage else {
-            return CGSize(width: pointSize, height: pointSize)
-        }
-
-        // Imported PNG artwork is authored in source pixels. Interpret the
-        // file as an @3x asset: 30x30 px -> 10x10 pt, 100x100 px ->
-        // 33.33x33.33 pt. Small files keep their authored size; only artwork
-        // whose longest edge exceeds 100 px is reduced proportionally.
-        let pixelWidth: CGFloat
-        let pixelHeight: CGFloat
-        if let cgImage = image.cgImage {
-            pixelWidth = CGFloat(cgImage.width)
-            pixelHeight = CGFloat(cgImage.height)
-        } else {
-            pixelWidth = image.size.width * image.scale
-            pixelHeight = image.size.height * image.scale
-        }
-        guard pixelWidth > 0.0, pixelHeight > 0.0 else {
-            return .zero
-        }
-
-        let designScale: CGFloat = 3.0
-        let maximumPixelEdge: CGFloat = 100.0
-        let pixelDownscale = min(
-            maximumPixelEdge / pixelWidth,
-            maximumPixelEdge / pixelHeight
-        )
-        let scale = min(1.0, pixelDownscale)
-        return CGSize(
-            width: pixelWidth * scale / designScale,
-            height: pixelHeight * scale / designScale
-        )
-    }
-
-    @ViewBuilder
-    private var icon: some View {
-        let size = resolvedIconSize
-        let base = Image(uiImage: image)
-            .renderingMode(preserveOriginalImage ? .original : .template)
-            .resizable()
-            .interpolation(.high)
-            .scaledToFit()
-            .frame(width: size.width, height: size.height)
-            .frame(width: controlSize, height: controlSize)
-
-        if preserveOriginalImage {
-            // Original-colour PNG: preserve pixel-authored size, ratio and alpha.
-            base
-        } else if let foregroundColor {
-            // Explicit white/black/accent/custom modes tint only SF Symbols.
-            base.foregroundStyle(Color(uiColor: foregroundColor))
-        } else {
-            // Automatic mode is owned by the selected native glass material.
-            base
-        }
-    }
-
-    @ViewBuilder
-    var body: some View {
-        // A 46x46 square Capsule is a true circle. Unlike Circle(), Capsule()
-        // can become a native pill/oval if its frame is later stretched. Apply
-        // glass directly so the material body is exactly 46x46 rather than the
-        // 56x46 private interaction shell produced by GlassButtonStyle.
-        if tintedGlass {
-            icon
-                .frame(width: controlSize, height: controlSize)
-                .contentShape(Capsule())
-                .glassEffect(.regular.interactive(), in: Capsule())
-        } else {
-            icon
-                .frame(width: controlSize, height: controlSize)
-                .contentShape(Capsule())
-                .glassEffect(.clear.interactive(), in: Capsule())
-        }
-    }
-}
-
-/// SwiftUI Liquid Glass host for the top and right-side controls.
-/// Clear mode uses interactive `.clear`; tint mode uses interactive `.regular`.
-/// The visible material body is a fixed 46x46 square Capsule.
-@available(iOS 26.0, *)
-@objc(AWEPhotosExactGlassButtonHostView)
-final class AWEPhotosExactGlassButtonHostView: UIView {
-    private var hostingController: UIHostingController<AnyView>?
-    private weak var lastImage: UIImage?
-    private var lastPointSize: CGFloat = -1
-    private var lastControlSize: CGFloat = -1
-    private var lastForegroundColor: UIColor?
-    private var lastPreserveOriginalImage = false
-    private var lastTintedGlass = false
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        backgroundColor = .clear
-        isOpaque = false
-        clipsToBounds = false
-        isUserInteractionEnabled = false
-        accessibilityElementsHidden = true
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    @objc(updateWithImage:pointSize:controlSize:foregroundColor:preserveOriginalImage:tintedGlass:)
-    func update(
-        image: UIImage,
-        pointSize: CGFloat,
-        controlSize: CGFloat,
-        foregroundColor: UIColor?,
-        preserveOriginalImage: Bool,
-        tintedGlass: Bool
-    ) {
-        let sameColor: Bool
-        if let previous = lastForegroundColor, let foregroundColor {
-            sameColor = previous.isEqual(foregroundColor)
-        } else {
-            sameColor = lastForegroundColor == nil && foregroundColor == nil
-        }
-        if lastImage === image,
-           abs(lastPointSize - pointSize) < 0.01,
-           abs(lastControlSize - controlSize) < 0.01,
-           sameColor,
-           lastPreserveOriginalImage == preserveOriginalImage,
-           lastTintedGlass == tintedGlass {
-            return
-        }
-        lastImage = image
-        lastPointSize = pointSize
-        lastControlSize = controlSize
-        lastForegroundColor = foregroundColor
-        lastPreserveOriginalImage = preserveOriginalImage
-        lastTintedGlass = tintedGlass
-
-        let root = AnyView(
-            AWEPhotosExactGlassIconButton(
-                image: image,
-                pointSize: pointSize,
-                controlSize: controlSize,
-                foregroundColor: foregroundColor,
-                preserveOriginalImage: preserveOriginalImage,
-                tintedGlass: tintedGlass
-            )
-        )
-
-        if let hostingController {
-            hostingController.rootView = root
-            hostingController.view.setNeedsLayout()
-            hostingController.view.setNeedsDisplay()
-            return
-        }
-
-        let controller = UIHostingController(rootView: root)
-        controller.view.backgroundColor = .clear
-        controller.view.isOpaque = false
-        controller.view.clipsToBounds = false
-        controller.view.isUserInteractionEnabled = false
-        controller.view.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(controller.view)
-        NSLayoutConstraint.activate([
-            controller.view.leadingAnchor.constraint(equalTo: leadingAnchor),
-            controller.view.trailingAnchor.constraint(equalTo: trailingAnchor),
-            controller.view.topAnchor.constraint(equalTo: topAnchor),
-            controller.view.bottomAnchor.constraint(equalTo: bottomAnchor),
-        ])
-        hostingController = controller
-    }
-}
 
 @objc(AWEAlbumMorphActionSink)
 protocol AWEAlbumMorphActionSink: AnyObject {
@@ -399,6 +219,16 @@ final class AWEAlbumMorphTabController:
     private let visibilityMaskView = UIView(frame: .zero)
     private var hasUserDrivenSelection = false
     private var visibleItemIdentifiers = ItemKey.defaultVisible
+    // UIKit's compact (iPhone) tab bar shows at most five root tabs; with six
+    // or more it shows the first four plus the legacy More item. Set once the
+    // live bar has shown that More item for five regular tabs + UISearchTab.
+    private static let compactRootTabCapacity = 5
+    // 3.5: that limit is UITabBarController's own (_effectiveMaxItems, set
+    // by _setMaximumNumberOfItems:, the 3.4 诊断 names). Raised to six, five
+    // regular tabs and Search are six root tabs without More.
+    private static let raisedRootTabCapacity = 6
+    private var rootTabCapacityState = "未设置"
+    private var searchYieldsToRegularTabs = false
     private var messageBadgeValue: String?
     private var secondBadgeValue: String?
     private var reproLastLayoutSample: CFTimeInterval = 0
@@ -407,6 +237,7 @@ final class AWEAlbumMorphTabController:
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        raiseRootTabCapacity()
 
         view.backgroundColor = .clear
         view.isOpaque = false
@@ -416,9 +247,10 @@ final class AWEAlbumMorphTabController:
         lastConfiguredCompactStyle = ALB15CompactStyle()
         tabBarMinimizeBehavior = .onScrollDown
 
-        overrideUserInterfaceStyle = .unspecified
-        view.overrideUserInterfaceStyle = .unspecified
-        tabBar.overrideUserInterfaceStyle = .unspecified
+        // 3.0: fixed Dark, never following the system or the page.
+        overrideUserInterfaceStyle = .dark
+        view.overrideUserInterfaceStyle = .dark
+        tabBar.overrideUserInterfaceStyle = .dark
 
         tabBar.accessibilityIdentifier =
             "AwemeLiquidBar.AlbumMorph.SystemTabBar"
@@ -460,7 +292,7 @@ final class AWEAlbumMorphTabController:
         var fields: [String: Any] = [
             "controllerID": String(describing: ObjectIdentifier(self)),
             "root": ALBReproBottomViewState(root), "rootParent": ALBReproBottomViewState(parent),
-            "verticalOffset": Double(verticalOffset), "configuredScale": Double(ALB15BottomScale()),
+            "verticalOffset": Double(verticalOffset),
             "compactStyle": ALB15CompactStyle(), "compactMode": compactMode,
             "requestedCompact": requestedCompact, "requestOutstanding": nativeRequestOutstanding,
             "requestAccepted": nativeRequestAccepted, "requestGeneration": nativeRequestGeneration,
@@ -469,14 +301,11 @@ final class AWEAlbumMorphTabController:
             "minimizeEnabled": nativeMinimizeEnabled, "visibleFraction": Double(morphVisibleFraction),
             "currentOriginalIndex": cachedOriginalIndex, "layoutInProgress": bottomLayoutInProgress,
             "layoutReentriesSinceSample": reproLayoutReentries,
-            "clearMode": UserDefaults.standard.bool(forKey: "AwemeLiquidBar.TEST5.bottom.clearMode"),
             "additionalSafeArea": [Double(additionalSafeAreaInsets.top), Double(additionalSafeAreaInsets.left),
                                    Double(additionalSafeAreaInsets.bottom), Double(additionalSafeAreaInsets.right)]
         ]
         if let root {
             fields["tabBar"] = ALBReproBottomViewState(tabBar, in: root)
-            fields["hostBottomInsetForScale"] = Double(parent?.safeAreaInsets.bottom ?? 0)
-            fields["scalePivotY"] = Double(root.bounds.height - (parent?.safeAreaInsets.bottom ?? 0) - 30)
         }
         return fields
     }
@@ -520,10 +349,12 @@ final class AWEAlbumMorphTabController:
         identifier: String,
         originalIndex: Int
     ) -> UITab {
+        // 2.4.2: 0 = no symbol configuration; UIKit's floating tab bar uses
+        // its own default glyph size (the forced 22 pt looked oversized).
         let image = albumMorphConfiguredImage(
             key: iconRole,
             fallback: fallback,
-            pointSize: 22.0
+            pointSize: 0.0
         )
         explicitImagesByIdentifier[identifier] = (image, image)
         let tab = UITab(
@@ -549,7 +380,7 @@ final class AWEAlbumMorphTabController:
         search.image = albumMorphConfiguredImage(
             key: "newbar.search.normal",
             fallback: "magnifyingglass",
-            pointSize: 21.0
+            pointSize: 0.0
         )
         return search
     }
@@ -627,8 +458,10 @@ final class AWEAlbumMorphTabController:
         if tab.responds(to: NSSelectorFromString("setBadgeValue:")) {
             tab.setValue(normalized, forKey: "badgeValue")
         }
+        // Regular tabs precede Search, so tabs[i] <-> items[i] holds unless
+        // UIKit's More item replaced a slot; then rely on the UITab badge above.
         if let index = tabs.firstIndex(where: { $0 === tab }),
-           let items = tabBar.items, index < items.count {
+           let items = tabBar.items, index < items.count, !nativeBarUsesMoreRoute() {
             items[index].badgeValue = normalized
             items[index].badgeColor = .systemRed
         }
@@ -694,19 +527,100 @@ final class AWEAlbumMorphTabController:
             result.remove(at: searchIndex)
             result.append(ItemKey.search)
         }
-        // The custom bar intentionally supports at most five visible entries.
-        // UIKit's sixth-tab legacy More route is not used at all.
-        if result.count > 5 {
-            result = Array(result.prefix(5))
-        }
+        // No cap: all five regular buttons plus Search are requested. If the
+        // live bar answers with UIKit's More route, Search yields instead of a
+        // regular tab (see yieldSearchIfNativeBarOverflowed).
         return result
     }
 
+    private var effectiveItemKeys: [String] {
+        guard searchYieldsToRegularTabs,
+              visibleItemIdentifiers.count > Self.compactRootTabCapacity else {
+            return visibleItemIdentifiers
+        }
+        return visibleItemIdentifiers.filter { $0 != ItemKey.search }
+    }
+
+    /// True when the live UITabBar contains UIKit's More item, i.e. some root
+    /// tabs (and their identifier mapping) were moved into the More list.
+    private func nativeBarUsesMoreRoute() -> Bool {
+        guard tabs.count > Self.compactRootTabCapacity,
+              let items = tabBar.items, !items.isEmpty else { return false }
+        let moreItem: UITabBarItem? = moreNavigationController.tabBarItem
+        if let moreItem {
+            if items.contains(where: { $0 === moreItem }) { return true }
+            if let title = moreItem.title, !title.isEmpty,
+               items.contains(where: { $0.title == title }) { return true }
+        }
+        return false
+    }
+
+    /// Read-only: UITabBarController selectors/ivars naming the More/max-item
+    /// threshold on this OS build, logged once for a later native experiment.
+    private func moreRouteRuntimeNames() -> String {
+        var names: [String] = []
+        func relevant(_ name: String) -> Bool {
+            let lower = name.lowercased()
+            return lower.contains("maxitem") || lower.contains("maximumnumber") ||
+                lower.contains("maxnumber") || lower.contains("moretab") ||
+                lower.contains("moreitem") || lower.contains("morenavigation")
+        }
+        var count: UInt32 = 0
+        if let methods = class_copyMethodList(UITabBarController.self, &count) {
+            for index in 0..<Int(count) {
+                let name = NSStringFromSelector(method_getName(methods[index]))
+                if relevant(name) { names.append(name) }
+            }
+            free(methods)
+        }
+        count = 0
+        if let ivars = class_copyIvarList(UITabBarController.self, &count) {
+            for index in 0..<Int(count) {
+                guard let raw = ivar_getName(ivars[index]) else { continue }
+                let name = String(cString: raw)
+                if relevant(name) { names.append("ivar:" + name) }
+            }
+            free(ivars)
+        }
+        return names.prefix(32).joined(separator: ",")
+    }
+
+    /// Five regular tabs + UISearchTab are six root tabs. If UIKit put them
+    /// on its More route (first four + More), keep all five regular tabs at
+    /// native size and let Search yield (the top bar keeps its own Search),
+    /// so no tab hides inside More and no index mapping shifts.
+    @discardableResult
+    private func yieldSearchIfNativeBarOverflowed() -> Bool {
+        guard !searchYieldsToRegularTabs,
+              tabs.contains(where: { $0 is UISearchTab }),
+              nativeBarUsesMoreRoute() else { return false }
+        searchYieldsToRegularTabs = true
+        albumMorphProbe(
+            "NATIVE_MORE_ROUTE tabs=\(tabs.count) items=\(tabBar.items?.count ?? 0) " +
+            "action=search-yields keep=\(effectiveItemKeys.joined(separator: ",")) " +
+            "runtime=\(moreRouteRuntimeNames())"
+        )
+        rebuildTabs(preservingOriginalIndex: cachedOriginalIndex)
+        return true
+    }
+
+    /// Before tabs are set (UIKit decides the More route when they are).
+    /// The private calls are made in Objective-C (ALB5BottomGeometry.m),
+    /// where an assertion can be caught and a failed launch skips them once.
+    private func raiseRootTabCapacity() {
+        let state = ALB35RaiseRootTabCapacity(self, Self.raisedRootTabCapacity)
+        if state != rootTabCapacityState {
+            rootTabCapacityState = state
+            albumMorphProbe("ROOT_TAB_CAPACITY \(state)")
+        }
+    }
+
     private func rebuildTabs(preservingOriginalIndex originalIndex: Int) {
+        raiseRootTabCapacity()
         proxies.removeAll()
         explicitImagesByIdentifier.removeAll(keepingCapacity: true)
 
-        let sourceKeys = Array(visibleItemIdentifiers.prefix(5))
+        let sourceKeys = effectiveItemKeys
         let rebuilt = sourceKeys.compactMap(tabForItemKey)
         guard !rebuilt.isEmpty else { return }
 
@@ -732,9 +646,16 @@ final class AWEAlbumMorphTabController:
         applyStableVerticalOffset()
         applyUnreadBadges()
         albumMorphProbe(
-            "VISIBLE_ITEMS_APPLIED items=\(visibleItemIdentifiers.joined(separator: ",")) " +
+            "VISIBLE_ITEMS_APPLIED items=\(sourceKeys.joined(separator: ",")) " +
+            "nativeItems=\(tabBar.items?.count ?? 0) searchYields=\(searchYieldsToRegularTabs) " +
             "selected=\(resolvedIndex) tabFrame=\(tabBar.frame)"
         )
+        if !yieldSearchIfNativeBarOverflowed(), tabs.count > Self.compactRootTabCapacity {
+            // UIKit may publish its bar items on the next run-loop turn.
+            DispatchQueue.main.async { [weak self] in
+                _ = self?.yieldSearchIfNativeBarOverflowed()
+            }
+        }
     }
 
     private func tabForOriginalIndex(_ index: Int) -> UITab? {
@@ -792,6 +713,8 @@ final class AWEAlbumMorphTabController:
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         reproRecordController("bottom.controller.viewDidAppear.before")
+        // Safety net if UIKit only materialised its items once on screen.
+        yieldSearchIfNativeBarOverflowed()
         prepareIndependentDriver()
         if nativeRequestOutstanding && !nativeRequestAccepted {
             enqueueNativeRequest(animated: true)
@@ -818,9 +741,6 @@ final class AWEAlbumMorphTabController:
         bottomLayoutInProgress = true
         defer { bottomLayoutInProgress = false }
 
-        // 2.2: iOS 27's floating bar may not run UITabBar -layoutSubviews; the
-        // Clear switch is also applied from this controller's own layout.
-        ALB50ApplyBottomClearFromController(tabBar)
         applyStableVerticalOffset()
         setVisibleFraction(morphVisibleFraction, animated: false)
         applyCompactUnreadBadgeScale(in: tabBar)
@@ -849,7 +769,6 @@ final class AWEAlbumMorphTabController:
             lastConfiguredCompactStyle = style
         }
 
-        // 2.2: the iOS 27 Clear switch is applied in the bar's own layout pass.
         tabBar.setNeedsLayout()
         applyStableVerticalOffset()
         prepareIndependentDriver(force: true)
@@ -859,16 +778,12 @@ final class AWEAlbumMorphTabController:
 
     private func applyStableVerticalOffset() {
         guard isViewLoaded else { return }
-        // Scale the owned canvas. The controller root stays untransformed so
-        // UIKit's frame/safe-area relayout cannot solve new bounds from a scale.
+        // Bottom-bar scaling is removed: UIKit renders the bar at its native
+        // size (scale exactly 1). The owned canvas only carries the user's
+        // vertical offset; the controller root stays untransformed.
         guard let canvas = view.superview,
-              canvas.accessibilityIdentifier == "AwemeLiquidBar.BottomScaleCanvas",
-              let host = canvas.superview, host.bounds.width > 0 else { return }
-        let scale = ALB15BottomScale()
-        let bottomInset = host.safeAreaInsets.bottom
-        let pivotY = host.bounds.height - bottomInset - 30
-        let target = CGAffineTransform(a: scale, b: 0, c: 0, d: scale, tx: 0,
-            ty: verticalOffset + (1 - scale) * (pivotY - host.bounds.midY))
+              canvas.accessibilityIdentifier == "AwemeLiquidBar.BottomScaleCanvas" else { return }
+        let target = CGAffineTransform(translationX: 0, y: verticalOffset)
         guard !canvas.transform.isApproximatelyEqual(to: target) else { return }
         canvas.transform = target
     }
@@ -876,9 +791,7 @@ final class AWEAlbumMorphTabController:
     @objc(setVerticalOffset:)
     func setVerticalOffset(_ offset: CGFloat) {
         let clamped = offset.isFinite ? min(max(offset, -24.0), 80.0) : 0
-        // transform.ty also contains the scale-pivot translation; it is not
-        // the stored vertical offset. Comparing the two made every host pass
-        // look like a changed setting whenever scale differed from 1.
+        // Compare against the stored offset, not the canvas transform.
         let changed = abs(verticalOffset - clamped) > 0.01
         verticalOffset = clamped
         applyStableVerticalOffset()
@@ -938,39 +851,6 @@ final class AWEAlbumMorphTabController:
         guard view.tintColor != color || tabBar.tintColor != color else { return }
         if view.tintColor != color { view.tintColor = color }
         if tabBar.tintColor != color { tabBar.tintColor = color }
-    }
-
-    @objc(setForcedDark:)
-    func setForcedDark(_ forced: Bool) {
-        setResolvedInterfaceStyleRaw(
-            forced
-                ? UIUserInterfaceStyle.dark.rawValue
-                : UIUserInterfaceStyle.unspecified.rawValue
-        )
-    }
-
-    @objc(setResolvedInterfaceStyleRaw:)
-    func setResolvedInterfaceStyleRaw(_ rawValue: Int) {
-        let requested = UIUserInterfaceStyle(rawValue: rawValue) ?? .unspecified
-        let style: UIUserInterfaceStyle
-        switch requested {
-        case .light, .dark:
-            style = requested
-        default:
-            style = .unspecified
-        }
-
-        guard overrideUserInterfaceStyle != style ||
-                view.overrideUserInterfaceStyle != style ||
-                tabBar.overrideUserInterfaceStyle != style else {
-            return
-        }
-
-        UIView.performWithoutAnimation {
-            overrideUserInterfaceStyle = style
-            view.overrideUserInterfaceStyle = style
-            tabBar.overrideUserInterfaceStyle = style
-        }
     }
 
     @objc(setMorphBarVisible:animated:)
@@ -1206,7 +1086,17 @@ final class AWEAlbumMorphTabController:
     @objc(nativeCollapseDiagnostics)
     func nativeCollapseDiagnostics() -> String {
         let source = sourceScrollView.map { String(describing: type(of: $0)) } ?? "未绑定"
-        return "模式=原生左侧小球；驱动=共用方向手势；源=\(source)；实际状态=\(lastObservedNativeState)；UIKit原生动画；实际动画结束判定；外层单次缩放；不绑定宿主列表"
+        return "模式=原生左侧小球；驱动=共用方向手势；源=\(source)；实际状态=\(lastObservedNativeState)；UIKit原生动画；实际动画结束判定；原生尺寸（无缩放）；不绑定宿主列表"
+    }
+
+    /// 3.3: why five buttons and Search do not fit (UIKit's More route) and
+    /// the UITabBarController names of that limit, for the 诊断 copy.
+    @objc(nativeMoreRouteDiagnostics)
+    func nativeMoreRouteDiagnostics() -> String {
+        let more = nativeBarUsesMoreRoute() ? "是" : "否"
+        let yields = searchYieldsToRegularTabs ? "是" : "否"
+        let items = tabBar.items?.count ?? 0
+        return "底栏 根标签=\(tabs.count) 原生项=\(items) 更多路由=\(more) 搜索让位=\(yields) 上限=\(rootTabCapacityState)"
     }
 
     @objc(isNativeAvatarCompact)
@@ -1329,7 +1219,10 @@ final class AWEAlbumMorphTabController:
             return false
         }
         if originalIndex(for: tab) == 0 && selectedTab === tab && cachedOriginalIndex == 0 {
-            return false
+            // Minimized, this is the ball itself: never veto UIKit's own
+            // expansion. The Douyin Home re-tap stays blocked by the
+            // coordinator (HOME_RESELECT_BLOCKED).
+            return compactMode
         }
         if originalIndex(for: tab) == 2 {
             actionSink?.albumMorphDidRequestOriginalIndex(2)
@@ -1345,6 +1238,12 @@ final class AWEAlbumMorphTabController:
     ) {
         guard !suppressCallbacks else { return }
         guard let originalIndex = originalIndex(for: selectedTab) else {
+            return
+        }
+        // The minimized Home ball re-selects Home only to let UIKit expand
+        // the bar: keep the scroll binding and send Douyin nothing.
+        if originalIndex == 0, let previousTab, previousTab === selectedTab {
+            albumMorphProbe("TAB_RESELECT_HOME_BALL expand-only")
             return
         }
 

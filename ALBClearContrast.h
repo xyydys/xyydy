@@ -46,7 +46,9 @@ static UIImage *ALB8ContrastSnapshot(UIWindow *window) {
     return snapshot;
 }
 static BOOL ALB8ContrastSurfaceVisible(UIView *surface,UIWindow *window) {
-    if (!surface || surface.window!=window) return NO;
+    // 3.10.2: the double-tap panel may live in the bottom bar's window (over
+    // the same screen); its rows are sampled against the main window.
+    if (!surface || (surface.window!=window && ![surface.window isKindOfClass:AWEAlbumMorphOverlayWindow.class])) return NO;
     CGRect visible=[surface convertRect:surface.bounds toView:window];
     for(UIView *v=surface;v;v=v.superview) {
         if(v.hidden || v.alpha<.01 || v.layer.opacity<.01)return NO;

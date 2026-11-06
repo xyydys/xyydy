@@ -3,12 +3,24 @@
 @property(nonatomic, weak) id<UIGestureRecognizerDelegate> original;
 @property(nonatomic, strong) NSHashTable<UIButton *> *menuButtons;
 @end
-@implementation ALBAvatarMenuGestureGate
+@implementation ALBAvatarMenuGestureGate {
+    BOOL _asking;
+}
+// 3.2.1: a re-entrant ask answers for this gate alone (backstop against a loop).
 - (BOOL)respondsToSelector:(SEL)selector {
-    return [super respondsToSelector:selector] || [self.original respondsToSelector:selector];
+    if ([super respondsToSelector:selector]) return YES;
+    if (_asking) return NO;
+    _asking = YES;
+    BOOL answer = [self.original respondsToSelector:selector];
+    _asking = NO;
+    return answer;
 }
 - (id)forwardingTargetForSelector:(SEL)selector {
-    return [self.original respondsToSelector:selector] ? self.original : [super forwardingTargetForSelector:selector];
+    if (_asking) return [super forwardingTargetForSelector:selector];
+    _asking = YES;
+    BOOL answer = [self.original respondsToSelector:selector];
+    _asking = NO;
+    return answer ? self.original : [super forwardingTargetForSelector:selector];
 }
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gesture shouldReceiveTouch:(UITouch *)touch {
     for (UIButton *button in self.menuButtons.allObjects)
@@ -38,9 +50,13 @@ static void ALBProtectAvatarMenuTouch(UIButton *button, UIView *stack) {
                 gate.menuButtons = [NSHashTable weakObjectsHashTable];
                 objc_setAssociatedObject(gesture, &key, gate, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
             }
-            if (gesture.delegate != gate) gate.original = gesture.delegate;
             [gate.menuButtons addObject:button];
-            gesture.delegate = gate;
+            // 3.2.1: 3.1's top-chrome gate can sit on the same recognizer;
+            // never wrap a chain that already holds this gate.
+            if (gesture.delegate != gate && !ALB32DelegateChainContains(gesture.delegate, gate)) {
+                gate.original = gesture.delegate;
+                gesture.delegate = gate;
+            }
         }
     }
 }
@@ -74,7 +90,7 @@ static void ALB8RememberCleanMenuAnchor(UIView *stack,UIButton *button) {
 static void ALBRefreshCleanMenuAppearance(UIView *host, UIButton *button) {
     // Douyin may pin its window to light/dark. Resolve again for each menu
     // activation so this independent menu follows the current system theme.
-    UIUserInterfaceStyle style=ALBMaterialEnabled() ? ALBMaterialStyle(button, YES) : AWESystemInterfaceStyle();
+    UIUserInterfaceStyle style=(ALB25MaterialEnabled() || ALB25MaterialRegisteredGlassEnabled()) ? ALB25MaterialStyle(button, YES) : AWESystemInterfaceStyle();
     if (button.overrideUserInterfaceStyle!=style) button.overrideUserInterfaceStyle=style;
     UIResponder *responder=host.nextResponder;
     if ([responder isKindOfClass:UIViewController.class]) {

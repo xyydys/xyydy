@@ -16,16 +16,12 @@ if command -v xcrun >/dev/null 2>&1; then
         exit 2
     fi
 fi
-chmod 755 layout/DEBIAN/postinst scripts/preflight.sh
+chmod 755 layout/DEBIAN/postinst
 if command -v python3 >/dev/null 2>&1; then
-    sh scripts/preflight.sh
-else
-    sh scripts/preflight_portable.sh
+    python3 scripts/preflight.py
 fi
 make clean
 make package -j"${JOBS:-1}" "$@"
-if command -v python3 >/dev/null 2>&1; then
-    python3 scripts/collect_build.py
-else
-    sh scripts/collect_build_portable.sh
-fi
+mkdir -p out
+find packages -maxdepth 1 -type f -name '*.deb' -exec cp {} out/ \;
+echo "安装包已复制到 out/"

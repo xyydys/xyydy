@@ -8,10 +8,16 @@ static UIColor *ALBPaletteTextInk(UIColor *automatic) {
         ?ALB5Color(@"panel.textColor",UIColor.whiteColor):automatic;
 }
 
+/* 3.11: every icon and pill draws the collapsing dock's glass (the right
+   column's, ALB25MaterialMotionButtonConfiguration): the glass button's own
+   plain glass, never registered, the panel fixed Dark like the dock's video
+   glass, ink white (the panel's custom text colour still wins). The panel
+   lives in Douyin's window again: no bar window, no edges of its own, no
+   pictures of the screen while it is up. Native UIButton owns real touches. */
+/* 3.11.19: the bar's own glass (iOS 26), Dark; UIKit turns each glass on
+   its own edge (ALBFollowSyncEdge / the bar item faces, ALBBarFace.h). */
 static UIButtonConfiguration *ALBPaletteGlassConfiguration(void) {
-    // Shared playback material follows the system unless the scoped button
-    // clear switch is enabled. Native UIButton continues to own real touches.
-    UIButtonConfiguration *cfg = ALB8PlaybackButtonConfiguration();
+    UIButtonConfiguration *cfg = ALB25MaterialMotionButtonConfigurationTone(NO);
     cfg.cornerStyle = UIButtonConfigurationCornerStyleCapsule;
     cfg.contentInsets = NSDirectionalEdgeInsetsMake(0, 10, 0, 10);
     cfg.baseBackgroundColor = nil;
@@ -55,7 +61,14 @@ static UIImageView *ALBPaletteAlignedImageCanvas(UIButton *button) {
 - (void)refreshArtwork;
 - (void)layoutArtwork;
 @end
+/* 3.11.9: the panel draws the right column's glass, a system bar item face
+   on each icon and text pill (ALBBarFace.h), each on its own Dark edge and
+   turned by UIKit (3.11.10). The two sliders keep the glass button (their
+   fill and labels live inside it), on their own edges too. */
+@class ALB5PaletteIcon;
+static void ALBPaletteFaceIcon(ALB5PaletteIcon *icon);
 @implementation ALB5PaletteIcon
+- (void)setHighlighted:(BOOL)highlighted { [super setHighlighted:highlighted]; ALBFaceSetPressed(self, highlighted); }
 - (void)refreshArtwork {
     if (CGRectIsEmpty(self.bounds) || !self.roleArtwork) return;
     UIColor *ink=AWEApplyConfiguredIconColorMode(self.roleKey,self.automaticInk?:UIColor.labelColor);
@@ -87,6 +100,7 @@ static UIImageView *ALBPaletteAlignedImageCanvas(UIButton *button) {
         [self.glyphView.layer addAnimation:group forKey:@"ALB5.breathe"];
     }
     [self layoutArtwork];
+    ALBPaletteFaceIcon(self);
 }
 - (void)layoutArtwork {
     UIImageView *host=ALBPaletteAlignedImageCanvas(self);
@@ -106,7 +120,6 @@ static UIImageView *ALBPaletteAlignedImageCanvas(UIButton *button) {
 }
 - (void)layoutSubviews {
     [super layoutSubviews];
-    ALBMaterialApplyButton(self, YES);
     if (!CGSizeEqualToSize(self.canvasSize,self.bounds.size) && !CGRectIsEmpty(self.bounds)) {
         self.canvasSize=self.bounds.size;
         UIGraphicsImageRenderer *renderer=[[UIGraphicsImageRenderer alloc] initWithSize:self.bounds.size];
@@ -114,12 +127,56 @@ static UIImageView *ALBPaletteAlignedImageCanvas(UIButton *button) {
         cfg.image=[[renderer imageWithActions:^(__unused UIGraphicsImageRendererContext *c){}] imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
         self.configuration=cfg;
         [super layoutSubviews];
-    ALBMaterialApplyButton(self, YES);
         [self refreshArtwork];
     }
     [self layoutArtwork];
+    ALBFaceLayout(self);
 }
 @end
+/* 3.11.10: UIKit deciding, a row's black/white ink of ours is no ink for a
+   face: its glyph takes UIKit's own (white on dark glass, black once the
+   glass turns light, as the right column's), unless the user picked a
+   colour for it or it shows a state in colour (liked, favourited). */
+static BOOL ALBPaletteInkIsPlain(UIColor *ink) {
+    if (!ink) return YES;
+    CGFloat white = 0, alpha = 0;
+    if (![ink getWhite:&white alpha:&alpha]) return NO;
+    return alpha > 0.99 && (white < 0.01 || white > 0.99);
+}
+/* 3.11.10: whether a panel button is on an edge itself: only a button
+   wearing no face (a slider, or every button where bar item faces are not
+   available); a face is on its own edge instead (ALBFaceLayout). Marked by
+   the same rule wherever the panel touches a button, so no button is left
+   on an edge it should not be on (3.11.9: the icons, 12 of 24). */
+static void ALBPaletteMarkEdge(UIView *button, BOOL slider) {
+    BOOL edge = ALBFollowSystemDecides() && (slider || !ALBBarFacesWanted());
+    if (edge == (objc_getAssociatedObject(button, &kALBFollowNoEdgeKey) == nil)) return;
+    objc_setAssociatedObject(button, &kALBFollowNoEdgeKey, edge ? nil : @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+static void ALBPaletteFaceIcon(ALB5PaletteIcon *icon) {
+    if (!icon) return;
+    ALBPaletteMarkEdge(icon, NO);
+    ALBFaceTapOnTouchUp(icon);
+    if (ALBBarFacesWanted() && icon.roleArtwork && !CGRectIsEmpty(icon.bounds)) {
+        UIColor *ink = AWEApplyConfiguredIconColorMode(icon.roleKey, icon.automaticInk ?: UIColor.labelColor);
+        BOOL systemInk = ALBFollowSystemDecides() && AWEStoredSymbolColorMode(icon.roleKey) == AWEConfiguredIconColorModeAutomatic &&
+                         !ALB5Bool(@"panel.customTextColor", NO) && ALBPaletteInkIsPlain(icon.automaticInk);
+        CGFloat point = ALB5Number([icon.roleKey stringByAppendingString:@".size"], 18, 10, 34);
+        CGFloat alpha = ALB5Number([icon.roleKey stringByAppendingString:@".alpha"], 1, .1, 1);
+        BOOL fillOn = ALB5Bool(@"panel.iconFill", NO);
+        CGFloat inset = ALB5Number(@"panel.inset", 3, 1, 6);
+        CGFloat side = MIN(CGRectGetWidth(icon.bounds), CGRectGetHeight(icon.bounds));
+        NSString *sig = [NSString stringWithFormat:@"icon|%p|%d|%@|%.1f|%.2f|%d|%.1f|%.1f", icon.roleArtwork, icon.originalArtwork,
+                         systemInk ? @"SYSTEM" : (AWEHexStringFromColor(ink) ?: ink.description), point, alpha, fillOn, inset, side];
+        UIColor *fill = systemInk ? [UIColor.labelColor colorWithAlphaComponent:.12] : [ink colorWithAlphaComponent:.12];
+        NSDictionary *spec = icon.originalArtwork
+            ? @{@"image": icon.roleArtwork, @"preserve": @YES, @"point": @(MAX(1.0, side - 8.0)), @"fixedPoint": @YES, @"sig": sig}
+            : @{@"image": icon.roleArtwork, @"fg": systemInk ? (id)NSNull.null : (id)ink, @"point": @(point), @"fixedPoint": @YES,
+                @"regular": @YES, @"alpha": @(alpha), @"fill": fillOn ? (id)fill : (id)NSNull.null, @"inset": @(inset), @"sig": sig};
+        ALBFaceNoteSpec(icon, spec);
+    }
+    ALBFaceSync(icon);
+}
 
 @interface ALBPaletteSlider : UIButton
 @property(nonatomic) CGSize canvasSize;
@@ -142,7 +199,8 @@ static UIImageView *ALBPaletteAlignedImageCanvas(UIButton *button) {
     if ((self = [super initWithFrame:CGRectZero])) {
         self.backgroundColor = UIColor.clearColor;
         self.clipsToBounds = NO;
-        UIButtonConfiguration *cfg=ALBPaletteGlassConfiguration(); cfg.contentInsets=NSDirectionalEdgeInsetsZero; self.configuration=cfg;
+        UIButtonConfiguration *cfg=ALBPaletteGlassConfiguration(); cfg.contentInsets=NSDirectionalEdgeInsetsZero;
+        self.configuration=cfg;
         self.fillClip = [UIView new];
         self.fillClip.userInteractionEnabled = NO;
         self.fillClip.clipsToBounds = YES;
@@ -171,14 +229,12 @@ static UIImageView *ALBPaletteAlignedImageCanvas(UIButton *button) {
 }
 - (void)layoutSubviews {
     [super layoutSubviews];
-    ALBMaterialApplyButton(self, YES);
     self.layer.cornerRadius = self.bounds.size.height/2;
     if(!CGSizeEqualToSize(self.canvasSize,self.bounds.size) && !CGRectIsEmpty(self.bounds)) {
         self.canvasSize=self.bounds.size;
         UIGraphicsImageRenderer *renderer=[[UIGraphicsImageRenderer alloc] initWithSize:self.bounds.size];
         UIButtonConfiguration *cfg=[self.configuration copy];cfg.image=[renderer imageWithActions:^(__unused UIGraphicsImageRendererContext *c){}];self.configuration=cfg;
         [super layoutSubviews];
-    ALBMaterialApplyButton(self, YES);
     }
     // Put the complete fill and labels inside the native image content. UIKit's
     // press transform now carries the fill together with the visible content.
@@ -238,9 +294,29 @@ static UIImageView *ALBPaletteAlignedImageCanvas(UIButton *button) {
 - (void)accessibilityIncrement { [self applyValue:self.value+0.01 haptic:YES]; if(self.valueChanged) self.valueChanged(self.value); }
 - (void)accessibilityDecrement { [self applyValue:self.value-0.01 haptic:YES]; if(self.valueChanged) self.valueChanged(self.value); }
 @end
+/* A text pill's face: its title, its ink, its glass against the icon. */
+static void ALBPaletteFacePill(UIView *view, BOOL rightSide) {
+    if (![view isKindOfClass:UIButton.class] || [view isKindOfClass:ALBPaletteSlider.class]) return;
+    UIButton *pill = (UIButton *)view;
+    ALBPaletteMarkEdge(pill, NO);
+    ALBFaceTapOnTouchUp(pill);
+    NSString *title = pill.configuration.title;
+    if (ALBBarFacesWanted() && title.length) {
+        UIColor *ink = pill.configuration.baseForegroundColor ?: UIColor.labelColor;
+        // 3.11.10: UIKit deciding, UIKit's own ink (the user's text colour still wins).
+        BOOL systemInk = ALBFollowSystemDecides() && !ALB5Bool(@"panel.customTextColor", NO);
+        NSString *sig = [NSString stringWithFormat:@"pill|%@|%@|%d", title,
+                         systemInk ? @"SYSTEM" : (AWEHexStringFromColor(ink) ?: ink.description), rightSide];
+        ALBFaceNoteSpec(pill, @{@"title": title, @"fg": systemInk ? (id)NSNull.null : (id)ink, @"align": @(rightSide ? 2 : 1), @"sig": sig});
+    }
+    ALBFaceSync(pill);
+}
 
-@interface ALBSidePalette : UIView
+@interface ALBSidePalette : UIView <UIGestureRecognizerDelegate>
 @property(nonatomic, weak) AWEPlayInteractionViewController *sourceController;
+// 3.11.45: a touch that is not on one of the panel's glass buttons closes it; a swipe closes it and goes on to the feed.
+@property(nonatomic, strong) ALBOutsidePress *outsidePress;   // 3.11.46：按下就关（ALBOutsidePress.h）
+@property(nonatomic, strong) UITapGestureRecognizer *gapTap;
 @property(nonatomic, weak) UIView *sourceStack;
 @property(nonatomic, strong) id aweme;
 @property(nonatomic, copy) NSString *identity;
@@ -248,7 +324,6 @@ static UIImageView *ALBPaletteAlignedImageCanvas(UIButton *button) {
 @property(nonatomic, strong) NSArray<UIButton *> *icons;
 @property(nonatomic, strong) NSArray<UIView *> *pills;
 @property(nonatomic, strong) UIButton *dismissButton;
-@property(nonatomic, strong) ALBClearContrast *contrastObserver;
 @property(nonatomic, strong) MPVolumeView *volumeView;
 @property(nonatomic, weak) UISlider *systemVolumeSlider;
 @property(nonatomic, strong) ALBPaletteSlider *volume;
@@ -259,6 +334,8 @@ static UIImageView *ALBPaletteAlignedImageCanvas(UIButton *button) {
 @property(nonatomic) BOOL rootFeedSession;
 @property(nonatomic) NSUInteger sourceGeneration;
 @property(nonatomic,copy) NSString *materialSignature;
+// The feed's window (the panel's own window; 3.10.2-3.10.12 it could be the bar's).
+@property(nonatomic, weak) UIWindow *feedWindow;
 - (void)beginRowContrast;
 - (void)refreshPaletteMaterial;
 - (void)refreshCurrentSource;
@@ -271,6 +348,48 @@ static UIImageView *ALBPaletteAlignedImageCanvas(UIButton *button) {
 @end
 static __weak ALBSidePalette *gALBSidePalette;
 static char kALBVolumeObservationContext;
+static NSUInteger gALBPaletteOutsideCloses, gALBPaletteSwipeCloses, gALBPaletteZoneOpens, gALBPaletteZoneComments;
+
+/* The panel's ink and light/dark (3.11.10, the right column's rule): every
+   icon, pill and slider glass Dark on its own Dark edge, and UIKit turns
+   each one and hands its ink to what is inside (a slider's name: the label
+   colour of where it is drawn). The user's own text colour still wins. */
+static void ALBPaletteApplyInk(ALBSidePalette *palette) {
+    if (!palette.window || !palette.pills.count) return;
+    BOOL custom = ALB5Bool(@"panel.customTextColor", NO);
+    BOOL follow = ALB25MaterialFollowBar();
+    UIColor *ink = ALBPaletteTextInk(UIColor.whiteColor);
+    for (NSUInteger row = 0; row < palette.pills.count && row < palette.icons.count; row++) {
+        ALB5PaletteIcon *icon = (ALB5PaletteIcon *)palette.icons[row];
+        NSInteger action = icon.tag;
+        if (action != 1 && action != 7 && action != 8 &&
+            ![icon.automaticInk isEqual:UIColor.systemPinkColor] &&
+            ![icon.automaticInk isEqual:UIColor.systemYellowColor] && ![icon.automaticInk isEqual:ink]) {
+            icon.automaticInk = ink; [icon refreshArtwork];
+        }
+        UIView *pill = palette.pills[row];
+        if ([pill isKindOfClass:ALBPaletteSlider.class]) {
+            ALBPaletteSlider *slider = (ALBPaletteSlider *)pill;
+            UIColor *nameInk = follow ? ALBPaletteTextInk(UIColor.labelColor) : ink;
+            if (![slider.nameLabel.textColor isEqual:nameInk]) slider.nameLabel.textColor = nameInk;
+            if (custom && ![slider.valueLabel.textColor isEqual:ink]) slider.valueLabel.textColor = ink;
+        } else if ([pill isKindOfClass:UIButton.class]) {
+            UIButton *button = (UIButton *)pill;
+            if (![button.configuration.baseForegroundColor isEqual:ink]) {
+                UIButtonConfiguration *cfg = [button.configuration copy];
+                cfg.baseForegroundColor = ink; button.configuration = cfg;
+            }
+        }
+        if (!follow) continue;
+        for (UIView *view in @[icon, pill]) {
+            if (![view isKindOfClass:UIButton.class]) continue;
+            UIButton *glass = (UIButton *)view;
+            if (view == pill) ALBPaletteFacePill(pill, palette.anchorFraction.x > 0.5);
+            if (ALBFaceActive(glass)) ALBFaceSyncStyle(glass);
+            else if (glass.overrideUserInterfaceStyle != UIUserInterfaceStyleDark) glass.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
+        }
+    }
+}
 
 static UIView *ALBFindVisibleActionStack(UIView *root) {
     if (!root || !root.window) return nil;
@@ -385,7 +504,148 @@ static UIView *ALBPaletteFollowEntry(UIView *stack) {
     return best;
 }
 
+/* 3.11.18 (ALBGlassTone.h): the new panel's bar items start from the preset
+   brightness instead of dark. */
+
+/* 3.11.46：双击面板每一项的动作（双击面板、三段式底栏 ✦ 的悬浮面板共用） */
+static void ALBPaletteRun(NSInteger index, UIView *stack, id model, AWEPlayInteractionViewController *controller, NSString *source) {
+    switch (index) {
+        case 0: {
+            UIView *host=AWEFindViewByExactRuntimeClass(stack,@"AWEPlayInteractionUserProfilePictureView",0);
+            if (!host) host=AWEFindViewByExactRuntimeClass(stack,@"AWEPlayInteractionUserProfileContainerView",0);
+            if (!ALBForwardOriginalView(host)) AWEShowDownloadToast(@"未找到作者主页入口");
+            break;
+        }
+        case 1:
+            if (AWEAlbumImagesForAweme(model).count) AWEDownloadCurrentImageForAweme(model);
+            else ALBMSSave(model, ALBMSWhatMain, source);
+            break;
+        case 2:
+            if (AWEAlbumImagesForAweme(model).count) ALBExportAlbumVideo(model);
+            else {
+                id share=AWEFirstSafeValue(model,@[@"shareInfo",@"shareModel"]);
+                NSString *url=AWEFirstRemoteURLString(AWEFirstSafeValue(share,@[@"shareURL",@"shareUrl",@"url"]),0);
+                if (url.length) { UIPasteboard.generalPasteboard.string=url; AWEShowDownloadToast(@"作品链接已复制"); }
+                else AWEShowDownloadToast(@"当前作品没有可用的分享链接");
+            }
+            break;
+        case 3: {
+            UIView *owner=nil;
+            ALBFXArmLike(model);   // 点赞特效：这一条马上要变成已赞（面板点的，没碰点赞键）
+            if(!AWEForwardHomeActionKindFromStack(stack,AWEHomeActionKindLike,&owner)) {
+                ALB43RecordPanelActionMiss(stack,AWEHomeActionKindLike,@"like-before-controller-fallback");
+                if([controller respondsToSelector:@selector(performLikeAction)])[controller performLikeAction];
+                else AWEShowDownloadToast(@"未识别到当前作品的点赞动作");
+            }
+            break;
+        }
+        case 4: AWEDownloadAudioForAweme(model); break;
+        case 5: {
+            UIView *owner=nil;
+            if(!AWEForwardHomeActionKindFromStack(stack,AWEHomeActionKindComment,&owner)) {
+                ALB43RecordPanelActionMiss(stack,AWEHomeActionKindComment,@"comment-before-controller-fallback");
+                if([controller respondsToSelector:@selector(performCommentAction)])[controller performCommentAction];
+                else AWEShowDownloadToast(@"未识别到当前作品的评论动作");
+            }
+            break;
+        }
+        case 6: AWECopyCompleteTextForAweme(model); break;
+        case 9:
+            if(AWEAlbumImagesForAweme(model).count)AWEDownloadAllImagesForAweme(model);
+            else AWEShowDownloadToast(@"当前作品不是图集");
+            break;
+        case 10: {
+            UIView *owner=nil;
+            if(!AWEForwardHomeActionKindFromStack(stack,AWEHomeActionKindFavorite,&owner)) {
+                ALB43RecordPanelActionMiss(stack,AWEHomeActionKindFavorite,@"favorite");
+                AWEShowDownloadToast(@"未识别到当前作品的收藏入口");
+            }
+            break;
+        }
+        case 11: {
+            UIView *owner=nil;
+            if(!AWEForwardHomeActionKindFromStack(stack,AWEHomeActionKindShare,&owner)) {
+                ALB43RecordPanelActionMiss(stack,AWEHomeActionKindShare,@"share");
+                AWEShowDownloadToast(@"未识别到当前作品的转发入口");
+            }
+            break;
+        }
+        case 12: {
+            UIView *entry=ALBPaletteFollowEntry(stack);
+            if(!entry || !AWEForwardExactNativeTapFromView(entry,@"PALETTE_FOLLOW"))
+                AWEShowDownloadToast(@"当前作者已关注，或未找到可用的关注入口");
+            break;
+        }
+        case 13:
+            if (gAWEStableCleanScreenEnabled) AWEStableExitCleanScreen();
+            else if (stack.window) AWEStableEnterCleanScreenFromStack(stack);
+            break;
+        case 14: ALBMSSave(model, ALBMSWhatCurrentLive, source); break;
+        case 15: ALBMSSave(model, ALBMSWhatAllLive, source); break;
+        case 16: ALBMSSave(model, ALBMSWhatAllTypes, source); break;
+    }
+}
+
 @implementation ALBSidePalette
+/* 3.11.17: a touch on an icon's or a pill's bar item goes to the item's own
+   control, and that control hands it on to the panel's button
+   (ALBBarFace.h ALBFaceAdoptHit; 3.11.16: the panel's taps did nothing). */
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    UIView *hit = ALBFaceAdoptHit([super hitTest:point withEvent:event]);
+    /* 3.11.45 用户：“把双击面板的关闭方式改为只要没有碰到对应的玻璃按钮胶囊就可以触发关闭，以及双击面板展开时如果上下滑动也可以
+       触发关闭并直接滑到下一个视频”。不在按钮 / 胶囊 / 滑条上的触摸不归面板：交给下面的视频（3.11.46：窗口上的
+       ALBOutsidePress 按下就关面板、抖音的点按等它所以不暂停；滑动照常交给视频流，直接到下一条）。面板列表能滚时列表留着。 */
+    if (UIAccessibilityIsVoiceOverRunning()) return hit;
+    if (!hit || hit == self || hit == self.dismissButton) return nil;
+    if (hit == self.group && !self.group.scrollEnabled) return nil;
+    return hit;
+}
+/* 碰到面板自己的按钮 / 胶囊 / 滑条：不归关面板的手势 */
+- (BOOL)alb_touchOnPanelControl:(UITouch *)touch {
+    UIView *view = touch.view;
+    if (!view || ![view isDescendantOfView:self]) return NO;
+    if (self.group.scrollEnabled && [view isDescendantOfView:self.group]) return YES;   // 列表能滚：在列表上不关
+    for (UIView *v = view; v && v != self; v = v.superview)
+        if ([v isKindOfClass:UIControl.class] && v != self.dismissButton) return YES;
+    return NO;
+}
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gesture shouldReceiveTouch:(UITouch *)touch {
+    if (self.dismissing) return NO;
+    return ![self alb_touchOnPanelControl:touch];
+}
+- (void)alb_gapTapped:(UITapGestureRecognizer *)gesture {
+    if (gesture.state != UIGestureRecognizerStateEnded) return;
+    gALBPaletteOutsideCloses++;
+    [self dismiss];
+}
+/* 3.11.46：窗口上挂一个按下就关的手势（ALBOutsidePress）：点哪里都关、不暂停视频；上下滑关掉以后照样翻到下一条 */
+- (void)alb_installOutsideGestures {
+    UIWindow *window = self.feedWindow ?: self.window;
+    if (!window || self.outsidePress.view == window) return;
+    [self alb_removeOutsideGestures];
+    ALBOutsidePress *press = [ALBOutsidePress installOnWindow:window];
+    __weak typeof(self) weakSelf = self;
+    press.insideControl = ^BOOL(UITouch *touch) {
+        ALBSidePalette *palette = weakSelf;
+        return !palette || palette.dismissing || [palette alb_touchOnPanelControl:touch];
+    };
+    press.onClose = ^{ [weakSelf dismiss]; };
+    press.onEnded = ^(BOOL swipe, __unused NSString *hitClass) {
+        if (swipe) gALBPaletteSwipeCloses++; else gALBPaletteOutsideCloses++;
+    };
+    self.outsidePress = press;
+    if (!self.gapTap) {
+        UITapGestureRecognizer *gap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(alb_gapTapped:)];
+        gap.cancelsTouchesInView = NO;
+        gap.delegate = self;
+        [self.group addGestureRecognizer:gap];
+        self.gapTap = gap;
+    }
+}
+- (void)alb_removeOutsideGestures {
+    [self.outsidePress retire];
+    self.outsidePress = nil;
+}
 - (instancetype)initWithFrame:(CGRect)frame {
     if ((self = [super initWithFrame:frame])) {
         self.backgroundColor = UIColor.clearColor;
@@ -417,6 +677,7 @@ static UIView *ALBPaletteFollowEntry(UIView *stack) {
     return self;
 }
 - (void)dealloc {
+    [self alb_removeOutsideGestures];
     [NSNotificationCenter.defaultCenter removeObserver:self];
     if (self.volumeObserved) [AVAudioSession.sharedInstance removeObserver:self forKeyPath:@"outputVolume" context:&kALBVolumeObservationContext];
 }
@@ -441,7 +702,8 @@ static UIView *ALBPaletteFollowEntry(UIView *stack) {
 }
 - (void)didMoveToWindow {
     [super didMoveToWindow];
-    [self.contrastObserver stop]; self.contrastObserver=nil;
+    if (!self.window) [self alb_removeOutsideGestures];
+    else if (!self.dismissing) [self alb_installOutsideGestures];
     if (!self.window && gALBSidePalette==self) {
         gALBSidePalette=nil; ALB8SetPaletteRightHidden(NO);
     }
@@ -456,54 +718,29 @@ static UIView *ALBPaletteFollowEntry(UIView *stack) {
     [self refreshPaletteMaterial];
 }
 - (void)refreshPaletteMaterial {
-    BOOL clear = ALBMaterialMode() != ALBMaterialRegular;
-    UIUserInterfaceStyle style = ALBMaterialEnabled() ? ALBMaterialStyle(self, YES) : UIUserInterfaceStyleUnspecified;
-    NSString *signature=[NSString stringWithFormat:@"%d|%ld|%lu",clear,(long)style,(unsigned long)ALBMaterialGeneration()];
+    // 3.11: the bar's glass on every icon and pill, the panel Dark (UIKit
+    // turns each glass on its own edge).
+    NSString *signature=[NSString stringWithFormat:@"motion|%d|%.3f|%lu|f%d%@",ALB25MaterialMotionClear(),
+        ALB25MaterialDarkTint(),(unsigned long)self.icons.count,ALB25MaterialFollowBar(),
+        ALB25MaterialFollowBar()?ALB25MaterialFollowGlassKey():@""];
+    if(self.overrideUserInterfaceStyle!=UIUserInterfaceStyleDark)self.overrideUserInterfaceStyle=UIUserInterfaceStyleDark;
     if([signature isEqualToString:self.materialSignature])return;
     self.materialSignature=signature;
-    if(self.overrideUserInterfaceStyle!=style)self.overrideUserInterfaceStyle=style;
+    // 3.11.5: the edges follow (system or plug-in deciding) on the next layout.
+    [self setNeedsLayout];
     NSMutableArray<UIButton *> *buttons=[NSMutableArray arrayWithArray:self.icons?:@[]];
     for(UIView *pill in self.pills)if([pill isKindOfClass:UIButton.class])[buttons addObject:(UIButton *)pill];
-
     for(UIButton *button in buttons) {
         UIButtonConfiguration *old=button.configuration;
         UIButtonConfiguration *cfg=ALBPaletteGlassConfiguration();
         cfg.contentInsets=old.contentInsets;
         cfg.image=old.image; cfg.title=old.title; cfg.baseForegroundColor=old.baseForegroundColor;
         button.configuration=cfg;
-        ALBMaterialApplyButton(button, YES);
     }
 }
 - (void)beginRowContrast {
-    [self.contrastObserver stop];
-    self.contrastObserver=nil;
     if (!self.window || !self.pills.count) return;
-    __weak ALBSidePalette *weakSelf=self;
-    void (^applyInk)(NSUInteger,BOOL)=^(NSUInteger row,BOOL light){
-        ALBSidePalette *panel=weakSelf;
-        if (row>=panel.pills.count || row>=panel.icons.count) return;
-        UIColor *ink=ALBPaletteTextInk(light?UIColor.whiteColor:UIColor.blackColor);
-        ALB5PaletteIcon *icon=(ALB5PaletteIcon *)panel.icons[row];
-        NSInteger action=icon.tag;
-        if (action!=1 && action!=7 && action!=8 &&
-            ![icon.automaticInk isEqual:UIColor.systemPinkColor] &&
-            ![icon.automaticInk isEqual:UIColor.systemYellowColor]) {
-            icon.automaticInk=ink; [icon refreshArtwork];
-        }
-        UIView *pill=panel.pills[row];
-        if ([pill isKindOfClass:ALBPaletteSlider.class]) {
-            ((ALBPaletteSlider *)pill).nameLabel.textColor=ink;
-            if(ALB5Bool(@"panel.customTextColor",NO))
-                ((ALBPaletteSlider *)pill).valueLabel.textColor=ink;
-        } else if ([pill isKindOfClass:UIButton.class]) {
-            UIButton *button=(UIButton *)pill;
-            UIButtonConfiguration *cfg=[button.configuration copy];
-            cfg.baseForegroundColor=ink; button.configuration=cfg;
-        }
-    };
-    if(ALB5Bool(@"panel.customTextColor",NO)) {
-        for(NSUInteger row=0;row<self.pills.count;row++)applyInk(row,YES);
-    } else self.contrastObserver=ALBObserveClearContrastRows(self.pills,applyInk);
+    ALBPaletteApplyInk(self);
 }
 - (void)setSourceActionsEnabled:(BOOL)enabled {
     for(UIButton *button in self.icons)if(!ALBPaletteIsSlider(button.tag))button.enabled=enabled;
@@ -515,7 +752,7 @@ static UIView *ALBPaletteFollowEntry(UIView *stack) {
     if(self.dismissing || !self.window)return;
     stack=stack?:ALBFindVisibleActionStack(controller.viewIfLoaded);
     id model=ALB8PaletteModelForStack(stack);
-    if(stack.window!=self.window || !model) {
+    if(stack.window!=(self.feedWindow?:self.window) || !model) {
         self.sourceController=nil; self.sourceStack=nil; self.aweme=nil; self.identity=nil;
         [self setSourceActionsEnabled:NO]; return;
     }
@@ -535,7 +772,7 @@ static UIView *ALBPaletteFollowEntry(UIView *stack) {
     if(!self.window || self.dismissing)return;
     if(!AWEPluginFeaturesEnabled() || (self.rootFeedSession && (AWECurrentRouteSuppressesBar() ||
         !AWEIndexUsesHomeVisualPolicy(AWECurrentMainTabIndex())))) { [self dismiss]; return; }
-    UIView *stack=ALBFindVisibleActionStack(self.window.rootViewController.view);
+    UIView *stack=ALBFindVisibleActionStack((self.feedWindow?:self.window).rootViewController.view);
     id model=ALB8PaletteModelForStack(stack);
     AWEPlayInteractionViewController *controller=nil;
     for(UIResponder *r=stack;r;r=r.nextResponder) {
@@ -552,7 +789,6 @@ static UIView *ALBPaletteFollowEntry(UIView *stack) {
     [self dismiss];
 }
 - (void)buildRows {
-    [self.contrastObserver stop]; self.contrastObserver=nil;
     for (UIView *view in self.icons) [view removeFromSuperview];
     for (UIView *view in self.pills) [view removeFromSuperview];
     self.icons=nil; self.pills=nil; self.volume=nil; self.brightness=nil;
@@ -561,9 +797,19 @@ static UIView *ALBPaletteFollowEntry(UIView *stack) {
     BOOL liked = ALB8PaletteLikeState(self.sourceStack, &likeKnown);
     id author = AWEFirstSafeValue(self.aweme, @[@"author", @"authorModel", @"user"]);
     NSString *nickname = AWEStringFromValue(AWEFirstSafeValue(author, @[@"nickname", @"nickName", @"name"]));
-    NSArray *titles = @[nickname.length ? nickname : @"作者主页", album ? @"保存当前图片" : @"保存当前视频",
-        album ? @"保存图集为视频" : @"复制作品链接", (likeKnown && liked) ? @"取消点赞" : @"点赞视频", @"保存音频", @"打开评论区", @"复制完整文案", @"音量", @"亮度", @"保存全部图片", @"收藏作品", @"转发作品", @"关注作者"];
-    NSArray *symbols = @[@"person.crop.circle", @"square.and.arrow.down", album ? @"film" : @"link", (likeKnown && liked) ? @"heart.fill" : @"heart", @"music.note", @"text.bubble", @"doc.on.doc", @"speaker.wave.2.fill", @"sun.max.fill", @"photo.on.rectangle.angled", @"star", @"arrowshape.turn.up.right", @"person.badge.plus"];
+    /* 3.11.45：点赞作品 / 收藏作品；视频走最高画质（实况作品是保存实况）；图集多了保存当前实况、保存所有实况、
+       保存所有类型图片（有实况或视频时才出现）；一键清屏 */
+    BOOL mainLive = !album && self.aweme && ALBMSMainIsLive(self.aweme);
+    NSUInteger albumCount = album ? AWEAlbumImagesForAweme(self.aweme).count : 0;
+    ALBMSKind currentKind = album ? ALBMSAlbumCurrentKind(self.aweme) : ALBMSKindVideo;
+    NSUInteger lives = album ? ALBMSAlbumLiveCount(self.aweme) : 0;
+    BOOL mixed = lives > 0;
+    if (album && !mixed) for (id image in AWEAlbumImagesForAweme(self.aweme)) if (ALBMSAlbumEntry(image).kind == ALBMSKindVideo) { mixed = YES; break; }
+    NSArray *titles = @[nickname.length ? nickname : @"作者主页", album ? @"保存当前图片" : (mainLive ? @"保存实况" : @"保存当前视频"),
+        album ? @"保存图集为视频" : @"复制作品链接", (likeKnown && liked) ? @"取消点赞" : @"点赞作品", @"保存音频", @"打开评论区", @"复制完整文案", @"音量", @"亮度", @"保存所有图片", @"收藏作品", @"转发作品", @"关注作者",
+        gAWEStableCleanScreenEnabled ? @"退出清屏" : @"一键清屏", currentKind == ALBMSKindVideo ? @"保存当前视频" : @"保存当前实况", @"保存所有实况", @"保存所有类型图片"];
+    NSArray *symbols = @[@"person.crop.circle", @"square.and.arrow.down", album ? @"film" : @"link", (likeKnown && liked) ? @"heart.fill" : @"heart", @"music.note", @"text.bubble", @"doc.on.doc", @"speaker.wave.2.fill", @"sun.max.fill", @"photo.on.rectangle.angled", @"star", @"arrowshape.turn.up.right", @"person.badge.plus",
+        gAWEStableCleanScreenEnabled ? @"eye" : @"eye.slash", currentKind == ALBMSKindVideo ? @"video" : @"livephoto", @"livephoto", @"square.stack.3d.down.right"];
     BOOL favoriteKnown=NO, favorited=NO;
     NSArray<UIView *> *nativeActions=ALB33AllHomeActionButtons(self.sourceStack);
     for(UIView *action in nativeActions)if(ALB33PanelActionKind(action,nativeActions)==AWEHomeActionKindFavorite) {
@@ -578,7 +824,11 @@ static UIView *ALBPaletteFollowEntry(UIView *stack) {
     for (NSNumber *actionID in ALB28PaletteActionOrder()) {
         NSUInteger i=actionID.unsignedIntegerValue;
         if(!ALB5Bool([NSString stringWithFormat:@"panel.action.%lu",(unsigned long)i],YES))continue;
-        if(i==9 && !album)continue;
+        if(i==9 && !(album && albumCount>1))continue;
+        if(i==14 && !(album && (currentKind==ALBMSKindLive || currentKind==ALBMSKindVideo)))continue;
+        if(i==15 && !(album && albumCount>1 && lives>0))continue;
+        if(i==16 && !(album && albumCount>1 && mixed))continue;
+        if(i>=titles.count)continue;
         ALB5PaletteIcon *icon = [ALB5PaletteIcon buttonWithType:UIButtonTypeSystem];
         icon.roleKey=[NSString stringWithFormat:@"palette.%lu",(unsigned long)i];
         UIButtonConfiguration *cfg=ALBPaletteGlassConfiguration();
@@ -635,7 +885,8 @@ static UIView *ALBPaletteFollowEntry(UIView *stack) {
 }
 - (void)layoutSubviews {
     [super layoutSubviews];
-    ALBMaterialApplyButton((UIButton *)self, YES);
+    // 2.4: the palette is a UIView, not a UIButton (2.3 sent it -isTracking and
+    // crashed). Its buttons are applied in -refreshPaletteMaterial.
     CGFloat width=self.bounds.size.width, height=self.bounds.size.height;
     CGFloat top=MIN(MAX(self.safeAreaInsets.top+54, 100),height*0.25);
     CGFloat bottom=MIN(MAX(self.safeAreaInsets.bottom+64, 90),height*0.20);
@@ -663,110 +914,79 @@ static UIView *ALBPaletteFollowEntry(UIView *stack) {
         CGFloat pillX=right ? groupWidth-side-9*scale-pillWidth : side+9*scale;
         self.pills[i].frame=CGRectMake(pillX, i*row+(side-pillHeight)/2, pillWidth, pillHeight);
     }
+    // 3.11.9: every icon and text pill wears a bar item face, each on its
+    // own Dark edge (ALBFaceLayout), turned by UIKit (3.11.10). A button under
+    // a face is never on an edge itself (3.11.9 put the icons on one at their
+    // first layout, before their face, and nothing took it away); the two
+    // sliders keep their glass button, on an edge of their own
+    // (ALBPaletteMarkEdge).
+    for (UIButton *icon in self.icons) {
+        ALBPaletteMarkEdge(icon, NO);
+        ALBFaceLayout(icon);
+        ALBFollowSyncEdge(icon);
+    }
+    for (UIView *pill in self.pills) {
+        BOOL slider = [pill isKindOfClass:ALBPaletteSlider.class];
+        if ([pill isKindOfClass:UIButton.class] && !slider && !ALBFaceFor(pill))
+            ALBPaletteFacePill(pill, right);
+        ALBPaletteMarkEdge(pill, slider);
+        if ([pill isKindOfClass:UIButton.class]) ALBFaceLayout((UIButton *)pill);
+        ALBFollowSyncEdge(pill);
+    }
 }
 - (void)dismiss {
     if (self.dismissing) return;
+    ALBGlassLifecycleMark(@"面板关闭：动画前");
     self.dismissing=YES; ++self.sourceGeneration;
-    [self.contrastObserver stop];
+    // 3.11.28: its glass fades out as UIKit draws it (no instant finish).
+    ALBGlassSeedPanelClosing(self);
     if (gALBSidePalette==self) { gALBSidePalette=nil; ALB8SetPaletteRightHidden(NO); }
+    [self alb_removeOutsideGestures];
     self.userInteractionEnabled=NO;
-    [UIView animateWithDuration:UIAccessibilityIsReduceMotionEnabled() ? 0 : 0.16 animations:^{ self.alpha=0; }
-        completion:^(__unused BOOL finished) { [self removeFromSuperview]; }];
+    // 3.11.28: down to just above UIKit's "hidden" line (alpha < 0.01), then
+    // removed: no visibility change while it fades, so its glass keeps its
+    // pockets and look to the end.
+    CGFloat fadeTo=0.012;   // 3.11.51：新玻璃直接到位固定开
+    [UIView animateWithDuration:UIAccessibilityIsReduceMotionEnabled() ? 0 : 0.16 animations:^{ self.alpha=fadeTo; }
+        completion:^(__unused BOOL finished) { [self removeFromSuperview]; ALBGlassLifecycleMark(@"面板关闭：移出窗口后"); }];
 }
 - (void)actionTapped:(UIButton *)sender {
     if (!AWEPluginFeaturesEnabled()) { [self dismiss]; return; }
     NSInteger index=sender.tag;
-    if (ALBPaletteIsSlider(index) || index<0 || index>12) return;
+    if (ALBPaletteIsSlider(index) || index<0 || index>16) return;
     if(self.dismissing)return;
     UIView *stack=self.sourceStack;
     id model=ALB8PaletteModelForStack(stack);
-    if(stack.window!=self.window || !model || ![AWEAwemeIdentity(model) isEqualToString:self.identity]) {
+    if(stack.window!=(self.feedWindow?:self.window) || !model || ![AWEAwemeIdentity(model) isEqualToString:self.identity]) {
         [self setSourceActionsEnabled:NO];
         AWEShowDownloadToast(@"正在切换作品，请稍后再试"); return;
     }
     AWEPlayInteractionViewController *controller=ALB8PaletteControllerOwnsStack(self.sourceController,stack,model)
         ?self.sourceController:nil;
     [self dismiss];
-    switch (index) {
-        case 0: {
-            UIView *host=AWEFindViewByExactRuntimeClass(stack,@"AWEPlayInteractionUserProfilePictureView",0);
-            if (!host) host=AWEFindViewByExactRuntimeClass(stack,@"AWEPlayInteractionUserProfileContainerView",0);
-            if (!ALBForwardOriginalView(host)) AWEShowDownloadToast(@"未找到作者主页入口");
-            break;
-        }
-        case 1:
-            if (AWEAlbumImagesForAweme(model).count) AWEDownloadCurrentImageForAweme(model);
-            else AWEDownloadSmartVideoForAweme(model);
-            break;
-        case 2:
-            if (AWEAlbumImagesForAweme(model).count) ALBExportAlbumVideo(model);
-            else {
-                id share=AWEFirstSafeValue(model,@[@"shareInfo",@"shareModel"]);
-                NSString *url=AWEFirstRemoteURLString(AWEFirstSafeValue(share,@[@"shareURL",@"shareUrl",@"url"]),0);
-                if (url.length) { UIPasteboard.generalPasteboard.string=url; AWEShowDownloadToast(@"作品链接已复制"); }
-                else AWEShowDownloadToast(@"当前作品没有可用的分享链接");
-            }
-            break;
-        case 3: {
-            UIView *owner=nil;
-            if(!AWEForwardHomeActionKindFromStack(stack,AWEHomeActionKindLike,&owner)) {
-                ALB43RecordPanelActionMiss(stack,AWEHomeActionKindLike,@"like-before-controller-fallback");
-                if([controller respondsToSelector:@selector(performLikeAction)])[controller performLikeAction];
-                else AWEShowDownloadToast(@"未识别到当前作品的点赞动作");
-            }
-            break;
-        }
-        case 4: AWEDownloadAudioForAweme(model); break;
-        case 5: {
-            UIView *owner=nil;
-            if(!AWEForwardHomeActionKindFromStack(stack,AWEHomeActionKindComment,&owner)) {
-                ALB43RecordPanelActionMiss(stack,AWEHomeActionKindComment,@"comment-before-controller-fallback");
-                if([controller respondsToSelector:@selector(performCommentAction)])[controller performCommentAction];
-                else AWEShowDownloadToast(@"未识别到当前作品的评论动作");
-            }
-            break;
-        }
-        case 6: AWECopyCompleteTextForAweme(model); break;
-        case 9:
-            if(AWEAlbumImagesForAweme(model).count)AWEDownloadAllImagesForAweme(model);
-            else AWEShowDownloadToast(@"当前作品不是图集");
-            break;
-        case 10: {
-            UIView *owner=nil;
-            if(!AWEForwardHomeActionKindFromStack(stack,AWEHomeActionKindFavorite,&owner)) {
-                ALB43RecordPanelActionMiss(stack,AWEHomeActionKindFavorite,@"favorite");
-                AWEShowDownloadToast(@"未识别到当前作品的收藏入口");
-            }
-            break;
-        }
-        case 11: {
-            UIView *owner=nil;
-            if(!AWEForwardHomeActionKindFromStack(stack,AWEHomeActionKindShare,&owner)) {
-                ALB43RecordPanelActionMiss(stack,AWEHomeActionKindShare,@"share");
-                AWEShowDownloadToast(@"未识别到当前作品的转发入口");
-            }
-            break;
-        }
-        case 12: {
-            UIView *entry=ALBPaletteFollowEntry(stack);
-            if(!entry || !AWEForwardExactNativeTapFromView(entry,@"PALETTE_FOLLOW"))
-                AWEShowDownloadToast(@"当前作者已关注，或未找到可用的关注入口");
-            break;
-        }
-    }
+    ALBPaletteRun(index, stack, model, controller, @"双击面板");
 }
 @end
 
+/* 3.11.45：拆成“在窗口里某一点打开”（三段式底栏的 ✦ 也用它，ALBDockHostOpenPalette） */
+static BOOL ALBPresentSidePaletteAt(AWEPlayInteractionViewController *controller, CGPoint location);
 static BOOL ALBPresentSidePalette(AWEPlayInteractionViewController *controller, id sender) {
     UIWindow *window=controller.view.window;
     if (!window) return NO;
     CGPoint location; UIView *coordinateView=nil;
     if (!AWEGetDoubleTapLocation(sender, controller.view, &location, &coordinateView) || !coordinateView) return NO;
     location=[coordinateView convertPoint:location toView:window];
+    return ALBPresentSidePaletteAt(controller, location);
+}
+static BOOL ALBPresentSidePaletteAt(AWEPlayInteractionViewController *controller, CGPoint location) {
+    UIWindow *window=controller.view.window;
+    if (!window) return NO;
     if (gALBSidePalette.window==window) { [gALBSidePalette dismiss]; return YES; }
     [gALBSidePalette dismiss];
+    ALBGlassLifecycleMark(@"面板打开：创建前");
     ALBSidePalette *palette=[[ALBSidePalette alloc] initWithFrame:window.bounds];
     palette.sourceController=controller;
+    palette.feedWindow=window;
     palette.rootFeedSession=AWEIndexUsesHomeVisualPolicy(AWECurrentMainTabIndex()) && !AWECurrentRouteSuppressesBar();
     palette.sourceStack=ALBFindVisibleActionStack(controller.view);
     palette.aweme=ALB8PaletteModelForStack(palette.sourceStack);
@@ -779,11 +999,21 @@ static BOOL ALBPresentSidePalette(AWEPlayInteractionViewController *controller, 
         return YES;
     }
     [palette setSourceActionsEnabled:palette.sourceStack!=nil && palette.aweme!=nil];
-    [window addSubview:palette]; gALBSidePalette=palette;
+    // 3.11.24: the right column's settled glass readings, before it is hidden
+    // (the panel's glasses start from them, ALBGlassSeed.h).
+    NSArray<NSArray<NSNumber *> *> *rightSamples=ALBGlassSeedRightSamples(window);
+    [window addSubview:palette];
+    gALBSidePalette=palette;
     ALB8SetPaletteRightHidden(YES);
     [palette setNeedsLayout]; [palette layoutIfNeeded];
-    palette.group.alpha=0;
+    ALBPaletteApplyInk(palette);
+    ALBGlassLifecycleMark(@"面板打开：首次布局后");
+    // 3.11.28: from just above UIKit's "hidden" line (alpha < 0.01) rather
+    // than 0: the glass just built keeps its pockets through the fade-in
+    // instead of losing them and building again (ALBGlassSeed.h).
+    palette.group.alpha=0.012;   // 3.11.51：新玻璃直接到位固定开
     [UIView animateWithDuration:UIAccessibilityIsReduceMotionEnabled() ? 0 : 0.18 animations:^{ palette.group.alpha=1; }];
+    ALBGlassSeedPanelOpened(palette, rightSamples);
     UIAccessibilityPostNotification(UIAccessibilityLayoutChangedNotification,palette.icons.firstObject);
     AWEInteractionDiagnosticWrite(@"SIDE_PALETTE_OPEN model=%@ point=%@ side=%@",palette.identity,
         NSStringFromCGPoint(location),palette.anchorFraction.x>0.5 ? @"right" : @"left");

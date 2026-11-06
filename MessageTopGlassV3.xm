@@ -1,4 +1,5 @@
 #import "ALBUnifiedMaterial.h"
+#import "ALB25Material.h"
 #import <UIKit/UIKit.h>
 #import <QuartzCore/QuartzCore.h>
 #import <objc/runtime.h>
@@ -6,6 +7,19 @@
 
 #import <math.h>
 #import "WCLGEdgeEffect.h"
+
+/* 3.5: the glass the configuration was built with ("right.glassSource"); a
+   button built under another one (option changed, or the bar's glass read
+   later) is configured again on its next pass. */
+static char kAWEMessageGlassKeyKey;
+/* 3.11.44：玻璃是系统自己的 Regular（不再跟右侧那份玻璃的设置走），记一个固定的键：旧版本做的配置换掉一次 */
+static NSString *const kAWEMessageGlassKind = @"system-regular/3.11.44";
+static BOOL AWEMessageGlassKeyStale(UIButton *button) {
+    return ![objc_getAssociatedObject(button, &kAWEMessageGlassKeyKey) isEqualToString:kAWEMessageGlassKind];
+}
+static void AWEMessageNoteGlassKey(UIButton *button) {
+    objc_setAssociatedObject(button, &kAWEMessageGlassKeyKey, kAWEMessageGlassKind, OBJC_ASSOCIATION_COPY_NONATOMIC);
+}
 
 static const NSInteger kAWEMessageGlassTagBase = 26082150;
 static NSString * const kAWEMessageEdgeBlurDistanceDefaultsKey =
@@ -96,53 +110,7 @@ extern void ALBUnbindOriginalGlassAction(UIButton *button);
 #endif
 static void AWEMessageProbe(NSString *format, ...);
 
-@interface AWEMessageGlassPressForwarder : NSObject
-@property (nonatomic, weak) UIControl *sourceControl;
-@property (nonatomic, weak) UIView *sourceView;
-@property (nonatomic, weak) UIButton *glassPlate;
-- (void)pressDown:(UIButton *)sender;
-- (void)pressCancel:(UIButton *)sender;
-- (void)pressUp:(UIButton *)sender;
-@end
-
-@implementation AWEMessageGlassPressForwarder
-- (void)pressDown:(UIButton *)sender {
-    self.glassPlate.highlighted = YES;
-}
-- (void)pressCancel:(UIButton *)sender {
-    self.glassPlate.highlighted = NO;
-}
-- (void)pressUp:(UIButton *)sender {
-BOOL sent = ALBForwardOriginalView(self.sourceControl ?: self.sourceView);
-    AWEMessageProbe(@"MESSAGE_NATIVE_ACTION sent=%d source=%@", sent,
-                    NSStringFromClass((self.sourceControl ?: self.sourceView).class));
-}
-@end
-
-static char kAWEMessageProxyForwarderKey;
 static char kAWEMessagePressGestureKey;
-static char kAWEMessagePressDriverKey;
-
-@interface AWEMessageGlassTouchDriver : NSObject
-@property (nonatomic, weak) UIButton *glassPlate;
-- (void)handlePress:(UILongPressGestureRecognizer *)recognizer;
-@end
-
-@implementation AWEMessageGlassTouchDriver
-- (void)handlePress:(UILongPressGestureRecognizer *)recognizer {
-    UIButton *plate = self.glassPlate;
-    if (!plate) return;
-    UIGestureRecognizerState state = recognizer.state;
-    BOOL down = state == UIGestureRecognizerStateBegan ||
-                state == UIGestureRecognizerStateChanged;
-    plate.highlighted = down;
-    if (!down) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            plate.highlighted = NO;
-        });
-    }
-}
-@end
 
 static NSString *AWEMessageProbePath(void) {
     NSString *documents = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,
@@ -209,10 +177,6 @@ static BOOL AWEMessageHasAncestorClass(UIView *view, NSString *className) {
         if ([NSStringFromClass(cursor.class) isEqualToString:className]) return YES;
     }
     return NO;
-}
-static id AWEMessageSafeValue(id object, NSString *key) {
-    @try { return [object valueForKey:key]; }
-    @catch (__unused NSException *exception) { return nil; }
 }
 
 #pragma mark - State saving / restoration
@@ -297,17 +261,6 @@ static void AWEMessageRememberAndHideVisual(UIView *view) {
         label.textColor = UIColor.clearColor;
     }
 }
-static void AWEMessageHideSourceArtwork(UIView *source) {
-    if (!source) return;
-    if ([source isKindOfClass:UIImageView.class] || [source isKindOfClass:UILabel.class]) {
-        AWEMessageRememberAndHideVisual(source);
-    }
-    for (UIView *sub in AWEMessageSubviews(source, 80)) {
-        if ([sub isKindOfClass:UIImageView.class] || [sub isKindOfClass:UILabel.class]) {
-            AWEMessageRememberAndHideVisual(sub);
-        }
-    }
-}
 static void AWEMessageRestoreVisuals(void) {
     for (UIView *view in gAWEMessageHiddenVisualViews.allObjects) {
         if ([view isKindOfClass:UIImageView.class]) {
@@ -383,29 +336,6 @@ static UIView *AWEMessageCompactAncestor(UIView *view, UIView *navBar) {
 
 static UIView *AWEMessagePressGestureHost(UIView *source, UIView *navBar);
 
-/* Release-fix: move the actual native hit owner, not just DUXBaseImageView.
-   The menu artwork is nested inside a gesture host; moving only the artwork
-   made the icon look correct while taps stayed at the old x coordinate. */
-static UIView *AWEMessageMoveNativeTopControl(UIView *source,
-                                              UIView *navBar,
-                                              CGFloat targetCenterX) {
-    if (!source || !navBar) return nil;
-    UIView *owner = AWEMessagePressGestureHost(source, navBar);
-    if (!owner) owner = AWEMessageCompactAncestor(source, navBar) ?: source;
-    if (!owner.superview || owner == navBar) return owner;
-    CGRect ownerRect = [owner convertRect:owner.bounds toView:navBar];
-    if (CGRectGetWidth(ownerRect) > 72.0 || CGRectGetHeight(ownerRect) > 70.0) {
-        return owner;
-    }
-    CGPoint currentInNav = [owner.superview convertPoint:owner.center toView:navBar];
-    CGPoint desiredInNav = CGPointMake(targetCenterX, currentInNav.y);
-    CGPoint desired = [navBar convertPoint:desiredInNav toView:owner.superview];
-    if (isfinite(desired.x) && isfinite(desired.y) &&
-        hypot(owner.center.x - desired.x, owner.center.y - desired.y) > 0.25) {
-        owner.center = desired;
-    }
-    return owner;
-}
 static UIView *AWEMessageMenuSource(UIView *navBar) {
     UIView *cached = objc_getAssociatedObject(navBar, &kAWEMessageCachedMenuSourceKey);
     if (cached.window && [cached isDescendantOfView:navBar] &&
@@ -505,7 +435,6 @@ static UILabel *AWEMessageTitleSource(UIView *navBar) {
     return nil;
 }
 static UIButtonConfiguration *AWEMessageRegularGlassConfiguration(void);
-static UIImage *AWEMessageSymbol(NSString *name, CGFloat size, UIImageSymbolWeight weight);
 
 static UIControl *AWEMessageControlAncestor(UIView *source, UIView *navBar) {
     if (!source || !navBar) return nil;
@@ -532,33 +461,6 @@ static UIView *AWEMessagePressGestureHost(UIView *source, UIView *navBar) {
         }
     }
     return fallback;
-}
-
-static void AWEMessageInstallPressDriver(UIView *source, UIView *navBar, UIButton *plate) {
-    UIView *host = AWEMessagePressGestureHost(source, navBar);
-    if (!host || !plate) return;
-    UILongPressGestureRecognizer *press =
-        objc_getAssociatedObject(host, &kAWEMessagePressGestureKey);
-    AWEMessageGlassTouchDriver *driver =
-        objc_getAssociatedObject(host, &kAWEMessagePressDriverKey);
-    if (!driver) {
-        driver = [AWEMessageGlassTouchDriver new];
-        objc_setAssociatedObject(host, &kAWEMessagePressDriverKey, driver,
-                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-    driver.glassPlate = plate;
-    if (!press) {
-        press = [[UILongPressGestureRecognizer alloc] initWithTarget:driver
-                                                              action:@selector(handlePress:)];
-        press.minimumPressDuration = 0.0;
-        press.allowableMovement = 18.0;
-        press.cancelsTouchesInView = NO;
-        press.delaysTouchesBegan = NO;
-        press.delaysTouchesEnded = NO;
-        [host addGestureRecognizer:press];
-        objc_setAssociatedObject(host, &kAWEMessagePressGestureKey, press,
-                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
 }
 
 static void AWEMessageOpenGlassClipChain(UIView *navBar, UIView *root) {
@@ -598,14 +500,32 @@ static void AWEMessageClearCompactSourceChrome(UIView *source, UIView *navBar) {
 }
 
 static UIUserInterfaceStyle AWEMessageResolvedAdaptiveInterfaceStyle(void) {
-UIWindow *window = gAWEMessageActiveController.viewIfLoaded.window;
+    UIWindow *window = gAWEMessageActiveController.viewIfLoaded.window;
     UIUserInterfaceStyle style = window.windowScene.traitCollection.userInterfaceStyle;
     if (style == UIUserInterfaceStyleUnspecified) style = UIScreen.mainScreen.traitCollection.userInterfaceStyle;
     return style;
 }
 
+/* 3.11.44 用户：“浅色模式的时候，每次只要出现消息那一整页，顶部的三个按钮都要由深变浅……这是个固定的页面”。原因：这三颗
+   （和它们后面的底板）用的是右侧那份玻璃（透明＋深色染色、深浅定死成深色，再由系统按背后亮度自己翻），新出现的玻璃没量过背后
+   多亮时系统当它是暗的，第一次读数要等它画出来约 0.25 秒，于是每次进来都先深后浅。消息页是不动的白 / 黑页面，不需要看背后：
+   改成系统自己的 Regular 玻璃按钮，深浅一上来就是系统的（窗口场景的深浅），不再翻。 */
+static NSUInteger gAWEMessageStyleApplied;
+static UIUserInterfaceStyle gAWEMessageStyleLast = UIUserInterfaceStyleUnspecified;
 static void AWEMessageApplyAdaptiveStyleToGlassButton(UIButton *button) {
-    ALBMaterialApplyButton(button, NO);
+    if (!button) return;
+    UIUserInterfaceStyle style = button.window.windowScene.traitCollection.userInterfaceStyle;
+    if (style == UIUserInterfaceStyleUnspecified) style = AWEMessageResolvedAdaptiveInterfaceStyle();
+    if (style != UIUserInterfaceStyleDark) style = UIUserInterfaceStyleLight;
+    if (button.overrideUserInterfaceStyle != style) {
+        button.overrideUserInterfaceStyle = style;
+        gAWEMessageStyleApplied++;
+        if (style != gAWEMessageStyleLast) {
+            gAWEMessageStyleLast = style;
+            AWEMessageProbe(@"MESSAGE_GLASS_STYLE style=%@ applied=%lu", style == UIUserInterfaceStyleDark ? @"dark" : @"light",
+                            (unsigned long)gAWEMessageStyleApplied);
+        }
+    }
 }
 
 static void AWEMessageReleaseProxy(UIButton *proxy) {
@@ -690,7 +610,7 @@ static UIButton *AWEMessageEnsurePressProxy(UIView *navBar, NSInteger index,
             @{@"source":originalImage,@"size":[NSValue valueWithCGSize:targetSize],@"rendered":image}, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     UIButtonConfiguration *cfg = proxy.configuration;
-    if (!cfg || cfg.image != image) {
+    if (!cfg || cfg.image != image || AWEMessageGlassKeyStale(proxy)) {
         cfg = AWEMessageRegularGlassConfiguration();
         if (!cfg) { AWEMessageReleaseProxy(proxy); return nil; }
         cfg.contentInsets = NSDirectionalEdgeInsetsZero;
@@ -699,6 +619,7 @@ static UIButton *AWEMessageEnsurePressProxy(UIView *navBar, NSInteger index,
         cfg.title = nil;
         cfg.baseForegroundColor = UIColor.labelColor;
         proxy.configuration = cfg;
+        AWEMessageNoteGlassKey(proxy);
     }
     proxy.tintColor = UIColor.labelColor;
     proxy.accessibilityLabel = visualSource.accessibilityLabel ?: imageView.accessibilityLabel;
@@ -777,16 +698,12 @@ static void AWEMessageSuppressAdSlotIfNeeded(UIView *slot) {
     slot.hidden = YES;
 }
 
+/* 3.11.44：系统自己的 Regular 玻璃按钮配置（不装右侧那份会按背后亮度翻深浅的玻璃） */
 static UIButtonConfiguration *AWEMessageRegularGlassConfiguration(void) {
+    SEL maker = NSSelectorFromString(@"glassButtonConfiguration");
+    if ([UIButtonConfiguration respondsToSelector:maker])
+        return ((UIButtonConfiguration *(*)(id, SEL))objc_msgSend)(UIButtonConfiguration.class, maker);
     return ALBMaterialButtonConfiguration();
-}
-static UIImage *AWEMessageSymbol(NSString *name, CGFloat size, UIImageSymbolWeight weight) {
-    if (@available(iOS 13.0, *)) {
-        UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:size weight:weight];
-        return [[UIImage systemImageNamed:name withConfiguration:cfg]
-                imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-    }
-    return nil;
 }
 static CGRect AWEMessagePlateFrame(UIView *navBar, NSInteger index) {
     CGFloat width = CGRectGetWidth(navBar.bounds);
@@ -811,7 +728,7 @@ static UIButton *AWEMessageEnsurePlate(UIView *navBar, NSInteger index) {
         [navBar addSubview:button];
         created = YES;
     }
-    if (created || !button.configuration) {
+    if (created || !button.configuration || AWEMessageGlassKeyStale(button)) {
         UIButtonConfiguration *cfg = AWEMessageRegularGlassConfiguration();
         if (!cfg) { button.hidden = YES; return button; }
         cfg.contentInsets = NSDirectionalEdgeInsetsZero;
@@ -822,6 +739,7 @@ static UIButton *AWEMessageEnsurePlate(UIView *navBar, NSInteger index) {
         cfg.title = nil;
         cfg.image = nil;
         button.configuration = cfg;
+        AWEMessageNoteGlassKey(button);
         button.tintColor = UIColor.clearColor;
         button.overrideUserInterfaceStyle = UIUserInterfaceStyleUnspecified;
     }
@@ -869,27 +787,6 @@ static NSString *AWEMessageColorDescription(UIColor *color) {
     if (!color) return @"nil";
     UIColor *resolved = [color resolvedColorWithTraitCollection:UIScreen.mainScreen.traitCollection];
     return resolved.description ?: @"?";
-}
-
-static void AWEMessageProbeTopBackgroundCandidates(UIView *root, UIView *navBar) {
-    if (!root || !navBar) return;
-    CGFloat width = CGRectGetWidth(root.bounds);
-    NSUInteger emitted = 0;
-    for (UIView *v in AWEMessageSubviews(root, 900)) {
-        if (v == root || AWEMessageIsInsideOurGlassTree(v) || v.hidden || v.alpha < 0.01) continue;
-        if ([v isKindOfClass:UILabel.class] || [v isKindOfClass:UIControl.class]) continue;
-        CGRect r = [v convertRect:v.bounds toView:root];
-        if (CGRectGetMaxY(r) < 0.0 || CGRectGetMinY(r) > 145.0) continue;
-        if (CGRectGetWidth(r) < width * 0.72 || CGRectGetHeight(r) < 18.0) continue;
-        NSString *name = NSStringFromClass(v.class);
-        BOOL effect = [v isKindOfClass:UIVisualEffectView.class];
-        UIColor *bg = v.backgroundColor;
-        if (!effect && (!bg || CGColorGetAlpha(bg.CGColor) < 0.03)) continue;
-        AWEMessageProbe(@"MESSAGE_TOP_CAND class=%@ frame=%@ bg=%@ effect=%d opaque=%d z=%.1f",
-                        name, NSStringFromCGRect(r), AWEMessageColorDescription(bg),
-                        effect, v.opaque, v.layer.zPosition);
-        if (++emitted >= 24) break;
-    }
 }
 
 static NSString *AWEMessageViewPath(UIView *view, UIView *stop) {
@@ -1624,16 +1521,6 @@ static __attribute__((unused)) void AWEMessageRestoreFullSurface(UIViewControlle
 %ctor {
     @autoreleasepool {
         %init;
-        [NSNotificationCenter.defaultCenter
-            addObserverForName:@"AwemeLiquidBar.iOS27AdaptiveGlassStyleDidChange"
-                        object:nil
-                         queue:NSOperationQueue.mainQueue
-                    usingBlock:^(__unused NSNotification *note) {
-            UIViewController *live = gAWEMessageActiveController;
-            if (live && live.isViewLoaded && live.view.window) {
-                AWEMessageApplyFullSurface(live);
-            }
-        }];
         [NSNotificationCenter.defaultCenter
             addObserverForName:@"ALB28.MessageButtonInsetChanged" object:nil queue:NSOperationQueue.mainQueue
             usingBlock:^(__unused NSNotification *note) {

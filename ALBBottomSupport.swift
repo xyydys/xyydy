@@ -43,7 +43,3 @@ func ALBReproBottomViewState(_ view: UIView?, in host: UIView? = nil) -> [String
     return state
 }
 
-
-// Explicit preference only. The default path returns without traversing or
-// writing any material. A mode switch is applied while expanded, never per tick.
-// Shared material writes live in ALBUnifiedMaterial.m.

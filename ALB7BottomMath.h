@@ -15,19 +15,6 @@ static inline double ALB7SurfacePairScore(ALB7Rect left, ALB7Rect right, double 
     if (span < barWidth*.58 || span > barWidth+12) return -1;
     return span - fabs(left.h-right.h)*3 - fabs(right.w-right.h)*2;
 }
-// A module centered at pivot remains centered for every uniform scale. Its
-// individual owners may have translated/scaled parents; callers convert both
-// old and new centers through UIKit before constructing each local transform.
-static inline double ALB7ScaledCoordinate(double position,double pivot,double scale) {
-    return pivot+(position-pivot)*scale;
-}
-
-// Always compose against a stable native baseline, never the last rendered
-// result. Translation remains native and the desired move is absolute.
-typedef struct { double a,b,c,d,tx,ty; } ALB8Affine;
-static inline ALB8Affine ALB8ComposeAbsoluteScale(ALB8Affine base,double sx,double sy,double dx,double dy) {
-    return (ALB8Affine){base.a*sx,base.b*sy,base.c*sx,base.d*sy,base.tx+dx,base.ty+dy};
-}
 static inline int ALB8FeedCompactPolicy(int next,int timerMode,int currentlyCompact,int nextExpands) {
     return timerMode ? (next && currentlyCompact && !nextExpands) : next;
 }
@@ -41,12 +28,6 @@ static inline int ALB8CommittedWorkDirection(long oldSection,long oldRow,long se
     if(section!=oldSection)return section>oldSection?1:-1;
     if(row!=oldRow)return row>oldRow?1:-1;
     return identitiesKnown ? (userDirection>0?1:(userDirection<0?-1:0)) : 0;
-}
-
-// Fallback has one owner too. This scale is applied to the expanded baseline;
-// UIKit native minimization must remain disabled for this branch.
-static inline double ALB8FallbackAbsoluteScale(double configuredScale,int compact) {
-    return configuredScale*(compact?.72:1.0);
 }
 
 static inline double ALB9TransitionProgress(double start,int compact,double elapsed) {

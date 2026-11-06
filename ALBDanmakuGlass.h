@@ -9,7 +9,6 @@
 @property(nonatomic,strong) UIColor *originalLayerBackground;
 @property(nonatomic,strong) NSMapTable<UIView *,NSNumber *> *childOpacities;
 @property(nonatomic) BOOL usesNativeButton;
-@property(nonatomic) NSUInteger materialGeneration;
 @end
 @implementation ALB28DanmakuGlassRecord
 @end
@@ -150,7 +149,7 @@ static void ALB28RefreshDanmakuGlass(UIView *root) {
         UIButton *button=record.button;
         if(button.tracking)return;
         BOOL nativeUpdated = record.usesNativeButton && button.configuration != record.appliedConfiguration;
-        if(!record.appliedConfiguration || nativeUpdated || record.materialGeneration != ALBMaterialGeneration()) {
+        if(!record.appliedConfiguration || nativeUpdated) {
             if(nativeUpdated)record.originalConfiguration=[button.configuration copy];
             UIButtonConfiguration *configuration=AWECreateAdaptiveGlassIconConfiguration(NO);
             configuration.cornerStyle=UIButtonConfigurationCornerStyleCapsule;
@@ -163,9 +162,8 @@ static void ALB28RefreshDanmakuGlass(UIView *root) {
             configuration.baseForegroundColor=source.tintColor?:UIColor.labelColor;
             button.configuration=configuration;
             record.appliedConfiguration=button.configuration;
-            record.materialGeneration=ALBMaterialGeneration();
         }
-        if (ALBMaterialEnabled()) button.overrideUserInterfaceStyle = ALBMaterialStyle(button, YES);
+        button.overrideUserInterfaceStyle = ALBMaterialStyle(button, YES);
         if(![source.backgroundColor isEqual:UIColor.clearColor])source.backgroundColor=UIColor.clearColor;
         if(!source.layer.backgroundColor || CGColorGetAlpha(source.layer.backgroundColor)>0)
             source.layer.backgroundColor=UIColor.clearColor.CGColor;

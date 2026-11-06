@@ -219,9 +219,49 @@ static void ALB19RightWriteTransform(UIView *view,CGAffineTransform transform) {
 @property(nonatomic,copy) NSString *role;
 @property(nonatomic) CGFloat nativeAlpha;
 @property(nonatomic) BOOL nativeInteractive;
+@property(nonatomic) BOOL quiet;   // hidden without UIKit's visibility change (3.11.28)
 @end
 @implementation ALB7RightVisibilityLease
 @end
+/* 3.11.28: the double-tap panel's own hide of the right column (not the
+   user's right.hide.* setting) sets alpha 0 underneath UIKit's visibility
+   change (-[UIView setAlpha:] across 0.01 tells every view and interaction
+   in the subtree; 3.11.26/27 diagnostics: the glass is then built again at
+   once while its edge pocket leaves and comes back 0.06–0.12 s later at its
+   dark start). Hidden this way the glass keeps its pocket and its look and
+   shows again as it was; it is still alpha 0 for touches and every check. */
+static NSUInteger gALB7RightQuietHides, gALB7RightQuietShows;
+static BOOL ALB7RightQuietHide(NSString *role) {
+    // 3.11.51：新玻璃直接到位固定开（设置删了）
+    return gALB8PaletteRightHidden && !ALB5Bool([@"right.hide." stringByAppendingString:role],NO);
+}
+/* 3.11.29: the 3.11.28 diagnostic counted 0 quiet hides: UIKit 26's
+   _backing_setAlpha is a direct function, not a method (the 26.1 decompile
+   reads `self` where its argument is). The same thing by hand: the view's
+   layer opacity, without implicit animation, accepted only when the view
+   then reads that alpha (a view keeping it on an intermediate layer gets
+   the usual setter). */
+static NSUInteger gALB7RightQuietFallbacks;
+static void ALB7RightSetAlpha(UIView *view,CGFloat alpha,BOOL quiet) {
+    if (quiet && view.layer) {
+        CALayer *layer=view.layer;
+        float previous=layer.opacity;
+        [CATransaction begin];
+        [CATransaction setDisableActions:YES];
+        layer.opacity=(float)alpha;
+        [CATransaction commit];
+        if (fabs(view.alpha-alpha)<0.001) {
+            if (alpha<0.01) gALB7RightQuietHides++; else gALB7RightQuietShows++;
+            return;
+        }
+        [CATransaction begin];
+        [CATransaction setDisableActions:YES];
+        layer.opacity=previous;
+        [CATransaction commit];
+        gALB7RightQuietFallbacks++;
+    }
+    view.alpha=alpha;
+}
 
 static void ALB5ApplyRightLayout(UIView *stack);
 static BOOL ALB6RightContains(UIView *root, UIView *view) {
@@ -257,7 +297,7 @@ static void ALB7RightPruneVisibility(UIView *stack) {
         if (objc_getAssociatedObject(view,&kALB7RightVisibilityKey)!=lease) continue;
         objc_setAssociatedObject(view,&kALB7RightVisibilityKey,nil,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         ++gALB6RightMutationDepth;
-        if (view.alpha==0) view.alpha=lease.nativeAlpha;
+        if (view.alpha==0) ALB7RightSetAlpha(view,lease.nativeAlpha,lease.quiet);
         view.userInteractionEnabled=lease.nativeInteractive;
         --gALB6RightMutationDepth;
     }
@@ -268,7 +308,7 @@ static void ALB8RightReleaseVisibilityLease(ALB7RightVisibilityLease *lease) {
     if (!view || objc_getAssociatedObject(view,&kALB7RightVisibilityKey)!=lease) return;
     objc_setAssociatedObject(view,&kALB7RightVisibilityKey,nil,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     ++gALB6RightMutationDepth;
-    if (view.alpha==0) view.alpha=lease.nativeAlpha;
+    if (view.alpha==0) ALB7RightSetAlpha(view,lease.nativeAlpha,lease.quiet);
     view.userInteractionEnabled=lease.nativeInteractive;
     --gALB6RightMutationDepth;
 }
@@ -284,6 +324,7 @@ static void ALB7RightSuppress(UIView *view,UIView *stack,NSString *role) {
     if (!lease) {
         lease=[ALB7RightVisibilityLease new]; lease.view=view;
         lease.nativeAlpha=view.alpha; lease.nativeInteractive=view.userInteractionEnabled;
+        lease.quiet=ALB7RightQuietHide(role);
         objc_setAssociatedObject(view,&kALB7RightVisibilityKey,lease,OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     NSMutableArray *leases=objc_getAssociatedObject(stack,&kALB7RightVisibilityListKey);
@@ -294,7 +335,7 @@ static void ALB7RightSuppress(UIView *view,UIView *stack,NSString *role) {
     if (![leases containsObject:lease]) [leases addObject:lease];
     lease.stack=stack; lease.role=role;
     ++gALB6RightMutationDepth;
-    if (view.alpha!=0) view.alpha=0;
+    if (view.alpha!=0) ALB7RightSetAlpha(view,0,lease.quiet);
     view.userInteractionEnabled=NO;
     --gALB6RightMutationDepth;
 }
@@ -508,10 +549,16 @@ static void ALB5ApplyRightLayout(UIView *stack) {
     @try {
         ALB7RightPruneVisibility(stack);
         [ALB8RightStacks() addObject:stack];
-        if (!AWEPluginFeaturesEnabled() || !stack.window ||
-            gAWEStableCleanScreenEnabled || !AWESameStyleIsRightActionStackV23(stack)) {
+        if (!AWEPluginFeaturesEnabled() || !stack.window || gAWEStableCleanScreenEnabled) {
             ALB5RestoreRightLayout(stack); return;
         }
+        // 3.3: Douyin fades the whole rail out and back in (long-press speed
+        // playback at the screen edge, and similar). A pass while it is
+        // invisible used to restore the native size, so the rail came back
+        // unscaled until the next refresh. While invisible the applied scale
+        // stays exactly as it is.
+        if (stack.hidden || stack.alpha <= 0.01 || stack.layer.opacity <= 0.01f) return;
+        if (!AWESameStyleIsRightActionStackV23(stack)) { ALB5RestoreRightLayout(stack); return; }
         NSArray<NSString *> *roles=@[@"avatar",@"like",@"comment",@"favorite",@"share",@"music"];
         CGFloat columnScale=ALB5Number(@"right.scale",1,.5,1.25);
         CGFloat musicGap=ALB5Number(@"right.musicGap",12,0,80);
@@ -808,8 +855,12 @@ static void ALB5ApplyRightLayout(UIView *stack) {
 static void ALB8SetPaletteRightHidden(BOOL hidden) {
     if (gALB8PaletteRightHidden==hidden) return;
     gALB8PaletteRightHidden=hidden;
+    // 3.11.24: each button keeps its own last settled glass reading as the
+    // start of the glass UIKit builds again (ALBGlassSeed.h).
+    if (!hidden) ALBGlassSeedRightRestored();
     for (UIView *stack in ALB8RightStacks().allObjects) ALB5ApplyRightLayout(stack);
     UIView *current=AWEFindCurrentRightActionStackAcrossWindows();
     if (current) ALB5ApplyRightLayout(current);
+    ALBGlassLifecycleMark(hidden ? @"右侧：面板打开后隐藏" : @"右侧：面板关闭后恢复");
 }
 #endif
